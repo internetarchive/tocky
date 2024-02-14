@@ -1,0 +1,1 @@
+# Needed to allow pytest to find the project root

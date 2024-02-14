@@ -1,0 +1,15 @@
+# Private
+.env
+env*.py
+
+# Editors
+.vscode/
+
+# Python
+.venv/
+venv/
+coverage.xml
+__pycache__/
+.pytest_cache/
+dist/
+.coverage
