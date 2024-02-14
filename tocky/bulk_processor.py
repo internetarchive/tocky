@@ -9,7 +9,7 @@ from lxml import etree
 
 from tocky.detector import extract_toc_pages
 from tocky.extractor import clean_raw_toc_ocr
-from tocky.extractor.printer import extract_djvu_page_text
+from tocky.ocr.printer import print_ocr
 from tocky.ia import extract_page_index, get_ia_metadata, get_page_scan
 from tocky.ocr import ocr_djvu_page
 from tocky.utils import avg_ocr_conf
@@ -63,7 +63,7 @@ def process_ol_book(ol_record: dict) -> ItemProcessingState:
   else:
     try:
       state.toc_raw_ocr = [
-          extract_djvu_page_text(redo_ocr(djvu_xml, page_name))
+          print_ocr(redo_ocr(djvu_xml, page_name))
           for (page_name, djvu_xml) in state.detected_toc
       ]
     except Exception as e:

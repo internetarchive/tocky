@@ -1,17 +1,17 @@
 import math
+from typing import Literal
 from lxml import etree
 from rtree import index
 
 from tocky.ia import extract_page_index, get_ia_metadata
 
-def extract_djvu_page_text_old(djvu_page: str | etree._Element) -> str:
+def ocr_printer_linear(djvu_page: str | etree._Element) -> str:
     if isinstance(djvu_page, str):
        root = etree.fromstring(djvu_page)
     else:
         root = djvu_page
-    page_file = root.xpath('./@usemap')[0]
 
-    result = f"\n\n----------- OCR of page {extract_page_index(page_file)} -----------\n\n\n"
+    result = ""
 
     ref_word = next(
         word
@@ -36,7 +36,7 @@ def extract_djvu_page_text_old(djvu_page: str | etree._Element) -> str:
 
     return result
 
-def extract_djvu_page_text(djvu_page: str | etree._Element) -> str:
+def ocr_printer_canvas(djvu_page: str | etree._Element) -> str:
     if isinstance(djvu_page, str):
        root = etree.fromstring(djvu_page)
     else:
@@ -130,3 +130,11 @@ def extract_djvu_page_text(djvu_page: str | etree._Element) -> str:
         # return re.sub(r'(\S) +', r'\1 ', s)
 
     return collapse_newlines(crop_text_canvas(canvas))
+
+def print_ocr(djvu_xml: str | etree._Element, printer: Literal['canvas', 'linear']='canvas') -> str:
+  if printer == 'canvas':
+    return ocr_printer_2d(djvu_xml)
+  elif printer == 'linear':
+    return ocr_printer_linear(djvu_xml)
+  else:
+    raise ValueError(f'Invalid printer type: {printer}')
