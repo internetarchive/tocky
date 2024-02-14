@@ -8,7 +8,7 @@ import requests
 from lxml import etree
 
 from tocky.detector import extract_toc_pages
-from tocky.extractor import clean_raw_toc_ocr
+from tocky.extractor import extract_structured_toc
 from tocky.ocr.printer import print_ocr
 from tocky.ia import extract_page_index, get_ia_metadata, get_page_scan
 from tocky.ocr import ocr_djvu_page
@@ -83,7 +83,7 @@ def process_ol_book(ol_record: dict) -> ItemProcessingState:
       try:
         book_title = get_ia_metadata(state.ocaid)['title']
         for chunk in chunks:
-          toc_response = clean_raw_toc_ocr(chunk, book_title, prev_toc=state.structured_toc)
+          toc_response = extract_structured_toc(chunk, book_title, prev_toc=state.structured_toc)
           state.structured_toc += '\n' + toc_response.toc.strip().strip('`').strip()
           state.prompt_tokens += toc_response.prompt_tokens
           state.completion_tokens += toc_response.completion_tokens

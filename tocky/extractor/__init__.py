@@ -8,8 +8,8 @@ class TocResponse:
   prompt_tokens: int
   completion_tokens: int
 
-def clean_raw_toc_ocr(raw_ocr: str, book_title: str, prev_toc: str = None) -> TocResponse:
-  prompt = """
+
+SYSTEM_PROMPT = """
 You are a librarian extracting table of contents data in a structured format. The format you will need to output is as follows:
 
 ```
@@ -87,6 +87,8 @@ B. Agriculture
 ```
 """
 
+
+def extract_structured_toc(ocr_text: str, book_title: str, prev_toc: str = None) -> TocResponse:
   if prev_toc:
     nline = '\n'
     message = f"""
@@ -100,7 +102,7 @@ Here is the end of what you last output. Do not output this again, though.
 
 And here is the rest of the OCR text:
 ```
-{raw_ocr}
+{ocr_text}
 ```
 """.strip()
   else:
@@ -108,14 +110,14 @@ And here is the rest of the OCR text:
 Extract the table of contents from this OCR text of "{book_title}":
 
 ```
-{raw_ocr}
+{ocr_text}
 ```
   """.strip()
   print('openai request', message[0:500] + '...')
   completion = openai.chat.completions.create(
     model="gpt-3.5-turbo-1106",
     messages=[
-      {"role": "system", "content": prompt},
+      {"role": "system", "content": SYSTEM_PROMPT},
       {"role": "user", "content": message},
     ],
     # max_tokens=1024,
