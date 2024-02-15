@@ -145,7 +145,7 @@ Extract the table of contents from this OCR text of "{book_title}":
       # Not good
       return line
 
-  toc = completion.choices[0].message.content
+  toc = completion.choices[0].message.content.strip().strip('`')
   prompt_tokens = completion.usage.prompt_tokens
   completion_tokens = completion.usage.completion_tokens
   return TocResponse(
