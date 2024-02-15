@@ -133,7 +133,7 @@ def ocr_printer_canvas(djvu_page: str | etree._Element) -> str:
 
 def print_ocr(djvu_xml: str | etree._Element, printer: Literal['canvas', 'linear']='canvas') -> str:
   if printer == 'canvas':
-    return ocr_printer_2d(djvu_xml)
+    return ocr_printer_canvas(djvu_xml)
   elif printer == 'linear':
     return ocr_printer_linear(djvu_xml)
   else:
