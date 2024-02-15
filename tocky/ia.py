@@ -40,7 +40,11 @@ def ia_language_to_iso639_2_code(lang: str) -> str | None:
   if len(lang) == 3:
     return lang
   else:
-    return pycountry.languages.get(name=lang)
+    language = pycountry.languages.get(name=lang)
+    if language:
+      return language.alpha_3
+    else:
+      return None
 
 def extract_page_index(page_filename: str) -> int:
   return int(re.search(r'(?:_)(\d+)(?:\.djvu)', page_filename).group(1))
