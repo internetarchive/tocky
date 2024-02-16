@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 import re
+from typing import TypedDict
 import tiktoken
 import json
 import traceback
@@ -19,11 +20,11 @@ from tocky.validator import validate_extracted_toc
 class ItemProcessingState:
   ocaid: str
   status: str = ''
-  toc_raw_ocr: list[str] | None = None
+  toc_raw_ocr: list[str] = field(default_factory=list)
   detected_toc: list[tuple[str, str]] = field(default_factory=list)
   toc_ocr: str = ''
   structured_toc: str = ''
-  error: Exception = None
+  error: Exception | None = None
   prompt_tokens: int = 0
   completion_tokens: int = 0
 
@@ -109,10 +110,16 @@ def push_to_toc_queue(record: dict):
       data=json.dumps(record)
   )
 
-def process_all(ia_query: str, rows=10, page=1, ia_overrides=None):
+
+class IaSearchParams(TypedDict):
+  q: str
+  sort: str
+
+
+def process_all(ia_params: IaSearchParams, rows=10, page=1, ia_overrides=None):
   ia_overrides = ia_overrides or {}
   ia_records = requests.get('https://archive.org/advancedsearch.php', params={
-    **ia_query,
+    **ia_params,
     'fl': 'identifier,openlibrary_edition',
     'rows': rows,
     'page': page,

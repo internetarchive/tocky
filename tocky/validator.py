@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import re
 
 @dataclass
 class TocEntry:
@@ -12,7 +13,7 @@ class OlTocParseError(Exception):
   pass
 
 
-def parse_ol_toc(toc_string: str) -> List[TocEntry]:
+def parse_ol_toc(toc_string: str) -> list[TocEntry]:
     toc_entries = []
     lines = toc_string.strip().split('\n')
     pattern = r'''
