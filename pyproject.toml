@@ -22,8 +22,6 @@ Rtree = "1.1.0"
 tiktoken = "0.5.1"
 tqdm = "4.66.1"
 pycountry = "^23.12.11"
-Flask = { version = "^3.0.0", optional = true }
-Flask-Cors = { version = "^4.0.0", optional = true }
 
 [tool.poetry.dev-dependencies]
 ipykernel = "^6.27.1"
@@ -33,8 +31,12 @@ pyright = "^1.1.347"
 pytest = "^7.4.4"
 pytest-cov = "^4.1.0"
 
-[tool.poetry.extras]
-app = ["Flask", "Flask-Cors"]
+[tool.poetry.group.app]
+optional = true
+
+[tool.poetry.group.app.dependencies]
+Flask = "^3.0.0"
+Flask-Cors = "^4.0.0"
 
 [build-system]
 requires = ["poetry-core"]
