@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tocky</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
+    <style>
+        #app {
+            font-family: Avenir, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .page-ocr {
+            border: 1px solid black;
+            font-size: 10px;
+        }
+
+        iframe {
+            width: 100%;
+            border: 0;
+            height: 100%;
+        }
+
+        #app>main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tab {
+            overflow: auto;
+            flex: 1;
+        }
+
+        .tab[data-tab=book] {
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-split {
+            display: flex;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .main-split .left,
+        .main-split .right {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .main-split .right textarea {
+            flex: 1;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <main class="ui basic segment" v-if="current_toc">
+            Status: {{current_toc.record.status}}
+
+            <div class="main-split">
+                <div class="left">
+                    <div class="ui top attached tabular menu">
+                        <div class="active item" data-tab="ocr">OCR</div>
+                        <div class="item" data-tab="book">Book</div>
+                        <div class="item" data-tab="json">JSON</div>
+                    </div>
+                    <div class="ui bottom attached tab segment" data-tab="ocr">
+                        <pre class="page-ocr" v-for="page in current_toc.record.toc_raw_ocr">{{page}}</pre>
+                    </div>
+                    <div class="ui bottom attached tab loading segment" data-tab="book">
+                        <iframe
+                            :src="`https://archive.org/embed/${current_toc.record.ocaid}?admin=1#page/leaf${current_toc.record.detected_toc[0]}`"></iframe>
+                    </div>
+                    <div class="ui bottom attached tab segment" data-tab="json">
+                        <pre>{{JSON.stringify(current_toc, null, '  ')}}</pre>
+                    </div>
+                </div>
+                <div class="right">
+                    <textarea v-model="corrected_toc"></textarea>
+                    <div>
+                        <select class="ui selection dropdown" v-model="current_toc.record.human_validation">
+                            <option value="Perfect">Perfect</option>
+                            <option value="Near Perfect">Near Perfect</option>
+                            <option value="Good">Good</option>
+                            <option value="Ok">Ok</option>
+                            <option value="Safe Wrong">Safe Wrong</option>
+                            <option value="Incomplete">Incomplete</option>
+                            <option value="Wrong">Wrong</option>
+                        </select>
+                        <div class="ui input">
+                            <input type="text" placeholder="Comment..." v-model="current_toc.record.comment">
+                        </div>
+                    </div>
+                    <div>
+                        <button class="ui primary button" @click="submitCorrections">Submit corrections</button>
+                        <button class="ui primary button" @click="saveToOL" :disabled="!corrected_toc">Save to Open
+                            Library</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <main class="ui basic segment" v-else>
+            <i>No TOC loaded</i>
+        </main>
+
+        <footer class="controls">
+            <button class="ui primary button" @click="getNextToc">Get next TOC</button>
+        </footer>
+    </div>
+
+    <script>
+        await import("https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js");
+        await import("https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.js");
+        const { default: Vue } = await import("https://cdn.jsdelivr.net/npm/vue@2.7/dist/vue.esm.browser.js");
+
+        window.app = new Vue({
+            el: "#app",
+            data() {
+                return {
+                    current_toc: null,
+                    corrected_toc: null,
+                };
+            },
+
+            watch: {
+                async current_toc(newVal, oldVal) {
+                    if (!oldVal) {
+                        console.log("init tabs");
+                        await new Promise((res) => setTimeout(res, 100));
+                        $(".tabular.menu .item").tab();
+                    }
+                },
+            },
+
+            methods: {
+                async getNextToc() {
+                    const example = {
+                        "assignee": null,
+                        "created": "2023-10-21 22:44:22",
+                        "id": 1,
+                        "record": {
+                            "code version": "v2.D.0",
+                            "completion_tokens": 181,
+                            "detected_toc": [11],
+                            "error": null,
+                            "ocaid": "goingsolo00roal",
+                            "prompt_tokens": 640,
+                            "status": "TOC Extracted",
+                            "structured_toc":
+                                "\n* | The Voyage Out | II\n* | Dar es Salaam | 29\n* | Simba | 39\n* | The Green Mamba | 50\n* | The Beginning of the War | 59\n* | Mdisho of the Mwanumwezi | 74\n* | Flying Training | 84\n* | Survival | 101\n* | First Encounter with a Bandit | 124\n* | The Ammunition Ship | 142\n* | The Battle of Athens on the Twentieth of April | 147\n* | The Last Day but One | 156\n* | The Argos Fiasco | 174\n* | Palestine and Syria | 186\n* | Home | 200\n* | Maps |\n    ** Map 1 | East Africa | 10\n    ** Map 2 | The Eastern Mediterranean | 102",
+                            "toc_raw_ocr": [
+                                "                                       Contents                                                    \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nThe Voyage Out                                                                                   II\nDar es Salaam                                                                                   29 \nSimba                                                                                            39\n\nThe Green Mamba                                                                                  So\n\nThe Beginning of the War                                                                         59\n\nMdisho of the Mwanumwezi                                                                         74\nFlying Training                                                                                 84 \n\nSurvival                                                                                       IOI \nFirst Encounter with a Bandit                                                                 124  \n\nThe Ammunition Ship                                                                            I42 \n\nThe Battle of Athens                 5  the Twentieth of April                                 I47 \nThe Last        Day      but One                                                               I56 \n\nThe Argos Fiasco                                                                               I74 \n\nPalestine and Syria                                                                            186 \nHome                                                                                          200  \n\n\n\n\n\n\n\n\n\n\n\nMaps                                                                                               \n\n I    East Africa                                                                                IO\n2     The Eastern Mediterranean                                                                I02 ",
+                            ],
+                        },
+                        "state": "Todo",
+                    };
+                    /* Read the session cookie to determine assignee */
+                    const assignee = document.cookie.match(/session=([^%]+)/)[1];
+                    const params = new URLSearchParams({ assignee });
+                    this.current_toc = await fetch(`/tocky/pop?${params}`, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-API-Key': window.TOCKEY_API_KEY = (window.TOCKEY_API_KEY || prompt("Tocky API key")),
+                        }
+                    }).then((r) => r.json());
+                    this.corrected_toc = this.current_toc.record.structured_toc;
+                },
+                async submitCorrections() {
+                    const body = Object.assign({}, this.current_toc.record);
+                    if (this.corrected_toc != this.current_toc.record.structured_toc) {
+                        body.corrected_toc = this.corrected_toc;
+                    }
+                    await fetch(
+                        `/tocky/update/${this.current_toc.id}`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-API-Key": window.TOCKEY_API_KEY = (window.TOCKEY_API_KEY || prompt("Tocky API key")),
+                            },
+                            body: JSON.stringify(body),
+                        },
+                    );
+                },
+                async saveToOL() {
+                    // Always save to prod endpoint!
+                    const rec = await fetch(
+                        `https://openlibrary.org/ia/${this.current_toc.record.ocaid}.json`,
+                    ).then((r) => r.json());
+                    rec.table_of_contents = parseOlToc(this.corrected_toc);
+                    rec._comment = 'Add TOC from Tocky';
+                    await fetch(`https://openlibrary.org${rec.key}.json`, {
+                        method: "PUT",
+                        credentials: "include",
+                        body: JSON.stringify(rec),
+                    });
+                },
+            },
+        });
+
+        class OlTocParseError extends Error { }
+        function parseOlToc(tocString) {
+            const tocEntries = [];
+            const lines = tocString.trim().split("\n").map((l) => l.trim());
+
+            for (const line of lines) {
+                const parts = line.split("|");
+                if (parts) {
+                    const [label, title, pagenum] = parts;
+                    if (!label.startsWith("*")) {
+                        throw new OlTocParseError(`no stars: ${parts}`);
+                    }
+                    tocEntries.push({
+                        level: label.trim().match(/^\*+/)[0].length,
+                        label: label.replace(/^\*+\s*/g, "").trim(),
+                        title: title.trim(),
+                        pagenum: pagenum.trim(),
+                    });
+                } else {
+                    throw new OlTocParseError("does not match pattern");
+                }
+            }
+
+            return tocEntries;
+        }
+    </script>
+</body>
+
+</html>
