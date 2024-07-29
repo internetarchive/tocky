@@ -4,7 +4,9 @@ ENV FLASK_APP=app.py
 ENV FLASK_RUN_HOST=0.0.0.0
 
 # Setup tesseract
-RUN add-apt-repository -y ppa:alex-p/tesseract-ocr5 \
+RUN apt-get update \
+    && apt-get install -y software-properties-common \
+    && add-apt-repository -y ppa:alex-p/tesseract-ocr5 \
     && apt-get update \
     && apt-get install -y tesseract-ocr tesseract-ocr-eng
 
