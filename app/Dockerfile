@@ -1,9 +1,10 @@
 FROM python:3.11
 
-ENV FLASK_APP=app.py
-ENV FLASK_RUN_HOST=0.0.0.0
-
 RUN pip install poetry
+
+ENV FLASK_APP=app.py \
+    FLASK_RUN_HOST=0.0.0.0 \
+    POETRY_VIRTUALENVS_CREATE=false
 
 WORKDIR /app
 
