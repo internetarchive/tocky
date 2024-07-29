@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "tocky"
 description = "Extract structured table of contents data from digitized books."
-version = "0.0.12"
+version = "0.0.13"
 authors = ["Drini Cami <cdrini@gmail.com>"]
 license = "MIT"
 
