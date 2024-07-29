@@ -195,13 +195,13 @@
                     );
                 },
                 async saveToOL() {
-                    // Always save to prod endpoint!
+                    // Always fetch latest from prod endpoint!
                     const rec = await fetch(
                         `https://openlibrary.org/ia/${this.current_toc.record.ocaid}.json`,
                     ).then((r) => r.json());
                     rec.table_of_contents = parseOlToc(this.corrected_toc);
                     rec._comment = 'Add TOC from Tocky';
-                    await fetch(`https://openlibrary.org${rec.key}.json`, {
+                    await fetch(`${rec.key}.json`, {
                         method: "PUT",
                         credentials: "include",
                         body: JSON.stringify(rec),
