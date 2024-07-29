@@ -10,10 +10,10 @@ RUN add-apt-repository -y ppa:alex-p/tesseract-ocr5 \
 
 WORKDIR /app
 
-COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+COPY pyproject.toml poetry.lock ./
+RUN pip install poetry && poetry install --extras "app"
 
-COPY . /app
+COPY ./app /app
 
 EXPOSE 5000
 
