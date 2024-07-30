@@ -19,7 +19,7 @@ Pillow = "^9.4.0"
 pytesseract = "0.3.10"
 requests = "^2.31.0"
 Rtree = "1.1.0"
-tiktoken = "0.5.1"
+tiktoken = "^0.7.0"
 tqdm = "4.66.1"
 pycountry = "^23.12.11"
 
