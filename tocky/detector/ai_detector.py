@@ -1,4 +1,5 @@
 import base64
+from dataclasses import dataclass
 import json
 import re
 import textwrap
@@ -10,8 +11,8 @@ from PIL import Image, ImageDraw, ImageFont
 from tocky.utils.ia import get_book_images
 from tocky.utils.llm import MODEL_PRICES
 
-
-class AiImageDetector:
+@dataclass
+class AiImageDetectorOptions:
     system_prompt = textwrap.dedent("""
         You are a bot that helps in the detection of all table of contents pages in a book.
 
@@ -25,21 +26,28 @@ class AiImageDetector:
     model = "gpt-4o-mini"
     max_tokens = 200
     image_size = (1024, 512)
+
+class AiImageDetector:
+    """
+    This detector uses multi-modal AI models ability to process images and text together
+    to detect table of contents pages in a book.
+    """
+    P = AiImageDetectorOptions()
     debug = True
 
     @property
-    def model_pricing(self):
-        return MODEL_PRICES[self.model]
+    def model(self):
+        return MODEL_PRICES[self.P.model]
 
     def predict_cost(self):
-        return self.model_pricing.predict_cost([self.system_prompt], self.max_tokens, [self.image_size])
+        return self.model.predict_cost([self.P.system_prompt], self.P.max_tokens, [self.P.image_size])
 
     def detect(self, ocaid: str):
         small_images = list(get_book_images(ocaid, range(0, 28), reduce=3))
         composite_image = place_images_in_grid(
             small_images,
-            composite_width=self.image_size[0],
-            composite_height=self.image_size[1],
+            composite_width=self.P.image_size[0],
+            composite_height=self.P.image_size[1],
             image_width=140,
         )
 
@@ -49,11 +57,11 @@ class AiImageDetector:
 
         client = OpenAI()
         response = client.chat.completions.create(
-            model=self.model,
+            model=self.P.model,
             messages=[
                 {
                     "role": "system",
-                    "content": self.system_prompt,
+                    "content": self.P.system_prompt,
                 },
                 {
                     "role": "user",
@@ -68,7 +76,7 @@ class AiImageDetector:
                     ],
                 }
             ],
-            max_tokens=self.max_tokens,
+            max_tokens=self.P.max_tokens,
         )
 
         if self.debug:
@@ -79,7 +87,7 @@ class AiImageDetector:
         json_m = re.search(r'\{[\s\S]*\}', response_str, flags=re.MULTILINE)
         assert json_m
 
-        return json.loads(json_m.group(0))
+        return json.loads(json_m.group(0))['toc_pages']
 
 
 
