@@ -11,7 +11,7 @@ from lxml import etree
 from tocky.detector import extract_toc_pages
 from tocky.extractor import extract_structured_toc
 from tocky.ocr.printer import print_ocr
-from tocky.ia import extract_page_index, get_ia_metadata, get_page_scan
+from tocky.utils.ia import extract_page_index, get_ia_metadata, get_page_scan
 from tocky.ocr import ocr_djvu_page
 from tocky.utils import avg_ocr_conf
 from tocky.validator import validate_extracted_toc

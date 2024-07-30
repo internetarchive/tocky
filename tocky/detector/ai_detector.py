@@ -7,8 +7,8 @@ from io import BytesIO
 from openai import OpenAI
 from PIL import Image, ImageDraw, ImageFont
 
-from tocky.ia import get_book_images
-from tocky.llm_utils import MODEL_PRICES
+from tocky.utils.ia import get_book_images
+from tocky.utils.llm import MODEL_PRICES
 
 
 class AiImageDetector:

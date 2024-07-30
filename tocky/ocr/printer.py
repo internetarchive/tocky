@@ -3,7 +3,7 @@ from typing import Literal
 from lxml import etree
 from rtree import index
 
-from tocky.ia import get_ia_metadata
+from tocky.utils.ia import get_ia_metadata
 
 def ocr_printer_linear(djvu_page: str | etree._Element) -> str:
     if isinstance(djvu_page, str):

@@ -4,7 +4,7 @@ import re
 
 from lxml import etree
 
-from tocky.ia import extract_page_index, get_djvu_pages, get_page_scan, ocaid_to_djvu_url
+from tocky.utils.ia import extract_page_index, get_djvu_pages, get_page_scan, ocaid_to_djvu_url
 from tocky.ocr import ocr_djvu_page
 from tocky.utils import avg_ocr_conf
 
