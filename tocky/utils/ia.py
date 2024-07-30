@@ -97,9 +97,13 @@ def get_main_jp2_zip(ocaid_or_metadata: str | IaFullMetadata) -> str:
   else:
     full_metadata = ocaid_or_metadata
 
-  all_jp2_zips = list(file for file in full_metadata['files'] if file['name'].endswith('_jp2.zip'))
+  all_jp2_zips = list(
+    file
+    for file in full_metadata['files']
+    if file['name'].endswith('_jp2.zip') and not file['name'].endswith('_raw_jp2.zip')
+  )
   assert all_jp2_zips, "No jp2 files found"
-  assert len(all_jp2_zips) == 1, "Multiple jp2 files found"
+  assert len(all_jp2_zips) == 1, f"Multiple jp2 files found {[f['name'] for f in all_jp2_zips]}"
   jp2_zip = all_jp2_zips[0]
   return jp2_zip['name']
 

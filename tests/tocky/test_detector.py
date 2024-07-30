@@ -14,7 +14,7 @@ class Test_analyze_page_for_toc:
         xml_str = build_test_page_object_str()
 
         elem = etree.fromstring(xml_str)
-        with patch('tocky.detector.ocr_djvu_page') as mock_ocr_djvu_page:
+        with patch('tocky.detector.ocr_detector.ocr_djvu_page') as mock_ocr_djvu_page:
             mock_ocr_djvu_page.return_value = build_test_page_object_str(re_ocrd=True)
 
             OcrDetector().analyze_page_for_toc(elem, redo_ocr=True)
@@ -24,7 +24,7 @@ class Test_analyze_page_for_toc:
         xml_str = build_test_page_object_str(re_ocrd=True)
 
         elem = etree.fromstring(xml_str)
-        with patch('tocky.detector.ocr_djvu_page') as mock_ocr_djvu_page:
+        with patch('tocky.detector.ocr_detector.ocr_djvu_page') as mock_ocr_djvu_page:
             mock_ocr_djvu_page.return_value = build_test_page_object_str(re_ocrd=True)
 
             OcrDetector().analyze_page_for_toc(elem, redo_ocr=True)
