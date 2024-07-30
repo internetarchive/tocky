@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Literal, Any
 
-from tocky.detector import analyze_djvu_for_toc, extract_page_index, ocaid_to_djvu_url
+from tocky.detector import OcrDetector, extract_page_index, ocaid_to_djvu_url
 
 @dataclass
 class TestCase:
@@ -96,7 +96,7 @@ def run_test(test: TestCase) -> TestResult:
   has_begun = False
   has_ended = False
   toc_pagenums = []
-  for (pagenum, xml_str, toc_analysis) in analyze_djvu_for_toc(ocaid_to_djvu_url(test.ocaid)):
+  for (pagenum, xml_str, toc_analysis) in OcrDetector().analyze_djvu_for_toc(ocaid_to_djvu_url(test.ocaid)):
     pagen = extract_page_index(pagenum)
 
     has_begun = has_begun or toc_analysis.is_toc

@@ -8,7 +8,7 @@ import os
 import requests
 from lxml import etree
 
-from tocky.detector import extract_toc_pages
+from tocky.detector import OcrDetector
 from tocky.extractor import extract_structured_toc
 from tocky.ocr.printer import print_ocr
 from tocky.utils.ia import extract_page_index, get_ia_metadata, get_page_scan
@@ -53,7 +53,7 @@ def process_ol_book(ol_record: dict) -> ItemProcessingState:
     return etree.tostring(root, encoding='unicode')
 
   try:
-    state.detected_toc = list(extract_toc_pages(state.ocaid))
+    state.detected_toc = list(OcrDetector().extract_toc_pages(state.ocaid))
   except Exception as e:
     state.status = 'Errored'
     state.error = e

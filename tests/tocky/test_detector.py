@@ -1,13 +1,13 @@
 from lxml import etree
 from unittest.mock import patch
 
-from tocky.detector import analyze_page_for_toc
+from tocky.detector import OcrDetector
 
 class Test_analyze_page_for_toc:
     def test_no_hiddentext(self):
         xml_str = build_test_page_object_str(hiddentext=False)
         elem = etree.fromstring(xml_str)
-        result = analyze_page_for_toc(elem, allow_reocr=False)
+        result = OcrDetector().analyze_page_for_toc(elem, allow_reocr=False)
         assert result.is_toc == False
 
     def test_redo_ocr(self):
@@ -17,7 +17,7 @@ class Test_analyze_page_for_toc:
         with patch('tocky.detector.ocr_djvu_page') as mock_ocr_djvu_page:
             mock_ocr_djvu_page.return_value = build_test_page_object_str(re_ocrd=True)
 
-            analyze_page_for_toc(elem, redo_ocr=True)
+            OcrDetector().analyze_page_for_toc(elem, redo_ocr=True)
             assert mock_ocr_djvu_page.call_count == 1
 
     def test_duplicate_redo_ocr(self):
@@ -27,7 +27,7 @@ class Test_analyze_page_for_toc:
         with patch('tocky.detector.ocr_djvu_page') as mock_ocr_djvu_page:
             mock_ocr_djvu_page.return_value = build_test_page_object_str(re_ocrd=True)
 
-            analyze_page_for_toc(elem, redo_ocr=True)
+            OcrDetector().analyze_page_for_toc(elem, redo_ocr=True)
             assert mock_ocr_djvu_page.call_count == 0
 
 def build_test_page_object_str(hiddentext=True, re_ocrd=False):
