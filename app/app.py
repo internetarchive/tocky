@@ -1,4 +1,5 @@
 from contextlib import closing
+from dataclasses import dataclass
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
@@ -161,8 +162,33 @@ def root():
 
 @app.route('/submit', methods=['GET'])
 def submit():
-    # Render the Vue.js frontend
     return app.send_static_file('submit.html')
+
+
+@dataclass
+class SubmitRecord:
+    ia_identifier: str
+    ol_edition_id: str
+
+    @staticmethod
+    def from_json_dict(record: dict) -> 'SubmitRecord':
+        return SubmitRecord(
+            ia_identifier=record['ia_identifier'],
+            ol_edition_id=record['ol_edition_id'],
+        )
+
+
+@app.route('/submit', methods=['POST'])
+def submit_post():
+    # Check header for api key
+    api_key = request.headers.get('X-API-Key')
+    if api_key != os.environ.get('API_KEY'):
+        return jsonify({'success': False, 'message': 'Invalid API key'}), 401
+
+    # Read the content from the request
+    content = request.get_json()
+
+    return jsonify(content)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

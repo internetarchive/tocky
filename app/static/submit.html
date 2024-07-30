@@ -20,20 +20,23 @@
 <body>
     <div id="app">
         <form class="ui form">
-            <label>
-                Internet Archive Identifier
-                <input type="text" v-model="ia_identifier">
+            <div class="field">
+                <label>Internet Archive</label>
+                <input type="text" v-model="iaIdentifier" placeholder="e.g. goody">
             </label>
 
-            <div class="ui horizontal divider">OR</div>
-
-            <label>
-                Open Library Edition key (e.g. "OL123M")
-                <input type="text" v-model="ol_edition_id">
-            </label>
+            <div class="field">
+                <label>Open Library</label>
+                <input type="text" v-model="olEditionId" placeholder="e.g. OL123M" pattern="^OL\d+M$">
+            </div>
 
             <footer class="controls">
-                <button class="ui primary button" @click="extractToc">Extract TOC</button>
+                <button
+                    class="ui primary button"
+                    @click="extractToc"
+                    :class="{ loading: state === 'Submitting' }"
+                    :disabled="state === 'Submitting'"
+                >Extract TOC</button>
             </footer>
         </form>
     </div>
@@ -47,21 +50,42 @@
             el: "#app",
             data() {
                 return {
-                    ia_identifier: "",
-                    ol_edition_id: "",
+                    iaIdentifier: "",
+                    olEditionId: "",
+                    state: "To Submit",
                 };
             },
 
             mounted() {
                 // read from url params if empty
                 const urlParams = new URLSearchParams(window.location.search);
-                this.ia_identifier = this.ia_identifier || urlParams.get("ia") || "";
-                this.ol_edition_id = this.ol_edition_id || urlParams.get("ol") || "";
+                this.iaIdentifier = this.iaIdentifier || urlParams.get("ia") || "";
+                this.olEditionId = this.olEditionId || urlParams.get("ol") || "";
             },
 
             methods: {
                 async extractToc() {
-                    alert("Not implemented");
+                    window.TOCKEY_API_KEY = (window.TOCKEY_API_KEY || prompt("Tocky API key"));
+
+                    if (!window.TOCKEY_API_KEY) {
+                        alert("Please provide a Tocky API key");
+                    }
+                    this.state = "Submitting";
+                    const res = await fetch("/tocky/submit", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            'X-API-Key': window.TOCKEY_API_KEY,
+                        },
+                        body: JSON.stringify({
+                            ia_identifier: this.iaIdentifier,
+                            ol_edition_id: this.olEditionId,
+                        })
+                    });
+                    if (!res.ok) {
+                        throw new Error("Failed to extract TOC");
+                    }
+                    console.log(res.json());
                 },
             },
         });
