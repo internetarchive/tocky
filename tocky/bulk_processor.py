@@ -82,7 +82,7 @@ def process_ol_book(ol_record: dict) -> ItemProcessingState:
         else:
           chunks[-1] += '\n' + page_ocr
       try:
-        book_title = get_ia_metadata(state.ocaid)['title']
+        book_title = get_ia_metadata(state.ocaid)['metadata']['title']
         for chunk in chunks:
           toc_response = extract_structured_toc(chunk, book_title, prev_toc=state.structured_toc)
           state.structured_toc += '\n' + toc_response.toc.strip().strip('`').strip()
@@ -93,7 +93,7 @@ def process_ol_book(ol_record: dict) -> ItemProcessingState:
         state.status = 'Errored'
         state.error = e
       if state.structured_toc:
-        total_pages = int(get_ia_metadata(state.ocaid)['imagecount'])
+        total_pages = int(get_ia_metadata(state.ocaid)['metadata']['imagecount'])
         validation = validate_extracted_toc(state.structured_toc, total_pages)
         if validation != 'Valid':
           state.status = f'TOC Validation: {validation}'

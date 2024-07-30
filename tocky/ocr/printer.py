@@ -3,7 +3,7 @@ from typing import Literal
 from lxml import etree
 from rtree import index
 
-from tocky.ia import extract_page_index, get_ia_metadata
+from tocky.ia import get_ia_metadata
 
 def ocr_printer_linear(djvu_page: str | etree._Element) -> str:
     if isinstance(djvu_page, str):
@@ -44,7 +44,7 @@ def ocr_printer_canvas(djvu_page: str | etree._Element) -> str:
     canvas = ""
 
     # Convert inches to pixels
-    dpi = int((root.xpath(".//PARAM[@name='DPI']/@value") or [int(get_ia_metadata(ocaid)['ppi'])])[0])
+    dpi = int((root.xpath(".//PARAM[@name='DPI']/@value") or [int(get_ia_metadata(ocaid)['metadata']['ppi'])])[0])
     line_rounding_size = round(0.0333 * dpi)
 
     canvas_width = 120  # dpi // 4
