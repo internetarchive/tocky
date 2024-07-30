@@ -1,7 +1,7 @@
 from lxml import etree
 from unittest.mock import patch
 
-from tocky.detector import OcrDetector
+from tocky.detector.ocr_detector import OcrDetector
 
 class Test_analyze_page_for_toc:
     def test_no_hiddentext(self):

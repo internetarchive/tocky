@@ -8,7 +8,7 @@ import os
 import requests
 from lxml import etree
 
-from tocky.detector import OcrDetector
+from tocky.detector.ocr_detector import OcrDetector
 from tocky.extractor import extract_structured_toc
 from tocky.ocr.printer import print_ocr
 from tocky.utils.ia import extract_page_index, get_ia_metadata, get_page_scan
