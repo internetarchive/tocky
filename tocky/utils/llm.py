@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 import openai
 
 import tiktoken
@@ -45,7 +46,7 @@ class ModelPricing:
     ):       
         prompt_tokens = sum(self.count_tokens(p) for p in prompts)
         image_tokens = sum(
-            self.tokens_per_tile * (image_size[0] * image_size[1] // self.image_tile_size ** 2)
+            self.tokens_per_tile * math.ceil(image_size[0] / self.image_tile_size) * math.ceil(image_size[1] / self.image_tile_size)
             for image_size in image_sizes
         )
         if image_tokens:
