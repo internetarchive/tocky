@@ -56,7 +56,7 @@ def pop():
             # Execute the parameterized query
             result = cur.execute("""
                 SELECT * FROM toc_queue
-                WHERE state = 'Todo'
+                WHERE state = 'To Review'
                 ORDER BY created ASC
                 LIMIT 1
             """)
@@ -64,7 +64,7 @@ def pop():
             if row:
                 cur.execute("""
                     UPDATE toc_queue
-                    SET state = 'In Progress',
+                    SET state = 'Reviewing',
                         assignee = ?
                     WHERE id = ?
                 """, (assignee, row['id']))
@@ -111,7 +111,7 @@ def push():
             # Execute the parameterized query
             cur.execute("""
                 INSERT INTO toc_queue (state, record)
-                VALUES ('Todo', ?)
+                VALUES ('To Review', ?)
             """, (json.dumps(content),))
             conn.commit()
             return jsonify({'success': True})
