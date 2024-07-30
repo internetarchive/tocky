@@ -4,17 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tocky</title>
+    <title>Submit | Tocky</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
-    <style>
-        #app {
-            font-family: Avenir, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-    </style>
+
 </head>
 
 <body>
@@ -22,12 +15,12 @@
         <form class="ui form">
             <div class="field">
                 <label>Internet Archive</label>
-                <input type="text" v-model="iaIdentifier" placeholder="e.g. goody">
-            </label>
+                <input type="text" v-model="ia_id" placeholder="e.g. goody">
+            </div>
 
             <div class="field">
                 <label>Open Library</label>
-                <input type="text" v-model="olEditionId" placeholder="e.g. OL123M" pattern="^OL\d+M$">
+                <input type="text" v-model="ol_id" placeholder="e.g. OL123M" pattern="^OL\d+M$">
             </div>
 
             <footer class="controls">
@@ -50,8 +43,8 @@
             el: "#app",
             data() {
                 return {
-                    iaIdentifier: "",
-                    olEditionId: "",
+                    ia_id: "",
+                    ol_id: "",
                     state: "To Submit",
                 };
             },
@@ -59,8 +52,8 @@
             mounted() {
                 // read from url params if empty
                 const urlParams = new URLSearchParams(window.location.search);
-                this.iaIdentifier = this.iaIdentifier || urlParams.get("ia") || "";
-                this.olEditionId = this.olEditionId || urlParams.get("ol") || "";
+                this.ia_id = this.ia_id || urlParams.get("ia_id") || "";
+                this.ol_id = this.ol_id || urlParams.get("ol_id") || "";
             },
 
             methods: {
@@ -78,8 +71,8 @@
                             'X-API-Key': window.TOCKEY_API_KEY,
                         },
                         body: JSON.stringify({
-                            ia_identifier: this.iaIdentifier,
-                            ol_edition_id: this.olEditionId,
+                            ia_identifier: this.ia_id,
+                            ol_edition_id: this.ol_id,
                         })
                     });
                     if (!res.ok) {
