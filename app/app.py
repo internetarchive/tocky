@@ -159,5 +159,10 @@ def root():
     # Render the Vue.js frontend
     return app.send_static_file('review.html')
 
+@app.route('/submit', methods=['GET'])
+def submit():
+    # Render the Vue.js frontend
+    return app.send_static_file('submit.html')
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
