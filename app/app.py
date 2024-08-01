@@ -196,16 +196,25 @@ def submit_post():
         return jsonify({'success': False, 'message': f'Invalid detector type: {submit_options["detector"]["type"]}'}), 400
     
     detector = DETECTOR_CLS()
-    # detector.P = OcrDetectorOptions(**submit_options['detector']['options'])
-    detector.P = dataclasses.replace(detector.P, **submit_options['detector']['options'])
-    detector.debug = False
+    try:
+        detector.P = dataclasses.replace(detector.P, **submit_options['detector']['options'])
+    except TypeError as e:
+        # TODO: This will not error if things are set to the wrong type
+        return jsonify({'success': False, 'message': f'Invalid detector options: {e}'}), 400
     
-    start_time = time.time()
-    result = detector.detect(ia_id)
-    end_time = time.time()
+    detector.debug = False
+    detector_start = time.time()
+    try:
+        detector_result = detector.detect(ia_id)
+        detector_error = None
+    except Exception as e:
+        detector_error = e
+        detector_result = None
+    finally:
+        detector_end = time.time()
 
     return jsonify({
-        'success': True,
+        'success': bool(detector_error),
         'options': {
             'input_book': submit_options['input_book'],
             'detector': {
@@ -219,8 +228,10 @@ def submit_post():
         },
         'results': {
             'detector': {
-                'time': end_time - start_time,
-                'result': result,
+                'success': bool(detector_error),
+                'time': detector_end - detector_start,
+                'result': detector_result,
+                'error': str(detector_error),
             },
         }
     })
