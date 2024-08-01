@@ -2,7 +2,7 @@ FROM python:3.10
 
 # Add the Tesseract OCR repository and install Tesseract OCR
 RUN apt-get update \
-    && apt-get install -y tesseract-ocr tesseract-ocr-eng \
+    && apt-get install -y tesseract-ocr tesseract-ocr-eng libopencv-dev \
     && apt-get clean
 
 RUN pip install poetry
