@@ -31,6 +31,11 @@
             </p-fieldset>
 
             <p-fieldset legend="Detector" :toggleable="true">
+                <p>
+                    Given a book, this phase is responsible for finding the pages that contain
+                    the table of contents in a book.
+                </p>
+                
                 <div class="ui segment basic">
                     <p-float-label>
                         <p-select v-model="detector" :options="detector_options" option-label="name"></p-select>
@@ -41,7 +46,7 @@
                 <p-fieldset legend="OCR Detector Options" :toggleable="true" v-if="detector == DETECTORS.ocr_detector">
                     <div class="ui segment basic">
                         <label>
-                            <p-checkbox v-model="detector.options.allow_reocr.value" binary="true"></p-checkbox>
+                            <p-checkbox v-model="detector.options.allow_reocr.value" :binary="true"></p-checkbox>
                             Allow Re-OCR <i class="ui icon question circle outline" v-tooltip="`Allow custom regenerating of the OCR when deemed useful. Useful to fix errors in IA OCR.`"></i>
                         </label>
     
@@ -82,6 +87,10 @@
             </p-fieldset>
 
             <p-fieldset legend="Extractor" :toggleable="true">
+                <p>
+                    Given the pages containing the table of contents, this phase is responsible
+                    for converting those pages to a structured format.
+                </p>
                 <div class="ui segment basic">
                     <p-float-label>
                         <p-select v-model="extractor" :options="extractor_options" option-label="name"></p-select>
@@ -94,6 +103,17 @@
                 <p-message severity="error" v-if="state === 'Errored'">
                     <p>{{ error }}</p>
                 </p-message>
+
+                <p-message severity="error" v-if="response && !response.results.detector.success">
+                    <details>
+                        <summary>Error in Detector: <code>{{ response.results.detector.error }}</code></summary>
+                        <pre>{{ response.results.detector.traceback }}</pre>
+                    </details>
+                </p-message>
+                <p-message severity="success" v-else-if="response && response.results.detector.success">
+                    Detector Success: {{ response.results.detector.result }}
+                </p-message>
+
                 <button
                     class="ui primary button"
                     @click="extractToc"
@@ -169,6 +189,7 @@
                     ol_id: "",
                     state: "To Submit",
                     error: null,
+                    response: null,
                     
                     DETECTORS: DETECTORS,
                     detector: DETECTORS.ocr_detector,
@@ -196,6 +217,7 @@
                         return;
                     }
                     this.state = "Submitting";
+                    this.response = null;
                     this.error = null;
                     try {
                         const res = await fetch("/tocky/submit", {
@@ -226,7 +248,7 @@
                         if (!res.ok) {
                             throw new Error("Failed to extract TOC");
                         }
-                        console.log(await res.json());
+                        this.response = await res.json();
                     } catch (e) {
                         this.state = "Errored";
                         this.error = e;
@@ -253,6 +275,7 @@
         window.app.component('p-input-number', PrimeVue.InputNumber);
         window.app.component('p-checkbox', PrimeVue.Checkbox);
         window.app.component('p-message', PrimeVue.Message);
+        window.app.component('p-select-button', PrimeVue.SelectButton);
 
         window.app.mount("#app");
     </script>
