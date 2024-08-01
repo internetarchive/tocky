@@ -1,6 +1,7 @@
 from contextlib import closing
 import dataclasses
 from time import time
+from traceback import TracebackException
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
@@ -230,8 +231,10 @@ def submit_post():
                 'success': not detector_error,
                 'time': detector_end - detector_start,
                 'result': detector_result,
-                'error': str(detector_error),
-                'traceback': detector_error.__traceback__ if detector_error else None,
+                **({
+                    'error': str(detector_error),
+                    'traceback': '\n'.join(TracebackException.from_exception(detector_error).format()),
+                } if detector_error else {}),
             },
         }
     })
