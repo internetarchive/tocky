@@ -27,19 +27,22 @@ class OcrDetector:
     return 0
 
   def detect(self, ocaid: str):
-    return list(int(leafnum) for (leafnum, _) in self.extract_toc_pages(ocaid))
+    return [
+      extract_page_index(page_name)
+      for (page_name, _) in self.extract_toc_pages(ocaid)
+    ]
   
   def extract_toc_pages(self, ocaid: str):
     return self.detect_table_of_contents_pages(ocaid_to_djvu_url(ocaid))
 
   def detect_table_of_contents_pages(self, djvu_url: str):
     has_begun = False
-    for (page_number, elem_str, toc_analysis) in self.analyze_djvu_for_toc(djvu_url):
+    for (page_name, elem_str, toc_analysis) in self.analyze_djvu_for_toc(djvu_url):
       if has_begun and not toc_analysis.is_toc:
         break
       if toc_analysis.is_toc:
         has_begun = True
-        yield (page_number, elem_str)
+        yield (page_name, elem_str)
 
   def analyze_djvu_for_toc(self, djvu_url: str):
     has_begun = False
