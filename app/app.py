@@ -1,5 +1,4 @@
 from contextlib import closing
-from dataclasses import dataclass
 import dataclasses
 from time import time
 from flask import Flask, request, jsonify
@@ -203,7 +202,7 @@ def submit_post():
         return jsonify({'success': False, 'message': f'Invalid detector options: {e}'}), 400
     
     detector.debug = False
-    detector_start = time.time()
+    detector_start = time()
     try:
         detector_result = detector.detect(ia_id)
         detector_error = None
@@ -211,10 +210,10 @@ def submit_post():
         detector_error = e
         detector_result = None
     finally:
-        detector_end = time.time()
+        detector_end = time()
 
     return jsonify({
-        'success': bool(detector_error),
+        'success': not detector_error,
         'options': {
             'input_book': submit_options['input_book'],
             'detector': {
@@ -228,7 +227,7 @@ def submit_post():
         },
         'results': {
             'detector': {
-                'success': bool(detector_error),
+                'success': not detector_error,
                 'time': detector_end - detector_start,
                 'result': detector_result,
                 'error': str(detector_error),

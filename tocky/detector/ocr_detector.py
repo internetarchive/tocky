@@ -18,7 +18,7 @@ TOC_PAGE_DETECTOR_VERSION = [
 @dataclass
 class OcrDetectorOptions:
   ocr_engine: Literal['easyocr', 'tesseract'] = 'easyocr'
-  allow_reocr = True
+  allow_reocr: bool = True
 
 class OcrDetector:
   P = OcrDetectorOptions()
