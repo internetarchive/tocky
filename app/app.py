@@ -231,6 +231,7 @@ def submit_post():
                 'time': detector_end - detector_start,
                 'result': detector_result,
                 'error': str(detector_error),
+                'traceback': detector_error.__traceback__ if detector_error else None,
             },
         }
     })
