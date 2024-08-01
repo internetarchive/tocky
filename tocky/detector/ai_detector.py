@@ -13,7 +13,7 @@ from tocky.utils.llm import MODEL_PRICES
 
 @dataclass
 class AiImageDetectorOptions:
-    system_prompt = textwrap.dedent("""
+    system_prompt: str = textwrap.dedent("""
         You are a bot that helps in the detection of all table of contents pages in a book.
 
         Notes:
@@ -23,9 +23,9 @@ class AiImageDetectorOptions:
 
         Please output only JSON of this format: { "toc_pages": [7,8], "notes": "<anything you want to share>" }
     """)
-    model = "gpt-4o-mini"
-    max_tokens = 200
-    image_size = (1024, 512)
+    model: str = "gpt-4o-mini"
+    max_tokens: int = 200
+    image_size: tuple[int, int] = (1024, 512)
 
 class AiImageDetector:
     """
