@@ -1,4 +1,4 @@
-FROM python:3.11
+FROM python:3.10
 
 # Add the Tesseract OCR repository and install Tesseract OCR
 RUN apt-get update \
