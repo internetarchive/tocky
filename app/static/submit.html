@@ -91,6 +91,9 @@
             </p-fieldset>
 
             <footer class="ui segment basic center">
+                <p-message severity="error" v-if="state === 'Errored'">
+                    <p>{{ error }}</p>
+                </p-message>
                 <button
                     class="ui primary button"
                     @click="extractToc"
@@ -165,6 +168,7 @@
                     ia_id: "",
                     ol_id: "",
                     state: "To Submit",
+                    error: null,
                     
                     DETECTORS: DETECTORS,
                     detector: DETECTORS.ocr_detector,
@@ -192,35 +196,42 @@
                         return;
                     }
                     this.state = "Submitting";
-                    const res = await fetch("/tocky/submit", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            'X-API-Key': window.TOCKEY_API_KEY,
-                        },
-                        body: JSON.stringify({
-                            input_book: {
-                                ia_id: this.ia_id,
-                                ol_id: this.ol_id,
+                    this.error = null;
+                    try {
+                        const res = await fetch("/tocky/submit", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                'X-API-Key': window.TOCKEY_API_KEY,
                             },
-                            detector: {
-                                type: this.detector.value,
-                                options: Object.fromEntries(
-                                    Object.entries(this.detector.options).map(([key, value]) => [key, value.value])
-                                )
-                            },
-                            extractor: {
-                                type: this.extractor.value,
-                                options: Object.fromEntries(
-                                    Object.entries(this.extractor.options).map(([key, value]) => [key, value.value])
-                                )
-                            }
-                        })
-                    });
-                    if (!res.ok) {
-                        throw new Error("Failed to extract TOC");
+                            body: JSON.stringify({
+                                input_book: {
+                                    ia_id: this.ia_id,
+                                    ol_id: this.ol_id,
+                                },
+                                detector: {
+                                    type: this.detector.value,
+                                    options: Object.fromEntries(
+                                        Object.entries(this.detector.options).map(([key, value]) => [key, value.value])
+                                    )
+                                },
+                                extractor: {
+                                    type: this.extractor.value,
+                                    options: Object.fromEntries(
+                                        Object.entries(this.extractor.options).map(([key, value]) => [key, value.value])
+                                    )
+                                }
+                            })
+                        });
+                        if (!res.ok) {
+                            throw new Error("Failed to extract TOC");
+                        }
+                        console.log(await res.json());
+                    } catch (e) {
+                        this.state = "Errored";
+                        this.error = e;
+                        console.error(e);
                     }
-                    console.log(await res.json());
                     this.state = "Submitted";
                 },
             },
