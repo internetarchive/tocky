@@ -12,18 +12,85 @@
 
 <body>
     <div id="app">
-        <form class="ui form">
-            <div class="field">
-                <label>Internet Archive</label>
-                <input type="text" v-model="ia_id" placeholder="e.g. goody">
-            </div>
+        <form class="ui form container">
+            <p-fieldset legend="Input Book" :toggleable="true">
+                <div class="ui segment basic">
+                    <div class="ui two column very relaxed stackable grid">
+                        <div class="column field">
+                            <label>Internet Archive ID</label>
+                            <input type="text" name="ia_id" v-model="ia_id" placeholder="e.g. goody">
+                        </div>
 
-            <div class="field">
-                <label>Open Library</label>
-                <input type="text" v-model="ol_id" placeholder="e.g. OL123M" pattern="^OL\d+M$">
-            </div>
+                        <div class="column field">
+                            <label>Open Library ID</label>
+                            <input type="text" name="ol_id" v-model="ol_id" placeholder="e.g. OL123M" pattern="^OL\d+M$">
+                        </div>
+                    </div>
+                    <div class="ui vertical divider">or</div>
+                </div>
+            </p-fieldset>
 
-            <footer class="controls">
+            <p-fieldset legend="Detector" :toggleable="true">
+                <div class="ui segment basic">
+                    <p-float-label>
+                        <p-select v-model="detector" :options="detector_options" option-label="name"></p-select>
+                        <label>Detector</label>
+                    </p-float-label>
+                </div>
+
+                <p-fieldset legend="OCR Detector Options" :toggleable="true" v-if="detector == DETECTORS.ocr_detector">
+                    <div class="ui segment basic">
+                        <label>
+                            <p-checkbox v-model="detector.options.allow_reocr.value" binary="true"></p-checkbox>
+                            Allow Re-OCR <i class="ui icon question circle outline" v-tooltip="`Allow custom regenerating of the OCR when deemed useful. Useful to fix errors in IA OCR.`"></i>
+                        </label>
+    
+                        <br>
+                        <br>
+                        <br>
+    
+                        <p-float-label>
+                            <p-select
+                                v-model="detector.options.ocr_engine.value"
+                                :options="detector.options.ocr_engine.options"
+                                :disabled="!detector.options.allow_reocr.value"
+                            ></p-select>
+                            <label>OCR Engine</label>
+                        </p-float-label>
+    
+                        <p-message severity="warn" v-if="detector.options.ocr_engine.value === 'easyocr'">
+                            <p>EasyOCR requires a GPU to run. If you don't have a GPU, please use Tesseract.</p>
+                        </p-message>
+                        <p-message severity="warn" v-else-if="detector.options.ocr_engine.value === 'tesseract'">
+                            <p>Tesseract can perform poorly when detecting page numbers on a table of contents page, but runs on CPU.</p>
+                        </p-message>
+                    </div>
+                </p-fieldset>
+                <p-fieldset legend="AI Detector Options" :toggleable="true" v-else-if="detector == DETECTORS.ai_detector">
+                    <div class="ui segment basic">
+                        <p-float-label>
+                            <p-select v-model="detector.options.model.value" :options="detector.options.model.options"></p-select>
+                            <label>Model</label>
+                        </p-float-label>
+                        <br>
+                        <div>
+                            <label>Max Tokens <i class="ui icon question circle outline" v-tooltip="`The maximum number of tokens to generate. This is the maximum number of tokens the model will generate for the completion.`"></i></label>
+                            <p-input-number v-model="detector.options.max_tokens.value" mode="decimal" :min="1" :max="500"></p-input-number>
+                        </div>
+                    </div>
+                </p-fieldset>
+            </p-fieldset>
+
+            <p-fieldset legend="Extractor" :toggleable="true">
+                <div class="ui segment basic">
+                    <p-float-label>
+                        <p-select v-model="extractor" :options="extractor_options" option-label="name"></p-select>
+                        <label>Extractor</label>
+                    </p-float-label>
+                </div>
+            </p-fieldset>
+
+            <footer class="ui segment basic center">
                 <button
                     class="ui primary button"
                     @click="extractToc"
@@ -34,18 +101,77 @@
         </form>
     </div>
 
-    <script type="module">
-        await import("https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js");
-        await import("https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.js");
-        const { default: Vue } = await import("https://cdn.jsdelivr.net/npm/vue@2.7/dist/vue.esm.browser.js");
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/primevue/umd/primevue.min.js"></script>
+    <script src="https://unpkg.com/@primevue/themes/umd/aura.min.js"></script>
+    <script>
+        const DETECTORS = {
+            ocr_detector: {
+                name: "OCR Detector",
+                value: "ocr_detector",
+                options: {
+                    allow_reocr: {
+                        value: true,
+                    },
+                    ocr_engine: {
+                        value: "tesseract",
+                        options: [
+                            "tesseract",
+                            "easyocr",
+                        ]
+                    }
+                }
+            },
+            ai_detector: {
+                name: "AI Detector",
+                value: "ai_detector",
+                options: {
+                    model: {
+                        value: 'gpt-4o-mini',
+                        options: [
+                            "gpt-4o-mini"
+                        ]
+                    },
+                    max_tokens: {
+                        value: 200,
+                    }
+                }
+            }
+        };
 
-        window.app = new Vue({
-            el: "#app",
+        const EXTRACTORS = {
+            ocr_extractor: {
+                name: "OCR Extractor",
+                value: "ocr_extractor",
+            },
+            ai_extractor: {
+                name: "AI Extractor",
+                value: "ai_extractor",
+                options: {
+                    model: {
+                        value: 'gpt-4o-mini',
+                        options: [
+                            "gpt-4o-mini",
+                            "gpt-3.5-turbo",
+                        ]
+                    }
+                }
+            }
+        }
+        window.app = Vue.createApp({
             data() {
                 return {
                     ia_id: "",
                     ol_id: "",
                     state: "To Submit",
+                    
+                    DETECTORS: DETECTORS,
+                    detector: DETECTORS.ocr_detector,
+                    detector_options: Object.values(DETECTORS),
+
+                    EXTRACTORS: EXTRACTORS,
+                    extractor: EXTRACTORS.ocr_extractor,
+                    extractor_options: Object.values(EXTRACTORS),
                 };
             },
 
@@ -62,6 +188,7 @@
 
                     if (!window.TOCKEY_API_KEY) {
                         alert("Please provide a Tocky API key");
+                        return;
                     }
                     this.state = "Submitting";
                     const res = await fetch("/tocky/submit", {
@@ -71,17 +198,51 @@
                             'X-API-Key': window.TOCKEY_API_KEY,
                         },
                         body: JSON.stringify({
-                            ia_identifier: this.ia_id,
-                            ol_edition_id: this.ol_id,
+                            input_book: {
+                                ia_id: this.ia_id,
+                                ol_id: this.ol_id,
+                            },
+                            detector: {
+                                type: this.detector.value,
+                                options: Object.fromEntries(
+                                    Object.entries(this.detector.options).map(([key, value]) => [key, value.value])
+                                )
+                            },
+                            extractor: {
+                                type: this.extractor.value,
+                                options: Object.fromEntries(
+                                    Object.entries(this.extractor.options).map(([key, value]) => [key, value.value])
+                                )
+                            }
                         })
                     });
                     if (!res.ok) {
                         throw new Error("Failed to extract TOC");
                     }
-                    console.log(res.json());
+                    console.log(await res.json());
+                    this.state = "Submitted";
                 },
             },
         });
+        window.app.use(PrimeVue.Config, {
+            theme: {
+                preset: PrimeVue.Themes.Aura,
+                options: {
+                    prefix: 'p',
+                    darkModeSelector: '.never',
+                }
+            }
+        });
+
+        window.app.component('p-select', PrimeVue.Select);
+        window.app.component('p-float-label', PrimeVue.FloatLabel);
+        window.app.component('p-fieldset', PrimeVue.Fieldset);
+        window.app.directive('tooltip', PrimeVue.Tooltip);
+        window.app.component('p-input-number', PrimeVue.InputNumber);
+        window.app.component('p-checkbox', PrimeVue.Checkbox);
+        window.app.component('p-message', PrimeVue.Message);
+
+        window.app.mount("#app");
     </script>
 </body>
 

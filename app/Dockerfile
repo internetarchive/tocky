@@ -9,7 +9,7 @@ ENV FLASK_APP=app.py \
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-root --only "app" --compile
+RUN poetry install --with "app" --compile
 
 COPY ./app /app
 

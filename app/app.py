@@ -1,11 +1,14 @@
 from contextlib import closing
 from dataclasses import dataclass
+import dataclasses
+from time import time
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import sqlite3
 import os
-
+from tocky.detector.ai_detector import AiImageDetector
+from tocky.detector.ocr_detector import OcrDetector
 
 DB_FILE = "/data/database.db"
 
@@ -165,17 +168,6 @@ def submit():
     return app.send_static_file('submit.html')
 
 
-@dataclass
-class SubmitRecord:
-    ia_identifier: str
-    ol_edition_id: str
-
-    @staticmethod
-    def from_json_dict(record: dict) -> 'SubmitRecord':
-        return SubmitRecord(
-            ia_identifier=record['ia_identifier'],
-            ol_edition_id=record['ol_edition_id'],
-        )
 
 
 @app.route('/submit', methods=['POST'])
@@ -186,9 +178,55 @@ def submit_post():
         return jsonify({'success': False, 'message': 'Invalid API key'}), 401
 
     # Read the content from the request
-    content = request.get_json()
+    submit_options = request.get_json()
+    
+    if not submit_options['input_book']['ia_id']:
+        return jsonify({'success': False, 'message': 'IA ID is required'}), 400
 
-    return jsonify(content)
+    ia_id = submit_options['input_book']['ia_id']
+
+    DETECTORS = {
+        'ocr_detector': OcrDetector,
+        'ai_detector': AiImageDetector,
+    }
+
+    # Run detector
+    DETECTOR_CLS = DETECTORS.get(submit_options['detector']['type'])
+    if not DETECTOR_CLS:
+        return jsonify({'success': False, 'message': f'Invalid detector type: {submit_options["detector"]["type"]}'}), 400
+    
+    detector = DETECTOR_CLS()
+    # detector.P = OcrDetectorOptions(**submit_options['detector']['options'])
+    detector.P = dataclasses.replace(detector.P, **submit_options['detector']['options'])
+    detector.debug = False
+    
+    start_time = time.time()
+    result = detector.detect(ia_id)
+    end_time = time.time()
+
+    return jsonify({
+        'success': True,
+        'options': {
+            'input_book': submit_options['input_book'],
+            'detector': {
+                'type': submit_options['detector']['type'],
+                'options': detector.P.__dict__,
+            },
+            'extractor': {
+                'type': submit_options['extractor']['type'],
+                'options': submit_options['extractor']['options'],
+            },
+        },
+        'results': {
+            'detector': {
+                'time': end_time - start_time,
+                'result': result,
+            },
+        }
+    })
 
 if __name__ == '__main__':
+    if not os.environ.get('API_KEY'):
+        raise ValueError('API_KEY environment variable must be set')
+
     app.run(host='0.0.0.0', port=5000)

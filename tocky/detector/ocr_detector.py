@@ -27,7 +27,7 @@ class OcrDetector:
     return 0
 
   def detect(self, ocaid: str):
-    return list(self.extract_toc_pages(ocaid))
+    return list(int(leafnum) for (leafnum, _) in self.extract_toc_pages(ocaid))
   
   def extract_toc_pages(self, ocaid: str):
     return self.detect_table_of_contents_pages(ocaid_to_djvu_url(ocaid))

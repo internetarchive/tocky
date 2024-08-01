@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Literal, Any
 
-from tocky.detector import OcrDetector, extract_page_index, ocaid_to_djvu_url
+from tocky.detector.ocr_detector import OcrDetector, extract_page_index, ocaid_to_djvu_url
 
 @dataclass
 class TestCase:
