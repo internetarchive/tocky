@@ -53,7 +53,7 @@ class OcrDetector:
       if toc_analysis.reran_ocr:
         reocrs_done += 1
       # Let's check predecessor with redone ocr
-      if not has_begun and toc_analysis.is_toc and last_result and not last_result[2].reran_ocr:
+      if self.P.allow_reocr and not has_begun and toc_analysis.is_toc and last_result and not last_result[2].reran_ocr:
         # Check if number is too high before redoing OCR
         recheck_previous = False
         for line in elem.findall(".//LINE"):
