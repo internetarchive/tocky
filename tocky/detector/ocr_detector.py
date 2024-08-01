@@ -75,7 +75,7 @@ class OcrDetector:
           if new_toc_analysis.is_toc:
             last_result = (last_result[0], last_result[1], new_toc_analysis)
 
-      if has_begun and not toc_analysis.is_toc and not toc_analysis.reran_ocr:
+      if self.P.allow_reocr and has_begun and not toc_analysis.is_toc and not toc_analysis.reran_ocr:
         # Let's try again with rerun ocr
         reocrs_done += 1
         toc_analysis = self.analyze_page_for_toc(elem, has_begun, redo_ocr=True)
