@@ -9,22 +9,37 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
     <style>
         .carousel {
-            display: flex;
             overflow-x: auto;
             scrollbar-width: thin;
+            max-width: 837px;
+        }
+
+        .carousel--track {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            padding: 10px;
         }
 
         .carousel img {
             border-radius: 5px;
-            margin: 5px;
+            width: 100px;
         }
 
         .carousel img.greyed-out {
             filter: grayscale(100%);
+            opacity: 0.3;
         }
 
-        .carousel div {
-            text-align: center;
+        .carousel--track > div {
+            position: relative;
+
+        }
+        .carousel .p-tag {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
         }
     </style>
 </head>
@@ -113,9 +128,11 @@
                             pattern="^\d+(, ?\d+)*$"
                         ></p-input-text>
                         <div class="carousel">
-                            <div v-for="leaf in getLeafNumbersWithContext(detector.options.leaf_numbers.value)" :key="leaf.number">
-                                <img :src="getImageUrl(leaf.number)" :class="{ 'greyed-out': leaf.greyedOut }" />
-                                <p-tag>{{ leaf.number }}</p-tag>
+                            <div class="carousel--track">
+                                <div v-for="leaf in getLeafNumbersWithContext(detector.options.leaf_numbers.value)" :key="leaf.number">
+                                    <img :src="getImageUrl(leaf.number)" :class="{ 'greyed-out': leaf.greyedOut }" />
+                                    <p-tag :severity="leaf.greyedOut ? 'secondary' : 'success'">{{ leaf.number }}</p-tag>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -311,20 +328,14 @@
                 getImageUrl(leafNumber) {
                     return `https://archive.org/download/${this.ia_id}/page/leaf${leafNumber}.jpg?scale=8`;
                 },
-                getLeafNumbersWithContext(leafNumbers) {
-                    const numbers = leafNumbers.split(',').map(Number);
-                    const minNumber = Math.min(...numbers);
-                    const maxNumber = Math.max(...numbers);
-                    const contextNumbers = [];
-                    for (let i = minNumber - 2; i <= maxNumber + 2; i++) {
-                        if (i > 0) {
-                            contextNumbers.push({
-                                number: i,
-                                greyedOut: !numbers.includes(i)
-                            });
-                        }
+                *getLeafNumbersWithContext(leafNumbers) {
+                    const max = Math.max(...leafNumbers);
+                    for (let i = 0; i <= Math.max(15, max + 2); i++) {
+                        yield {
+                            number: i,
+                            greyedOut: !leafNumbers.includes(i),
+                        };
                     }
-                    return contextNumbers;
                 }
             },
         });
