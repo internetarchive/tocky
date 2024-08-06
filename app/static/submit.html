@@ -130,7 +130,7 @@
                         <div class="carousel">
                             <div class="carousel--track">
                                 <div v-for="leaf in getLeafNumbersWithContext(detector.options.leaf_numbers.value)" :key="leaf.number">
-                                    <img :src="getImageUrl(leaf.number)" :class="{ 'greyed-out': leaf.greyedOut }" />
+                                    <img :src="getImageUrl(leaf.number)" :class="{ 'greyed-out': leaf.greyedOut }" @click="toggleLeafNumber(leaf.number)" />
                                     <p-tag :severity="leaf.greyedOut ? 'secondary' : 'success'">{{ leaf.number }}</p-tag>
                                 </div>
                             </div>
@@ -335,6 +335,15 @@
                             number: i,
                             greyedOut: !leafNumbers.includes(i),
                         };
+                    }
+                },
+                toggleLeafNumber(leafNumber) {
+                    const index = this.detector.options.leaf_numbers.value.indexOf(leafNumber);
+                    if (index === -1) {
+                        this.detector.options.leaf_numbers.value.push(leafNumber);
+                        this.detector.options.leaf_numbers.value.sort();
+                    } else {
+                        this.detector.options.leaf_numbers.value.splice(index, 1);
                     }
                 }
             },
