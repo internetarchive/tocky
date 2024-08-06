@@ -84,6 +84,17 @@
                         </div>
                     </div>
                 </p-fieldset>
+                <p-fieldset legend="Manual Detector Options" :toggleable="true" v-else-if="detector == DETECTORS.manual_detector">
+                    <blockquote>"Why don't you just tell me where the TOC is?"</blockquote>
+                    <div class="ui segment basic">
+                        <label>Leaf Numbers</label>
+                        <p-input-text
+                            v-model="detector.options.leaf_numbers.value_str"
+                            placeholder="e.g. 1,2,3"
+                            pattern="^\d+(, ?\d+)*$"
+                        ></p-input-text>
+                    </div>
+                </p-fieldset>
             </p-fieldset>
 
             <p-fieldset legend="Extractor" :toggleable="true">
@@ -157,6 +168,22 @@
                     },
                     max_tokens: {
                         value: 200,
+                    }
+                }
+            },
+            manual_detector: {
+                name: "Manual Detector",
+                value: "manual_detector",
+                options: {
+                    leaf_numbers: {
+                        value: [],
+                        
+                        get value_str() {
+                            return this.value.join(",");
+                        },
+                        set value_str(value) {
+                            this.value = value.split(",").map(x => x.trim()).filter(x => x).map(x => parseFloat(x));
+                        },
                     }
                 }
             }
@@ -276,6 +303,7 @@
         window.app.component('p-checkbox', PrimeVue.Checkbox);
         window.app.component('p-message', PrimeVue.Message);
         window.app.component('p-select-button', PrimeVue.SelectButton);
+        window.app.component('p-input-text', PrimeVue.InputText);
 
         window.app.mount("#app");
     </script>

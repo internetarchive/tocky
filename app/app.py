@@ -9,6 +9,7 @@ import sqlite3
 import os
 from tocky.detector.ai_detector import AiImageDetector
 from tocky.detector.ocr_detector import OcrDetector
+from tocky.detector.manual_detector import ManualDetector
 
 DB_FILE = "/data/database.db"
 
@@ -188,6 +189,7 @@ def submit_post():
     DETECTORS = {
         'ocr_detector': OcrDetector,
         'ai_detector': AiImageDetector,
+        'manual_detector': ManualDetector,
     }
 
     # Run detector
