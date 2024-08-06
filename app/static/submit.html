@@ -7,7 +7,26 @@
     <title>Submit | Tocky</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
+    <style>
+        .carousel {
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: thin;
+        }
 
+        .carousel img {
+            border-radius: 5px;
+            margin: 5px;
+        }
+
+        .carousel img.greyed-out {
+            filter: grayscale(100%);
+        }
+
+        .carousel div {
+            text-align: center;
+        }
+    </style>
 </head>
 
 <body>
@@ -93,6 +112,12 @@
                             placeholder="e.g. 1,2,3"
                             pattern="^\d+(, ?\d+)*$"
                         ></p-input-text>
+                        <div class="carousel">
+                            <div v-for="leaf in getLeafNumbersWithContext(detector.options.leaf_numbers.value)" :key="leaf.number">
+                                <img :src="getImageUrl(leaf.number)" :class="{ 'greyed-out': leaf.greyedOut }" />
+                                <p-tag>{{ leaf.number }}</p-tag>
+                            </div>
+                        </div>
                     </div>
                 </p-fieldset>
             </p-fieldset>
@@ -283,6 +308,24 @@
                     }
                     this.state = "Submitted";
                 },
+                getImageUrl(leafNumber) {
+                    return `https://archive.org/download/${this.ia_id}/page/leaf${leafNumber}.jpg?scale=8`;
+                },
+                getLeafNumbersWithContext(leafNumbers) {
+                    const numbers = leafNumbers.split(',').map(Number);
+                    const minNumber = Math.min(...numbers);
+                    const maxNumber = Math.max(...numbers);
+                    const contextNumbers = [];
+                    for (let i = minNumber - 2; i <= maxNumber + 2; i++) {
+                        if (i > 0) {
+                            contextNumbers.push({
+                                number: i,
+                                greyedOut: !numbers.includes(i)
+                            });
+                        }
+                    }
+                    return contextNumbers;
+                }
             },
         });
         window.app.use(PrimeVue.Config, {
@@ -304,6 +347,7 @@
         window.app.component('p-message', PrimeVue.Message);
         window.app.component('p-select-button', PrimeVue.SelectButton);
         window.app.component('p-input-text', PrimeVue.InputText);
+        window.app.component('p-tag', PrimeVue.Tag);
 
         window.app.mount("#app");
     </script>
