@@ -23,12 +23,17 @@
 
         .carousel img {
             border-radius: 5px;
-            width: 100px;
+            width: 150px;
+            cursor: pointer;
+            transition: filter 0.3s;
+            border: 1px solid var(--p-tag-success-background);
+            outline: 2px solid var(--p-tag-success-background);
         }
 
-        .carousel img.greyed-out {
-            filter: grayscale(100%);
-            opacity: 0.3;
+        .carousel img.greyed-out:not(:hover) {
+            filter: grayscale(100%) opacity(0.5);
+            border: 1px solid var(--p-tag-secondary-background);
+            outline: 0;
         }
 
         .carousel--track > div {
