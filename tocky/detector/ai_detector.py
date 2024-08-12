@@ -8,6 +8,7 @@ from io import BytesIO
 from openai import OpenAI
 from PIL import Image, ImageDraw, ImageFont
 
+from tocky.detector import AbstractDetector
 from tocky.utils.ia import get_book_images
 from tocky.utils.llm import MODEL_PRICES
 
@@ -27,7 +28,7 @@ class AiImageDetectorOptions:
     max_tokens: int = 200
     image_size: tuple[int, int] = (1024, 512)
 
-class AiImageDetector:
+class AiImageDetector(AbstractDetector[AiImageDetectorOptions]):
     """
     This detector uses multi-modal AI models ability to process images and text together
     to detect table of contents pages in a book.

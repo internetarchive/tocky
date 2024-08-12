@@ -1,7 +1,88 @@
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 import re
+from time import time
+from traceback import TracebackException
+from typing import Generic, Literal, TypeVar, cast
 from lxml import etree
 from PIL import Image
+
+
+@dataclass
+class ShareableState:
+  """
+  Shareable state between detector runs or between detectors/extractors
+  """
+  ocr_cache: dict[int, str] = field(default_factory=dict)
+  """Map of leaf number to OCR text (djvu xml format)"""
+
+
+T = TypeVar('T')
+
+
+@dataclass
+class ResultStatSuccess(Generic[T]):
+    success: Literal[True]
+    time: float
+    result: T
+    error: None = None
+    traceback: None = None
+
+    def to_dict(self):
+        return {
+            'success': self.success,
+            'time': self.time,
+            'result': self.result,
+        }
+
+@dataclass
+class ResultStatError:
+    success: Literal[False]
+    time: float
+    result: None
+    error: Exception
+    
+    @property
+    def traceback(self) -> str:
+        return '\n'.join(TracebackException.from_exception(self.error).format())
+
+    def to_dict(self):
+        return {
+            'success': self.success,
+            'time': self.time,
+            'result': None,
+            'error': str(self.error),
+            'traceback': self.traceback,
+        }
+ResultStat = ResultStatSuccess[T] | ResultStatError
+
+def run_with_result_stats(func: Callable[[], T]) -> ResultStat[T]:
+    start = time()
+    result = None
+    try:
+        result = func()
+        error = None
+    except Exception as e:
+        error = e
+    finally:
+        end = time()
+        dur = end - start
+        if error is None:
+            return ResultStatSuccess(
+                success=True,
+                time=dur,
+                result=cast(T, result),
+                error=None,
+                traceback=None,
+            )
+        else:
+            return ResultStatError(
+                success=False,
+                time=dur,
+                result=None,
+                error=error,
+            )
+
 
 @dataclass
 class PageScan:

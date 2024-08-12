@@ -1,0 +1,18 @@
+from typing import Generic, TypeVar
+from tocky.utils import ShareableState
+
+TParams = TypeVar("TParams")
+
+class AbstractDetector(Generic[TParams]):
+    P: TParams
+    S = ShareableState()
+    debug = True
+    """
+    When debug is set to true, extra helper variables could be set
+    """
+
+    def predict_cost(self) -> float:
+        raise NotImplementedError()
+
+    def detect(self, ocaid: str) -> list[int]:
+        raise NotImplementedError()

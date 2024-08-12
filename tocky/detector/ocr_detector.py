@@ -5,6 +5,7 @@ from typing import Literal
 
 from lxml import etree
 
+from tocky.detector import AbstractDetector
 from tocky.utils.ia import extract_page_index, get_djvu_pages, get_page_scan, ocaid_to_djvu_url
 from tocky.ocr import ocr_djvu_page
 from tocky.utils import avg_ocr_conf
@@ -20,17 +21,19 @@ class OcrDetectorOptions:
   ocr_engine: Literal['easyocr', 'tesseract'] = 'easyocr'
   allow_reocr: bool = True
 
-class OcrDetector:
+class OcrDetector(AbstractDetector[OcrDetectorOptions]):
   P = OcrDetectorOptions()
 
   def predict_cost(self):
     return 0
 
-  def detect(self, ocaid: str):
-    return [
-      extract_page_index(page_name)
-      for (page_name, _) in self.extract_toc_pages(ocaid)
-    ]
+  def detect(self, ocaid: str) -> list[int]:
+    results = list(self.extract_toc_pages(ocaid))
+    self.S.ocr_cache.update({
+        extract_page_index(page_name): djvu_xml_str
+        for (page_name, djvu_xml_str) in results
+    })
+    return [extract_page_index(page_name) for (page_name, _) in results]
   
   def extract_toc_pages(self, ocaid: str):
     return self.detect_table_of_contents_pages(ocaid_to_djvu_url(ocaid))

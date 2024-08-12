@@ -1,6 +1,23 @@
 import re
 from dataclasses import dataclass
+from typing import Literal
 import openai
+
+from tocky.utils import ShareableState
+
+@dataclass
+class OcrExtractorOptions:
+  ocr_engine: Literal['easyocr', 'tesseract'] = 'easyocr'
+  allow_reocr: bool = True
+
+
+class OcrExtractor:
+  P = OcrExtractorOptions()
+  S = ShareableState()
+
+  def extract(self, ocaid: str, detector_result: list[int]) -> str:
+    raise NotImplementedError()
+
 
 @dataclass
 class TocResponse:

@@ -1,15 +1,16 @@
 from contextlib import closing
 import dataclasses
-from time import time
-from traceback import TracebackException
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import sqlite3
 import os
+from tocky.detector import AbstractDetector
 from tocky.detector.ai_detector import AiImageDetector
 from tocky.detector.ocr_detector import OcrDetector
 from tocky.detector.manual_detector import ManualDetector
+from tocky.extractor import OcrExtractor
+from tocky.utils import run_with_result_stats
 
 DB_FILE = "/data/database.db"
 
@@ -186,37 +187,56 @@ def submit_post():
 
     ia_id = submit_options['input_book']['ia_id']
 
-    DETECTORS = {
+    DETECTORS: dict[str, type[AbstractDetector]] = {
         'ocr_detector': OcrDetector,
         'ai_detector': AiImageDetector,
         'manual_detector': ManualDetector,
     }
 
-    # Run detector
+    # Set up detector
     DETECTOR_CLS = DETECTORS.get(submit_options['detector']['type'])
     if not DETECTOR_CLS:
         return jsonify({'success': False, 'message': f'Invalid detector type: {submit_options["detector"]["type"]}'}), 400
-    
+
     detector = DETECTOR_CLS()
     try:
         detector.P = dataclasses.replace(detector.P, **submit_options['detector']['options'])
     except TypeError as e:
         # TODO: This will not error if things are set to the wrong type
         return jsonify({'success': False, 'message': f'Invalid detector options: {e}'}), 400
-    
-    detector.debug = False
-    detector_start = time()
+
+    # Set up extractor
+    EXTRACTORS = {
+        'ocr_extractor': OcrExtractor,
+    }
+
+    # Run extractor
+    EXTRACTOR_CLS = EXTRACTORS.get(submit_options['extractor']['type'])
+    if not EXTRACTOR_CLS:
+        return jsonify({'success': False, 'message': f'Invalid extractor type: {submit_options["extractor"]["type"]}'}), 400
+
+    extractor = EXTRACTOR_CLS()
     try:
-        detector_result = detector.detect(ia_id)
-        detector_error = None
-    except Exception as e:
-        detector_error = e
-        detector_result = None
-    finally:
-        detector_end = time()
+        extractor.P = dataclasses.replace(extractor.P, **submit_options['extractor']['options'])
+    except TypeError as e:
+        # TODO: This will not error if things are set to the wrong type
+        return jsonify({'success': False, 'message': f'Invalid extractor options: {e}'}), 400
+    # Share cache
+    extractor.S = detector.S
+
+    # Now let's run some stuff!
+
+    # Run the detector
+    detector.debug = False
+    detector_response = run_with_result_stats(lambda: detector.detect(ia_id))
+
+    if detector_response.success == True:
+        # Run the extractor
+        extractor_response = run_with_result_stats(lambda: extractor.extract(ia_id, detector_response.result))
+
 
     return jsonify({
-        'success': not detector_error,
+        'success': detector_response.success and extractor_response.success,
         'options': {
             'input_book': submit_options['input_book'],
             'detector': {
@@ -229,15 +249,8 @@ def submit_post():
             },
         },
         'results': {
-            'detector': {
-                'success': not detector_error,
-                'time': detector_end - detector_start,
-                'result': detector_result,
-                **({
-                    'error': str(detector_error),
-                    'traceback': '\n'.join(TracebackException.from_exception(detector_error).format()),
-                } if detector_error else {}),
-            },
+            'detector': detector_response.to_dict(),
+            'extractor': extractor_response.to_dict(),
         }
     })
 
