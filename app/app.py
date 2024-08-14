@@ -5,6 +5,7 @@ from flask_cors import CORS
 import json
 import sqlite3
 import os
+from tocky.bulk_processor import process_ia_book
 from tocky.detector import AbstractDetector
 from tocky.detector.ai_detector import AiImageDetector
 from tocky.detector.ocr_detector import OcrDetector
@@ -225,18 +226,17 @@ def submit_post():
     extractor.S = detector.S
 
     # Now let's run some stuff!
-
-    # Run the detector
-    detector.debug = False
-    detector_response = run_with_result_stats(lambda: detector.detect(ia_id))
-
-    if detector_response.success == True:
-        # Run the extractor
-        extractor_response = run_with_result_stats(lambda: extractor.extract(ia_id, detector_response.result))
+    detector.debug = False    
+    state = process_ia_book(ia_id, detector, extractor)
 
 
     return jsonify({
-        'success': detector_response.success and extractor_response.success,
+        'success': (
+            state.detector_result
+            and state.detector_result.success
+            and state.extractor_result
+            and state.extractor_result.success
+        ),
         'options': {
             'input_book': submit_options['input_book'],
             'detector': {
@@ -245,12 +245,12 @@ def submit_post():
             },
             'extractor': {
                 'type': submit_options['extractor']['type'],
-                'options': submit_options['extractor']['options'],
+                'options': extractor.P.__dict__,
             },
         },
         'results': {
-            'detector': detector_response.to_dict(),
-            'extractor': extractor_response.to_dict(),
+            'detector': state.detector_result.to_dict() if state.detector_result else None,
+            'extractor': state.extractor_result.to_dict() if state.extractor_result else None,
         }
     })
 

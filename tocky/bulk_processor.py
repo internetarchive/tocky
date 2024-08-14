@@ -56,6 +56,16 @@ def process_ol_book(
     if ol_toc and not toc_missing_pagenums:
       state.status = 'Already has good TOC'
       return state
+  
+  return process_ia_book(state.ocaid, detector, extractor)
+
+
+def process_ia_book(
+  ocaid: str,
+  detector: AbstractDetector,
+  extractor: AiExtractor,
+) -> ItemProcessingState:
+  state = ItemProcessingState(ocaid=ocaid)
 
   def redo_ocr(ocaid: str, leaf_num: int, djvu_xml: str) -> str:
     root = etree.fromstring(djvu_xml)
