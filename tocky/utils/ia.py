@@ -2,6 +2,7 @@ from collections.abc import Iterable, Iterator
 import functools
 from io import BytesIO
 import itertools
+import json
 import re
 import sys
 from typing import Literal, TypedDict, cast
@@ -11,6 +12,8 @@ from lxml import etree
 import pycountry
 from requests import HTTPError
 import concurrent.futures
+
+import requests
 
 from tocky.utils import PageScan
 
@@ -152,3 +155,22 @@ def get_djvu_pages(djvu_url: str, start: int=0, end: int=sys.maxsize):
     for _, elem in itertools.islice(etree.iterparse(response.raw, events=("end",), tag="OBJECT"), start, end):
       page_name = cast(str, elem.xpath(".//PARAM[@name='PAGE']/@value")[0])
       yield page_name, cast(etree._Element, elem)
+
+class IaLiteMetadata(TypedDict):
+  identifier: str
+  openlibrary_edition: str | None
+
+def bulk_ia_to_ol(ia_records: list[IaLiteMetadata]) -> dict[str, dict]:
+  ol_records_by_key = requests.get('http://openlibrary.org/api/get_many', params={
+    'keys': json.dumps([
+      f'/books/{metadata["openlibrary_edition"]}'
+      for metadata in ia_records
+    ])
+  }).json()['result']
+    
+  for ia_record in ia_records:
+    ol_record = ol_records_by_key[f'/books/{ia_record["openlibrary_edition"]}']
+    if 'ocaid' not in ol_record:
+      ol_record['ocaid'] = ia_record['identifier']
+  
+  return ol_records_by_key
