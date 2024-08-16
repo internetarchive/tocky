@@ -54,7 +54,7 @@ CORS(app)
 def pop():
     # Check header for api key
     api_key = request.headers.get('X-API-Key')
-    if api_key != os.environ.get('API_KEY'):
+    if api_key != os.environ.get('TOCKY_SERVER_KEY'):
         return jsonify({'success': False, 'message': 'Invalid API key'}), 401
 
     assignee = request.args.get('assignee')
@@ -87,7 +87,7 @@ def update(id: int):
     """Reads the record from the content body and writes it back to sqlite"""
     # Check header for api key
     api_key = request.headers.get('X-API-Key')
-    if api_key != os.environ.get('API_KEY'):
+    if api_key != os.environ.get('TOCKY_SERVER_KEY'):
         return jsonify({'success': False, 'message': 'Invalid API key'}), 401
 
     content = request.get_json()
@@ -110,7 +110,7 @@ def push():
     """Reads a record from the content body and adds a new row to sqlite"""
     # Check header for api key
     api_key = request.headers.get('X-API-Key')
-    if api_key != os.environ.get('API_KEY'):
+    if api_key != os.environ.get('TOCKY_SERVER_KEY'):
         return jsonify({'success': False, 'message': 'Invalid API key'}), 401
 
     content = request.get_json()
@@ -180,7 +180,7 @@ def submit():
 def submit_post():
     # Check header for api key
     api_key = request.headers.get('X-API-Key')
-    if api_key != os.environ.get('API_KEY'):
+    if api_key != os.environ.get('TOCKY_SERVER_KEY'):
         return jsonify({'success': False, 'message': 'Invalid API key'}), 401
 
     # Read the content from the request
@@ -259,7 +259,7 @@ def submit_post():
     })
 
 if __name__ == '__main__':
-    if not os.environ.get('API_KEY'):
-        raise ValueError('API_KEY environment variable must be set')
+    if not os.environ.get('TOCKY_SERVER_KEY'):
+        raise ValueError('TOCKY_SERVER_KEY environment variable must be set')
 
     app.run(host='0.0.0.0', port=5000)

@@ -136,7 +136,7 @@ def push_to_toc_queue(record: dict) -> int:
   resp = requests.put(
       'https://testing.openlibrary.org/tocky/push',
       headers={
-          'X-API-KEY': os.environ['TOC_QUEUE_DB_PASSWORD'],
+          'X-API-KEY': os.environ['TOCKY_SERVER_KEY'],
           'Content-Type': 'application/json',
       },
       data=json.dumps(record)
@@ -147,7 +147,7 @@ def update_toc_queue(row_id: int, record: dict):
   resp = requests.post(
       f'https://testing.openlibrary.org/tocky/update/{row_id}',
       headers={
-          'X-API-KEY': os.environ['TOC_QUEUE_DB_PASSWORD'],
+          'X-API-KEY': os.environ['TOCKY_SERVER_KEY'],
           'Content-Type': 'application/json',
       },
       data=json.dumps(record)
