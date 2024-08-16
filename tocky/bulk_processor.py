@@ -144,7 +144,7 @@ def push_to_toc_queue(record: dict) -> int:
   return resp['id']
 
 def update_toc_queue(row_id: int, record: dict):
-  resp = requests.post(
+  return requests.post(
       f'https://testing.openlibrary.org/tocky/update/{row_id}',
       headers={
           'X-API-KEY': os.environ['TOCKY_SERVER_KEY'],
@@ -152,7 +152,6 @@ def update_toc_queue(row_id: int, record: dict):
       },
       data=json.dumps(record)
   ).json()
-  return resp['id']
 
 class IaSearchParams(TypedDict):
   q: str
