@@ -11,7 +11,7 @@ from tocky.detector.ai_detector import AiImageDetector
 from tocky.detector.ocr_detector import OcrDetector
 from tocky.detector.manual_detector import ManualDetector
 from tocky.extractor.ai_extractor import AiExtractor
-from tocky.utils import run_with_result_stats
+from tocky.extractor.ai_image_extractor import AiImageExtractor
 
 DB_FILE = "/data/database.db"
 
@@ -209,6 +209,7 @@ def submit_post():
     # Set up extractor
     EXTRACTORS = {
         'ai_extractor': AiExtractor,
+        'ai_image_extractor': AiImageExtractor,
     }
 
     # Run extractor

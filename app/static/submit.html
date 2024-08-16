@@ -155,6 +155,24 @@
                         <label>Extractor</label>
                     </p-float-label>
                 </div>
+
+                <p-fieldset legend="AI Extractor Options" :toggleable="true" v-if="extractor == EXTRACTORS.ai_extractor">
+                    <div class="ui segment basic">
+                        <p-float-label>
+                            <p-select v-model="extractor.options.model.value" :options="extractor.options.model.options"></p-select>
+                            <label>Model</label>
+                        </p-float-label>
+                    </div>
+                </p-fieldset>
+
+                <p-fieldset legend="AI Image Extractor Options" :toggleable="true" v-if="extractor == EXTRACTORS.ai_image_extractor">
+                    <div class="ui segment basic">
+                        <p-float-label>
+                            <p-select v-model="extractor.options.model.value" :options="extractor.options.model.options"></p-select>
+                            <label>Model</label>
+                        </p-float-label>
+                    </div>
+                </p-fieldset>
             </p-fieldset>
 
             <footer class="ui segment basic center">
