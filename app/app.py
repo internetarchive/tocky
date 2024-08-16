@@ -7,11 +7,11 @@ import sqlite3
 import os
 from tocky.bulk_processor import process_ia_book
 from tocky.detector import AbstractDetector
-from tocky.detector.ai_detector import AiImageDetector
+from tocky.detector.ai_vision_detector import AiVisionDetector
 from tocky.detector.ocr_detector import OcrDetector
 from tocky.detector.manual_detector import ManualDetector
 from tocky.extractor.ai_extractor import AiExtractor
-from tocky.extractor.ai_image_extractor import AiImageExtractor
+from tocky.extractor.ai_vision_extractor import AiVisionExtractor
 
 DB_FILE = "/data/database.db"
 
@@ -193,7 +193,7 @@ def submit_post():
 
     DETECTORS: dict[str, type[AbstractDetector]] = {
         'ocr_detector': OcrDetector,
-        'ai_detector': AiImageDetector,
+        'ai_vision_detector': AiVisionDetector,
         'manual_detector': ManualDetector,
     }
 
@@ -212,7 +212,7 @@ def submit_post():
     # Set up extractor
     EXTRACTORS = {
         'ai_extractor': AiExtractor,
-        'ai_image_extractor': AiImageExtractor,
+        'ai_vision_extractor': AiVisionExtractor,
     }
 
     # Run extractor

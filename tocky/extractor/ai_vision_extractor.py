@@ -2,14 +2,14 @@ from dataclasses import dataclass
 import textwrap
 
 from openai import OpenAI
-from tocky.detector.ai_detector import concatenate_and_resize, image_to_base64
+from tocky.detector.ai_vision_detector import concatenate_and_resize, image_to_base64
 from tocky.extractor import AbstractExtractor, TocResponse
 from tocky.utils import ShareableState
 from tocky.utils.ia import get_book_images
 
 
 @dataclass
-class AiImageExtractorOptions:
+class AiVisionExtractorOptions:
     model: str = "gpt-4o-mini"
     target_height: int = 512
     system_prompt: str = textwrap.dedent(
@@ -56,8 +56,8 @@ class AiImageExtractorOptions:
     )
 
 
-class AiImageExtractor(AbstractExtractor[AiImageExtractorOptions]):
-    P = AiImageExtractorOptions()
+class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
+    P = AiVisionExtractorOptions()
     S = ShareableState()
 
     def extract(self, ocaid: str, detector_result: list[int]) -> str:

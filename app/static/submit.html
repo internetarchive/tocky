@@ -110,7 +110,7 @@
                         </p-message>
                     </div>
                 </p-fieldset>
-                <p-fieldset legend="AI Detector Options" :toggleable="true" v-else-if="detector == DETECTORS.ai_detector">
+                <p-fieldset legend="AI Vision Detector Options" :toggleable="true" v-else-if="detector == DETECTORS.ai_vision_detector">
                     <div class="ui segment basic">
                         <p-float-label>
                             <p-select v-model="detector.options.model.value" :options="detector.options.model.options"></p-select>
@@ -165,7 +165,7 @@
                     </div>
                 </p-fieldset>
 
-                <p-fieldset legend="AI Image Extractor Options" :toggleable="true" v-if="extractor == EXTRACTORS.ai_image_extractor">
+                <p-fieldset legend="AI Vision Extractor Options" :toggleable="true" v-if="extractor == EXTRACTORS.ai_vision_extractor">
                     <div class="ui segment basic">
                         <p-float-label>
                             <p-select v-model="extractor.options.model.value" :options="extractor.options.model.options"></p-select>
@@ -221,9 +221,9 @@
                     }
                 }
             },
-            ai_detector: {
-                name: "AI Detector",
-                value: "ai_detector",
+            ai_vision_detector: {
+                name: "AI Vision Detector",
+                value: "ai_vision_detector",
                 options: {
                     model: {
                         value: 'gpt-4o-mini',
@@ -268,9 +268,9 @@
                     }
                 }
             },
-            ai_image_extractor: {
-                name: "AI Image Extractor",
-                value: "ai_image_extractor",
+            ai_vision_extractor: {
+                name: "AI Vision Extractor",
+                value: "ai_vision_extractor",
                 options: {
                     model: {
                         value: 'gpt-4o-mini',

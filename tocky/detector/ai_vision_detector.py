@@ -13,7 +13,7 @@ from tocky.utils.ia import get_book_images
 from tocky.utils.llm import MODEL_PRICES
 
 @dataclass
-class AiImageDetectorOptions:
+class AiVisionDetectorOptions:
     system_prompt: str = textwrap.dedent("""
         You are a bot that helps in the detection of all table of contents pages in a book.
 
@@ -28,12 +28,12 @@ class AiImageDetectorOptions:
     max_tokens: int = 200
     image_size: tuple[int, int] = (1024, 512)
 
-class AiImageDetector(AbstractDetector[AiImageDetectorOptions]):
+class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
     """
     This detector uses multi-modal AI models ability to process images and text together
     to detect table of contents pages in a book.
     """
-    P = AiImageDetectorOptions()
+    P = AiVisionDetectorOptions()
     debug = True
 
     @property
