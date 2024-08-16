@@ -249,8 +249,21 @@
                         ]
                     }
                 }
-            }
-        }
+            },
+            ai_image_extractor: {
+                name: "AI Image Extractor",
+                value: "ai_image_extractor",
+                options: {
+                    model: {
+                        value: 'gpt-4o-mini',
+                        options: [
+                            "gpt-4o-mini",
+                            "gpt-3.5-turbo",
+                        ]
+                    }
+                }
+            },
+        };
         window.app = Vue.createApp({
             data() {
                 return {
