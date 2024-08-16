@@ -22,6 +22,7 @@ TockyItemState = Literal[
   "To Review",
   "Reviewing",
   "Done",
+  "Errored",
 ]
 
 @dataclass
@@ -40,6 +41,22 @@ class ItemProcessingState:
   error: Exception | None = None
   prompt_tokens: int = 0
   completion_tokens: int = 0
+
+  def to_db_dict(self):
+    return {
+      'code_version': 'v2.E.1',
+      'ocaid': self.ocaid,
+      'state': self.state,
+      'status': self.status,
+      'prompt_tokens': self.prompt_tokens,
+      'completion_tokens': self.completion_tokens,
+      'error': str(self.error) if self.error else None,
+      'toc_raw_ocr': self.toc_raw_ocr,
+      'structured_toc': self.structured_toc,
+      'detected_toc': self.detector_result.result if self.detector_result else None,
+      'detector_result': self.detector_result.to_dict() if self.detector_result else None,
+      'extractor_result': self.extractor_result.to_dict() if self.extractor_result else None,
+  }
 
 
 def process_ol_book(
@@ -62,20 +79,32 @@ def process_ia_book(
   ocaid: str,
   detector: AbstractDetector,
   extractor: AiExtractor,
+  push: bool = False,
 ) -> ItemProcessingState:
   state = ItemProcessingState(ocaid=ocaid)
-  state.state = 'Detecting'
+  toc_queue_id = 0
+  if push:
+    toc_queue_id = push_to_toc_queue(state.to_db_dict())
+  
+  def set_state(new_state: TockyItemState):
+    state.state = new_state
+    if push:
+      update_toc_queue(toc_queue_id, state.to_db_dict())
+
+  set_state('Detecting')
   state.detector_result = run_with_result_stats(lambda: detector.detect(state.ocaid))
 
   if state.detector_result.error is not None:
     state.status = 'Errored'
     state.error = state.detector_result.error
+    set_state('Errored')
     return state
 
+  set_state('To Extract')
   if not state.detector_result.result:
     state.status = 'No TOC detected'
   else:
-    state.state = 'Extracting'
+    set_state('Extracting')
     state.extractor_result = run_with_result_stats(lambda: extractor.extract(state.ocaid, state.detector_result.result))
 
     if hasattr(extractor, 'toc_raw_ocr'):
@@ -84,6 +113,7 @@ def process_ia_book(
     if state.extractor_result.error is not None:
       state.status = 'Errored'
       state.error = state.extractor_result.error
+      set_state('Errored')
       return state
   
 
@@ -91,7 +121,6 @@ def process_ia_book(
     state.prompt_tokens = state.extractor_result.result.prompt_tokens
     state.completion_tokens = state.extractor_result.result.completion_tokens
     state.status = 'TOC Extracted'
-    state.state = 'To Review'
     
     if state.structured_toc:
       total_pages = int(get_ia_metadata(state.ocaid)['metadata']['imagecount'])
@@ -99,18 +128,31 @@ def process_ia_book(
       if validation != 'Valid':
         state.status = f'TOC Validation: {validation}'
 
+    set_state('To Review')
+
   return state
 
-def push_to_toc_queue(record: dict):
-  return requests.put(
+def push_to_toc_queue(record: dict) -> int:
+  resp = requests.put(
       'https://testing.openlibrary.org/tocky/push',
       headers={
           'X-API-KEY': os.environ['TOC_QUEUE_DB_PASSWORD'],
           'Content-Type': 'application/json',
       },
       data=json.dumps(record)
-  )
+  ).json()
+  return resp['id']
 
+def update_toc_queue(row_id: int, record: dict):
+  resp = requests.post(
+      f'https://testing.openlibrary.org/tocky/update/{row_id}',
+      headers={
+          'X-API-KEY': os.environ['TOC_QUEUE_DB_PASSWORD'],
+          'Content-Type': 'application/json',
+      },
+      data=json.dumps(record)
+  ).json()
+  return resp['id']
 
 class IaSearchParams(TypedDict):
   q: str
@@ -144,19 +186,7 @@ def process_all(ia_params: IaSearchParams, rows=10, page=1, ia_overrides=None):
   with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
     for result in executor.map(run_pipeline, ol_records_by_key.values()):
       print(f'[{result.status}] {result.ocaid}')
-      push_to_toc_queue({
-          'code_version': 'v2.E.1',
-          'ocaid': result.ocaid,
-          'status': result.status,
-          'prompt_tokens': result.prompt_tokens,
-          'completion_tokens': result.completion_tokens,
-          'error': str(result.error) if result.error else None,
-          'toc_raw_ocr': result.toc_raw_ocr,
-          'structured_toc': result.structured_toc,
-          'detected_toc': result.detector_result.result if result.detector_result else None,
-          'detector_result': result.detector_result.to_dict() if result.detector_result else None,
-          'extractor_result': result.extractor_result.to_dict() if result.extractor_result else None,
-      })
+      push_to_toc_queue(result.to_db_dict())
       if result.error:
         print(traceback.print_exception(result.error))
       all_results.append(result)

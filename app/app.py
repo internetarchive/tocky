@@ -91,37 +91,40 @@ def update(id: int):
         return jsonify({'success': False, 'message': 'Invalid API key'}), 401
 
     content = request.get_json()
+    state = content.get('state', 'Done')
     with closing(get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             # Execute the parameterized query
             cur.execute("""
                 UPDATE toc_queue
-                SET state = 'Done',
+                SET state = ?,
                     record = ?
                 WHERE id = ?
-            """, (json.dumps(content), id))
+            """, (state, json.dumps(content), id))
             conn.commit()
             return jsonify({'success': True})
 
 
 @app.route('/push', methods=['PUT'])
 def push():
+    """Reads a record from the content body and adds a new row to sqlite"""
     # Check header for api key
     api_key = request.headers.get('X-API-Key')
     if api_key != os.environ.get('API_KEY'):
         return jsonify({'success': False, 'message': 'Invalid API key'}), 401
 
-    """Reads a record from the content body and adds a new row to sqlite"""
     content = request.get_json()
+    state = content.get('state', 'To Review')
+
     with closing(get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             # Execute the parameterized query
-            cur.execute("""
+            result = cur.execute("""
                 INSERT INTO toc_queue (state, record)
-                VALUES ('To Review', ?)
-            """, (json.dumps(content),))
+                VALUES (?, ?)
+            """, (state, json.dumps(content),))
             conn.commit()
-            return jsonify({'success': True})
+            return jsonify({'success': True, 'id': result.lastrowid})
 
 
 @app.route('/list', methods=['GET'])
@@ -228,7 +231,7 @@ def submit_post():
 
     # Now let's run some stuff!
     detector.debug = False    
-    state = process_ia_book(ia_id, detector, extractor)
+    state = process_ia_book(ia_id, detector, extractor, push=True)
 
 
     return jsonify({
