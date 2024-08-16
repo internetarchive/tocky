@@ -5,15 +5,13 @@ import json
 import traceback
 import os
 import requests
-from lxml import etree
+
 
 from tocky.detector import AbstractDetector
 from tocky.detector.ocr_detector import OcrDetector
 from tocky.extractor.ai_extractor import AiExtractor, TocResponse
-from tocky.ocr.printer import print_ocr
-from tocky.utils.ia import bulk_ia_to_ol, get_ia_metadata, get_page_scan
-from tocky.ocr import ocr_djvu_page
-from tocky.utils import ResultStat, avg_ocr_conf, run_with_result_stats
+from tocky.utils.ia import bulk_ia_to_ol, get_ia_metadata
+from tocky.utils import ResultStat, run_with_result_stats
 from tocky.validator import validate_extracted_toc
 
 TockyItemState = Literal[
@@ -66,19 +64,6 @@ def process_ia_book(
   extractor: AiExtractor,
 ) -> ItemProcessingState:
   state = ItemProcessingState(ocaid=ocaid)
-
-  def redo_ocr(ocaid: str, leaf_num: int, djvu_xml: str) -> str:
-    root = etree.fromstring(djvu_xml)
-    if root.xpath('.//HIDDENTEXT/@x-re-ocrd') == ['true']:
-      return djvu_xml
-
-    new_ocr = ocr_djvu_page(get_page_scan(ocaid, leaf_num))
-    new_ocr_el = etree.fromstring(new_ocr).find('.//HIDDENTEXT')
-    if (avg_ocr_conf(new_ocr_el) or 100) > (avg_ocr_conf(root.find('.//HIDDENTEXT')) or 0):
-      root.replace(root.find('.//HIDDENTEXT'), new_ocr_el)
-
-    return etree.tostring(root, encoding='unicode')
-
   state.state = 'Detecting'
   state.detector_result = run_with_result_stats(lambda: detector.detect(state.ocaid))
 
@@ -90,44 +75,29 @@ def process_ia_book(
   if not state.detector_result.result:
     state.status = 'No TOC detected'
   else:
-    djvu_xml_to_fetch = set(state.detector_result.result) - set(detector.S.ocr_cache.keys())
-    if djvu_xml_to_fetch:
-      # TODO: Get the Djvu XML. But just error for now
-      state.status = 'OCR Cache Miss'
-      return state
-    try:
-      state.toc_raw_ocr = [
-          print_ocr(redo_ocr(state.ocaid, leaf_num, detector.S.ocr_cache[leaf_num]))
-          for leaf_num in state.detector_result.result
-      ]
-    except Exception as e:
+    state.state = 'Extracting'
+    state.extractor_result = run_with_result_stats(lambda: extractor.extract(state.ocaid, state.detector_result.result))
+
+    if hasattr(extractor, 'toc_raw_ocr'):
+      state.toc_raw_ocr = extractor.toc_raw_ocr
+
+    if state.extractor_result.error is not None:
       state.status = 'Errored'
-      state.error = e
+      state.error = state.extractor_result.error
+      return state
+  
 
-    if re.search(r'([A-Za-z]{25,}|\beee+\b)', '\n'.join(state.toc_raw_ocr), flags=re.MULTILINE):
-      state.status = 'Bad OCR on TOC'
-    else:
-      state.state = 'Extracting'
-
-      book_title = get_ia_metadata(state.ocaid)['metadata']['title']
-      state.extractor_result = run_with_result_stats(lambda: extractor.extract_structured_toc(state.toc_raw_ocr, book_title))
-
-      if state.extractor_result.error is not None:
-        state.status = 'Errored'
-        state.error = state.extractor_result.error
-        return state
-
-      state.structured_toc = state.extractor_result.result.toc
-      state.prompt_tokens = state.extractor_result.result.prompt_tokens
-      state.completion_tokens = state.extractor_result.result.completion_tokens
-      state.status = 'TOC Extracted'
-      state.state = 'To Review'
-      
-      if state.structured_toc:
-        total_pages = int(get_ia_metadata(state.ocaid)['metadata']['imagecount'])
-        validation = validate_extracted_toc(state.structured_toc, total_pages)
-        if validation != 'Valid':
-          state.status = f'TOC Validation: {validation}'
+    state.structured_toc = state.extractor_result.result.toc
+    state.prompt_tokens = state.extractor_result.result.prompt_tokens
+    state.completion_tokens = state.extractor_result.result.completion_tokens
+    state.status = 'TOC Extracted'
+    state.state = 'To Review'
+    
+    if state.structured_toc:
+      total_pages = int(get_ia_metadata(state.ocaid)['metadata']['imagecount'])
+      validation = validate_extracted_toc(state.structured_toc, total_pages)
+      if validation != 'Valid':
+        state.status = f'TOC Validation: {validation}'
 
   return state
 

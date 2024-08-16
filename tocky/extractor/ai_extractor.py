@@ -1,17 +1,18 @@
+from lxml import etree
 import re
 from dataclasses import dataclass
 import textwrap
 import openai
 import tiktoken
 
-from tocky.utils import ShareableState
+from tocky.extractor import AbstractExtractor, TocResponse
+from tocky.ocr.printer import print_ocr
+from tocky.utils import ShareableState, avg_ocr_conf
+from tocky.utils.ia import get_ia_metadata, get_page_scan
 
 
-@dataclass
-class TocResponse:
-  toc: str
-  prompt_tokens: int
-  completion_tokens: int
+class BadOcrOnToc(Exception):
+  pass
 
 
 @dataclass
@@ -96,12 +97,40 @@ class AiExtractorOptions:
   """)
 
 
-class AiExtractor:
+class AiExtractor(AbstractExtractor[AiExtractorOptions]):
   P = AiExtractorOptions()
   S = ShareableState()
 
-  def extract(self, ocaid: str, detector_result: list[int]) -> str:
-    raise NotImplementedError()
+  def extract(self, ocaid: str, detector_result: list[int]) -> TocResponse:
+    def redo_ocr(ocaid: str, leaf_num: int, djvu_xml: str) -> str:
+      from tocky.ocr import ocr_djvu_page
+
+      root = etree.fromstring(djvu_xml)
+      if root.xpath('.//HIDDENTEXT/@x-re-ocrd') == ['true']:
+        return djvu_xml
+
+      new_ocr = ocr_djvu_page(get_page_scan(ocaid, leaf_num))
+      new_ocr_el = etree.fromstring(new_ocr).find('.//HIDDENTEXT')
+      if (avg_ocr_conf(new_ocr_el) or 100) > (avg_ocr_conf(root.find('.//HIDDENTEXT')) or 0):
+        root.replace(root.find('.//HIDDENTEXT'), new_ocr_el)
+
+      return etree.tostring(root, encoding='unicode')
+
+    djvu_xml_to_fetch = set(detector_result) - set(self.S.ocr_cache.keys())
+    if djvu_xml_to_fetch:
+      # TODO: Get the Djvu XML. But just error for now
+      raise NotImplementedError(f"Missing Djvu XML for leafs: {djvu_xml_to_fetch}")
+
+    self.toc_raw_ocr = [
+      print_ocr(redo_ocr(ocaid, leaf_num, self.S.ocr_cache[leaf_num]))
+      for leaf_num in detector_result
+    ]
+
+    if re.search(r'([A-Za-z]{25,}|\beee+\b)', '\n'.join(self.toc_raw_ocr), flags=re.MULTILINE):
+      raise BadOcrOnToc("Bad OCR on TOC")
+
+    return self.extract_structured_toc(self.toc_raw_ocr, get_ia_metadata(ocaid)['metadata']['title'])
+
 
   def extract_structured_toc(
     self,
