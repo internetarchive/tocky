@@ -60,7 +60,7 @@ class AiImageExtractor(AbstractExtractor[AiImageExtractorOptions]):
     P = AiImageExtractorOptions()
     S = ShareableState()
 
-    def extract(self, ocaid: str, detector_result: list[int]) -> TocResponse:
+    def extract(self, ocaid: str, detector_result: list[int]) -> str:
         toc_page_image = concatenate_and_resize(list(get_book_images(ocaid, detector_result, reduce=1)), target_height=512)
 
         client = OpenAI()
@@ -93,8 +93,10 @@ class AiImageExtractor(AbstractExtractor[AiImageExtractorOptions]):
         assert completion.choices[0].message.content
         assert completion.usage
 
-        return TocResponse(
+        self.toc_response = TocResponse(
             toc=completion.choices[0].message.content,
             prompt_tokens=completion.usage.prompt_tokens,
             completion_tokens=completion.usage.completion_tokens,
         )
+
+        return self.toc_response.toc

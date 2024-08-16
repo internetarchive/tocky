@@ -21,8 +21,11 @@ class AbstractExtractor(Generic[TParams]):
     When debug is set to true, extra helper variables could be set
     """
 
+    toc_raw_ocr: list[str] | None = None
+    toc_response: TocResponse | None = None
+
     def predict_cost(self) -> float:
         raise NotImplementedError()
 
-    def extract(self, ocaid: str, detector_result: list[int]) -> TocResponse:
+    def extract(self, ocaid: str, detector_result: list[int]) -> str:
         raise NotImplementedError()

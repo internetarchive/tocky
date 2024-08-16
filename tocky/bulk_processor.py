@@ -9,7 +9,8 @@ import requests
 
 from tocky.detector import AbstractDetector
 from tocky.detector.ocr_detector import OcrDetector
-from tocky.extractor.ai_extractor import AiExtractor, TocResponse
+from tocky.extractor import AbstractExtractor
+from tocky.extractor.ai_extractor import AiExtractor
 from tocky.utils.ia import bulk_ia_to_ol, get_ia_metadata
 from tocky.utils import ResultStat, run_with_result_stats
 from tocky.validator import validate_extracted_toc
@@ -32,9 +33,9 @@ class ItemProcessingState:
   status: str = ''
 
   detector_result: ResultStat[list[int]] | None = None
-  extractor_result: ResultStat[TocResponse] | None = None
+  extractor_result: ResultStat[str] | None = None
 
-  toc_raw_ocr: list[str] = field(default_factory=list)
+  toc_raw_ocr: list[str] | None = None
   detected_toc: list[tuple[str, str]] = field(default_factory=list)
   toc_ocr: str = ''
   structured_toc: str = ''
@@ -62,7 +63,7 @@ class ItemProcessingState:
 def process_ol_book(
   ol_record: dict, 
   detector: AbstractDetector,
-  extractor: AiExtractor,
+  extractor: AbstractExtractor,
 ) -> ItemProcessingState:
   state = ItemProcessingState(ocaid=ol_record['ocaid'])
   ol_toc = ol_record.get('table_of_contents')
@@ -78,7 +79,7 @@ def process_ol_book(
 def process_ia_book(
   ocaid: str,
   detector: AbstractDetector,
-  extractor: AiExtractor,
+  extractor: AbstractExtractor,
   push: bool = False,
 ) -> ItemProcessingState:
   state = ItemProcessingState(ocaid=ocaid)
@@ -107,8 +108,7 @@ def process_ia_book(
     set_state('Extracting')
     state.extractor_result = run_with_result_stats(lambda: extractor.extract(state.ocaid, state.detector_result.result))
 
-    if hasattr(extractor, 'toc_raw_ocr'):
-      state.toc_raw_ocr = extractor.toc_raw_ocr
+    state.toc_raw_ocr = extractor.toc_raw_ocr
 
     if state.extractor_result.error is not None:
       state.status = 'Errored'
@@ -117,9 +117,10 @@ def process_ia_book(
       return state
   
 
-    state.structured_toc = state.extractor_result.result.toc
-    state.prompt_tokens = state.extractor_result.result.prompt_tokens
-    state.completion_tokens = state.extractor_result.result.completion_tokens
+    state.structured_toc = state.extractor_result.result
+    assert extractor.toc_response
+    state.prompt_tokens = extractor.toc_response.prompt_tokens
+    state.completion_tokens = extractor.toc_response.completion_tokens
     state.status = 'TOC Extracted'
     
     if state.structured_toc:

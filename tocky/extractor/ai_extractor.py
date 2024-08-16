@@ -101,7 +101,7 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
   P = AiExtractorOptions()
   S = ShareableState()
 
-  def extract(self, ocaid: str, detector_result: list[int]) -> TocResponse:
+  def extract(self, ocaid: str, detector_result: list[int]) -> str:
     def redo_ocr(ocaid: str, leaf_num: int, djvu_xml: str) -> str:
       from tocky.ocr import ocr_djvu_page
 
@@ -129,7 +129,9 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
     if re.search(r'([A-Za-z]{25,}|\beee+\b)', '\n'.join(self.toc_raw_ocr), flags=re.MULTILINE):
       raise BadOcrOnToc("Bad OCR on TOC")
 
-    return self.extract_structured_toc(self.toc_raw_ocr, get_ia_metadata(ocaid)['metadata']['title'])
+    self.toc_response = self.extract_structured_toc(self.toc_raw_ocr, get_ia_metadata(ocaid)['metadata']['title'])
+
+    return self.toc_response.toc
 
 
   def extract_structured_toc(
