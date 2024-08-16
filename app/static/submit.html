@@ -237,11 +237,6 @@
         };
 
         const EXTRACTORS = {
-            ocr_extractor: {
-                name: "OCR Extractor",
-                value: "ocr_extractor",
-                options: {},
-            },
             ai_extractor: {
                 name: "AI Extractor",
                 value: "ai_extractor",
@@ -270,7 +265,7 @@
                     detector_options: Object.values(DETECTORS),
 
                     EXTRACTORS: EXTRACTORS,
-                    extractor: EXTRACTORS.ocr_extractor,
+                    extractor: EXTRACTORS.ai_extractor,
                     extractor_options: Object.values(EXTRACTORS),
                 };
             },
