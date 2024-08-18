@@ -105,20 +105,6 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
   S = ShareableState()
 
   def extract(self, ocaid: str, detector_result: list[int]) -> str:
-    def redo_ocr(ocaid: str, leaf_num: int, djvu_xml: str) -> str:
-      from tocky.ocr import ocr_djvu_page
-
-      root = etree.fromstring(djvu_xml)
-      if root.xpath('.//HIDDENTEXT/@x-re-ocrd') == ['true']:
-        return djvu_xml
-
-      new_ocr = ocr_djvu_page(get_page_scan(ocaid, leaf_num))
-      new_ocr_el = etree.fromstring(new_ocr).find('.//HIDDENTEXT')
-      if (avg_ocr_conf(new_ocr_el) or 100) > (avg_ocr_conf(root.find('.//HIDDENTEXT')) or 0):
-        root.replace(root.find('.//HIDDENTEXT'), new_ocr_el)
-
-      return etree.tostring(root, encoding='unicode')
-
     djvu_xml_to_fetch = set(detector_result) - set(self.S.ocr_cache.keys())
     if djvu_xml_to_fetch:
       # TODO: Get the Djvu XML. But just error for now
@@ -126,7 +112,7 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
 
     self.toc_raw_ocr = [
       print_ocr(
-        redo_ocr(ocaid, leaf_num, self.S.ocr_cache[leaf_num])
+        self.redo_ocr(ocaid, leaf_num, self.S.ocr_cache[leaf_num])
         if self.P.redo_ocr
         else self.S.ocr_cache[leaf_num]
       )
@@ -140,6 +126,19 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
 
     return self.toc_response.toc
 
+  def redo_ocr(self, ocaid: str, leaf_num: int, djvu_xml: str) -> str:
+    from tocky.ocr import ocr_djvu_page
+
+    root = etree.fromstring(djvu_xml)
+    if root.xpath('.//HIDDENTEXT/@x-re-ocrd') == ['true']:
+      return djvu_xml
+
+    new_ocr = ocr_djvu_page(get_page_scan(ocaid, leaf_num), engine=self.P.ocr_engine)
+    new_ocr_el = etree.fromstring(new_ocr).find('.//HIDDENTEXT')
+    if (avg_ocr_conf(new_ocr_el) or 100) > (avg_ocr_conf(root.find('.//HIDDENTEXT')) or 0):
+      root.replace(root.find('.//HIDDENTEXT'), new_ocr_el)
+
+    return etree.tostring(root, encoding='unicode')
 
   def extract_structured_toc(
     self,
