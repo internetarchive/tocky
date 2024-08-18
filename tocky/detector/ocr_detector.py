@@ -18,7 +18,7 @@ TOC_PAGE_DETECTOR_VERSION = [
 
 @dataclass
 class OcrDetectorOptions:
-  ocr_engine: Literal['easyocr', 'tesseract'] = 'easyocr'
+  ocr_engine: Literal['easyocr', 'tesseract', 'azure'] = 'easyocr'
   allow_reocr: bool = True
 
 class OcrDetector(AbstractDetector[OcrDetectorOptions]):
@@ -265,5 +265,3 @@ def extract_pages(djvu_url: str, pages: list[int]):
         to_see.remove(page_index)
         if not to_see:
           break
-
-

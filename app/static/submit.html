@@ -108,6 +108,9 @@
                         <p-message severity="warn" v-else-if="detector.options.ocr_engine.value === 'tesseract'">
                             <p>Tesseract can perform poorly when detecting page numbers on a table of contents page, but runs on CPU.</p>
                         </p-message>
+                        <p-message severity="warn" v-else-if="detector.options.ocr_engine.value === 'azure'">
+                            <p>Azure OCR is a paid service.</p>
+                        </p-message>
                     </div>
                 </p-fieldset>
                 <p-fieldset legend="AI Vision Detector Options" :toggleable="true" v-else-if="detector == DETECTORS.ai_vision_detector">
@@ -217,6 +220,7 @@
                         options: [
                             "tesseract",
                             "easyocr",
+                            "azure",
                         ]
                     }
                 }
