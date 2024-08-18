@@ -1,3 +1,4 @@
+from typing import Literal
 from lxml import etree
 import re
 from dataclasses import dataclass
@@ -17,6 +18,8 @@ class BadOcrOnToc(Exception):
 
 @dataclass
 class AiExtractorOptions:
+  redo_ocr: bool = True
+  ocr_engine: Literal['easyocr', 'tesseract', 'azure'] = 'easyocr'
   model: str = "gpt-4o-mini"
   system_prompt: str = textwrap.dedent("""
     You are a librarian extracting table of contents data in a structured format. The format you will need to output is as follows:
@@ -122,7 +125,11 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
       raise NotImplementedError(f"Missing Djvu XML for leafs: {djvu_xml_to_fetch}")
 
     self.toc_raw_ocr = [
-      print_ocr(redo_ocr(ocaid, leaf_num, self.S.ocr_cache[leaf_num]))
+      print_ocr(
+        redo_ocr(ocaid, leaf_num, self.S.ocr_cache[leaf_num])
+        if self.P.redo_ocr
+        else self.S.ocr_cache[leaf_num]
+      )
       for leaf_num in detector_result
     ]
 
