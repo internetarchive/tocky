@@ -165,6 +165,35 @@
                             <p-select v-model="extractor.options.model.value" :options="extractor.options.model.options"></p-select>
                             <label>Model</label>
                         </p-float-label>
+
+                        <label>
+                            <p-checkbox v-model="extractor.options.redo_ocr.value" :binary="true"></p-checkbox>
+                            Redo OCR <i class="ui icon question circle outline" v-tooltip="`Allow custom regenerating of the OCR when deemed useful. Useful to fix errors in IA OCR.`"></i>
+                        </label>
+
+    
+                        <br>
+                        <br>
+                        <br>
+    
+                        <p-float-label>
+                            <p-select
+                                v-model="extractor.options.ocr_engine.value"
+                                :options="extractor.options.ocr_engine.options"
+                                :disabled="!extractor.options.redo_ocr.value"
+                            ></p-select>
+                            <label>OCR Engine</label>
+                        </p-float-label>
+    
+                        <p-message severity="warn" v-if="extractor.options.ocr_engine.value === 'easyocr'">
+                            <p>EasyOCR requires a GPU to run. If you don't have a GPU, please use Tesseract.</p>
+                        </p-message>
+                        <p-message severity="warn" v-else-if="extractor.options.ocr_engine.value === 'tesseract'">
+                            <p>Tesseract can perform poorly when detecting page numbers on a table of contents page, but runs on CPU.</p>
+                        </p-message>
+                        <p-message severity="warn" v-else-if="extractor.options.ocr_engine.value === 'azure'">
+                            <p>Azure OCR is a paid service.</p>
+                        </p-message>
                     </div>
                 </p-fieldset>
 
