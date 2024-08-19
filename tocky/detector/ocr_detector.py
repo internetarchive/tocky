@@ -6,7 +6,7 @@ from typing import Literal
 from lxml import etree
 
 from tocky.detector import AbstractDetector
-from tocky.utils.ia import extract_page_index, get_djvu_pages, get_page_scan, ocaid_to_djvu_url
+from tocky.utils.ia import extract_leaf_num, get_djvu_pages, get_page_scan, ocaid_to_djvu_url
 from tocky.ocr import ocr_djvu_page
 from tocky.utils import avg_ocr_conf
 
@@ -30,10 +30,10 @@ class OcrDetector(AbstractDetector[OcrDetectorOptions]):
   def detect(self, ocaid: str) -> list[int]:
     results = list(self.extract_toc_pages(ocaid))
     self.S.ocr_cache.update({
-        extract_page_index(page_name): djvu_xml_str
+        extract_leaf_num(page_name): djvu_xml_str
         for (page_name, djvu_xml_str) in results
     })
-    return [extract_page_index(page_name) for (page_name, _) in results]
+    return [extract_leaf_num(page_name) for (page_name, _) in results]
   
   def extract_toc_pages(self, ocaid: str):
     return self.detect_table_of_contents_pages(ocaid_to_djvu_url(ocaid))
@@ -109,7 +109,7 @@ class OcrDetector(AbstractDetector[OcrDetectorOptions]):
 
     page_file: str = elem.xpath('./@usemap')[0]
     ocaid = page_file.rsplit('_', 1)[0]
-    leaf_num = extract_page_index(page_file)
+    leaf_num = extract_leaf_num(page_file)
     # print('analyze_page_for_toc', page_file, f'{allow_reocr=}')
 
     def do_redo_ocr(min_conf: float):
@@ -254,14 +254,3 @@ class PageTocDetectionResult:
   failure: str | None = None
   reran_ocr: bool = False
   used_new_ocr: bool = False
-
-
-def extract_pages(djvu_url: str, pages: list[int]):
-    to_see = set(pages)
-    for page_name, elem in get_djvu_pages(djvu_url):
-      page_index = extract_page_index(page_name)
-      if page_index in to_see:
-        yield (page_name, etree.tostring(elem, encoding="unicode"))
-        to_see.remove(page_index)
-        if not to_see:
-          break

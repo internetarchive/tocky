@@ -137,8 +137,14 @@ def ia_language_to_iso639_2_code(lang: str) -> str | None:
     else:
       return None
 
-def extract_page_index(page_filename: str) -> int:
-  return int(re.search(r'(?:_)(\d+)(?:\.djvu)', page_filename).group(1))
+def extract_leaf_num(page_filename: str) -> int:
+  """
+  E.g. 'goody_0001.djvu' -> 1
+  """
+  m = re.search(r'(?:_)(\d+)(?:\.djvu)', page_filename)
+  if not m:
+    raise ValueError(f"Unable to extract leaf number from {page_filename}")
+  return int(m.group(1))
 
 def ocaid_to_djvu_url(ocaid: str) -> str:
   get_ia_metadata(ocaid)
@@ -162,7 +168,7 @@ def get_djvu_by_leaf_nums(djvu_url: str, start: int, end: int):
   """
 
   for page_name, elem in get_djvu_pages(djvu_url):
-    leaf_num = extract_page_index(page_name)
+    leaf_num = extract_leaf_num(page_name)
     if start <= leaf_num <= end:
       yield leaf_num, elem
     if leaf_num > end:
