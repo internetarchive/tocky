@@ -22,7 +22,7 @@ ia_session = get_session()
 class IaMetadata(TypedDict):
   identifier: str
   ppi: str
-  language: str
+  language: str | list[str]
   """Usually 3 letter MARC code"""
   title: str
   imagecount: str
@@ -86,11 +86,14 @@ def get_page_scan(
     jp2_zip = get_main_jp2_zip(full_metadata)
     image = get_page_image(ocaid, leaf_num, ext=ext, reduce=reduce, quality=quality, jp2_zip=jp2_zip)
 
+  md_lang = full_metadata['metadata']['language']
+  lang = md_lang if isinstance(md_lang, str) else md_lang[0]
+
   return PageScan(
     uri=f'https://archive.org/details/{ocaid}#page/leaf{leaf_num}',
     image=image,
     dpi=int(full_metadata['metadata']['ppi']),
-    lang=ia_language_to_iso639_2_code(full_metadata['metadata']['language']) or 'eng',
+    lang=ia_language_to_iso639_2_code(lang) or 'eng',
   )
 
 
