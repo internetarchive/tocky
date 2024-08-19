@@ -46,11 +46,15 @@
             left: 50%;
             transform: translateX(-50%);
         }
+
+        [v-cloak] {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
-    <div id="app">
+    <div id="app" v-cloak>
         <form class="ui form container">
             <p-fieldset legend="Input Book" :toggleable="true">
                 <div class="ui segment basic">

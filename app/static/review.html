@@ -8,6 +8,10 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
     <style>
+        [v-cloak] {
+            display: none;
+        }
+
         #app {
             font-family: Avenir, Helvetica, Arial, sans-serif;
             display: flex;
@@ -65,7 +69,7 @@
 </head>
 
 <body>
-    <div id="app">
+    <div id="app" v-cloak>
         <main class="ui basic segment" v-if="current_toc">
             Status: {{current_toc.record.status}}
 
