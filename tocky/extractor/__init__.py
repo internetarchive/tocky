@@ -15,11 +15,14 @@ TParams = TypeVar("TParams")
 
 class AbstractExtractor(Generic[TParams]):
     P: TParams
-    S = ShareableState()
+    S: ShareableState
     debug = True
     """
     When debug is set to true, extra helper variables could be set
     """
+
+    def __init__(self):
+        self.S = ShareableState()
 
     toc_raw_ocr: list[str] | None = None
     toc_response: TocResponse | None = None

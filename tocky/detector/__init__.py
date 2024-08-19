@@ -5,11 +5,14 @@ TParams = TypeVar("TParams")
 
 class AbstractDetector(Generic[TParams]):
     P: TParams
-    S = ShareableState()
+    S: ShareableState
     debug = True
     """
     When debug is set to true, extra helper variables could be set
     """
+
+    def __init__(self):
+        self.S = ShareableState()
 
     def predict_cost(self) -> float:
         raise NotImplementedError()

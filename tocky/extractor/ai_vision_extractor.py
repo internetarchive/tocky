@@ -57,8 +57,9 @@ class AiVisionExtractorOptions:
 
 
 class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
-    P = AiVisionExtractorOptions()
-    S = ShareableState()
+    def __init__(self):
+        super().__init__()
+        self.P = AiVisionExtractorOptions()
 
     def extract(self, ocaid: str, detector_result: list[int]) -> str:
         toc_page_image = concatenate_and_resize(list(get_book_images(ocaid, detector_result, reduce=1)), target_height=512)

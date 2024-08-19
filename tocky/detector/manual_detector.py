@@ -9,7 +9,9 @@ class ManualDetectorOptions:
 
 
 class ManualDetector(AbstractDetector[ManualDetectorOptions]):
-    P = ManualDetectorOptions()
+    def __init__(self):
+        super().__init__()
+        self.P = ManualDetectorOptions()
 
     def predict_cost(self):
         return 0.0

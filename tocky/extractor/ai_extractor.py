@@ -101,8 +101,9 @@ class AiExtractorOptions:
 
 
 class AiExtractor(AbstractExtractor[AiExtractorOptions]):
-  P = AiExtractorOptions()
-  S = ShareableState()
+  def __init__(self):
+    super().__init__()
+    self.P = AiExtractorOptions()
 
   def extract(self, ocaid: str, detector_result: list[int]) -> str:
     djvu_xml_to_fetch = set(detector_result) - set(self.S.ocr_cache.keys())

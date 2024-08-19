@@ -22,7 +22,9 @@ class OcrDetectorOptions:
   allow_reocr: bool = True
 
 class OcrDetector(AbstractDetector[OcrDetectorOptions]):
-  P = OcrDetectorOptions()
+  def __init__(self):
+    super().__init__()
+    self.P = OcrDetectorOptions()
 
   def predict_cost(self):
     return 0
