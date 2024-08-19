@@ -194,7 +194,7 @@
                                 "Content-Type": "application/json",
                                 "X-API-Key": window.TOCKEY_API_KEY = (window.TOCKEY_API_KEY || prompt("Tocky API key")),
                             },
-                            body: JSON.stringify(body),
+                            body: JSON.stringify({ ...body, state: 'Done' }),
                         },
                     );
                 },
