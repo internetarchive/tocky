@@ -407,7 +407,10 @@
                 getImageUrl(leafNumber) {
                     return `https://archive.org/download/${this.ia_id}/page/leaf${leafNumber}.jpg?scale=8`;
                 },
-                *getLeafNumbersWithContext(leafNumbers) {
+                getLeafNumbersWithContext(leafNumbers) {
+                    return Array.from(this._genLeafNumbersWithContext(leafNumbers));
+                },
+                *_genLeafNumbersWithContext(leafNumbers) {
                     const max = Math.max(...leafNumbers);
                     for (let i = 0; i <= Math.max(15, max + 2); i++) {
                         yield {
