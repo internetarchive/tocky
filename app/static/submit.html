@@ -8,20 +8,12 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
     <style>
-        .carousel {
-            overflow-x: auto;
-            scrollbar-width: thin;
-            max-width: 837px;
+        .page-carousel {
+            height: 300px;
+            width: 100%;
         }
 
-        .carousel--track {
-            display: flex;
-            align-items: flex-end;
-            gap: 10px;
-            padding: 10px;
-        }
-
-        .carousel img {
+        .page-carousel img {
             border-radius: 5px;
             width: 150px;
             cursor: pointer;
@@ -30,17 +22,17 @@
             outline: 2px solid var(--p-tag-success-background);
         }
 
-        .carousel img.greyed-out:not(:hover) {
+        .page-carousel img.greyed-out:not(:hover) {
             filter: grayscale(100%) opacity(0.5);
             border: 1px solid var(--p-tag-secondary-background);
             outline: 0;
         }
 
-        .carousel--track > div {
+        .page-carousel__page {
             position: relative;
-
+            padding: 0 5px;
         }
-        .carousel .p-tag {
+        .page-carousel__page .p-tag {
             position: absolute;
             bottom: 12px;
             left: 50%;
@@ -139,9 +131,17 @@
                             placeholder="e.g. 1,2,3"
                             pattern="^\d+(, ?\d+)*$"
                         ></p-input-text>
-                        <p-virtual-scroller :items="getLeafNumbersWithContext(detector.options.leaf_numbers.value)" :item-size="150">
+                        <p-virtual-scroller
+                            class="page-carousel"
+                            orientation="horizontal"
+                            :items="getLeafNumbersWithContext(detector.options.leaf_numbers.value)"
+                            :item-size="160"
+                        >
                             <template #item="slotProps">
-                                <div :key="slotProps.item.number">
+                                <div
+                                    class="page-carousel__page"
+                                    :key="slotProps.item.number"
+                                >
                                     <img :src="getImageUrl(slotProps.item.number)" :class="{ 'greyed-out': slotProps.item.greyedOut }" @click="toggleLeafNumber(slotProps.item.number)" />
                                     <p-tag :severity="slotProps.item.greyedOut ? 'secondary' : 'success'">{{ slotProps.item.number }}</p-tag>
                                 </div>
@@ -412,7 +412,7 @@
                 },
                 *_genLeafNumbersWithContext(leafNumbers) {
                     const max = Math.max(...leafNumbers);
-                    for (let i = 0; i <= Math.max(15, max + 2); i++) {
+                    for (let i = 0; i <= Math.max(30, max + 2); i++) {
                         yield {
                             number: i,
                             greyedOut: !leafNumbers.includes(i),
