@@ -139,14 +139,14 @@
                             placeholder="e.g. 1,2,3"
                             pattern="^\d+(, ?\d+)*$"
                         ></p-input-text>
-                        <div class="carousel">
-                            <div class="carousel--track">
-                                <div v-for="leaf in getLeafNumbersWithContext(detector.options.leaf_numbers.value)" :key="leaf.number">
-                                    <img :src="getImageUrl(leaf.number)" :class="{ 'greyed-out': leaf.greyedOut }" @click="toggleLeafNumber(leaf.number)" />
-                                    <p-tag :severity="leaf.greyedOut ? 'secondary' : 'success'">{{ leaf.number }}</p-tag>
+                        <p-virtual-scroller :items="getLeafNumbersWithContext(detector.options.leaf_numbers.value)" :item-size="150">
+                            <template #item="slotProps">
+                                <div :key="slotProps.item.number">
+                                    <img :src="getImageUrl(slotProps.item.number)" :class="{ 'greyed-out': slotProps.item.greyedOut }" @click="toggleLeafNumber(slotProps.item.number)" />
+                                    <p-tag :severity="slotProps.item.greyedOut ? 'secondary' : 'success'">{{ slotProps.item.number }}</p-tag>
                                 </div>
-                            </div>
-                        </div>
+                            </template>
+                        </p-virtual-scroller>
                     </div>
                 </p-fieldset>
             </p-fieldset>
@@ -447,6 +447,7 @@
         window.app.component('p-select-button', PrimeVue.SelectButton);
         window.app.component('p-input-text', PrimeVue.InputText);
         window.app.component('p-tag', PrimeVue.Tag);
+        window.app.component('p-virtual-scroller', PrimeVue.VirtualScroller);
 
         window.app.mount("#app");
     </script>
