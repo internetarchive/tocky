@@ -129,7 +129,7 @@ def process_ia_book(
       if validation != 'Valid':
         state.status = f'TOC Validation: {validation}'
 
-    set_state('To Review')
+  set_state('To Review')
 
   return state
 
