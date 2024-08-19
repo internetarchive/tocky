@@ -9,7 +9,7 @@ import tiktoken
 from tocky.extractor import AbstractExtractor, TocResponse
 from tocky.ocr.printer import print_ocr
 from tocky.utils import ShareableState, avg_ocr_conf
-from tocky.utils.ia import get_ia_metadata, get_page_scan
+from tocky.utils.ia import get_djvu_by_leaf_nums, get_ia_metadata, get_page_scan, ocaid_to_djvu_url
 
 
 class BadOcrOnToc(Exception):
@@ -107,8 +107,12 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
   def extract(self, ocaid: str, detector_result: list[int]) -> str:
     djvu_xml_to_fetch = set(detector_result) - set(self.S.ocr_cache.keys())
     if djvu_xml_to_fetch:
-      # TODO: Get the Djvu XML. But just error for now
-      raise NotImplementedError(f"Missing Djvu XML for leafs: {djvu_xml_to_fetch}")
+      djvu_url = ocaid_to_djvu_url(ocaid)
+      start = min(djvu_xml_to_fetch)
+      end = max(djvu_xml_to_fetch)
+      for leaf_num, elem in get_djvu_by_leaf_nums(djvu_url, start, end):
+        if leaf_num in djvu_xml_to_fetch:
+          self.S.ocr_cache[leaf_num] = etree.tostring(elem, encoding='unicode')
 
     self.toc_raw_ocr = [
       print_ocr(

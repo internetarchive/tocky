@@ -156,6 +156,18 @@ def get_djvu_pages(djvu_url: str, start: int=0, end: int=sys.maxsize):
       page_name = cast(str, elem.xpath(".//PARAM[@name='PAGE']/@value")[0])
       yield page_name, cast(etree._Element, elem)
 
+def get_djvu_by_leaf_nums(djvu_url: str, start: int, end: int):
+  """
+  Fetches the Djvu XML for a range of leaf numbers, inclusive
+  """
+
+  for page_name, elem in get_djvu_pages(djvu_url):
+    leaf_num = extract_page_index(page_name)
+    if start <= leaf_num <= end:
+      yield leaf_num, elem
+    if leaf_num > end:
+      break
+
 class IaLiteMetadata(TypedDict):
   identifier: str
   openlibrary_edition: str | None
