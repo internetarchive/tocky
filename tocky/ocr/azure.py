@@ -88,10 +88,10 @@ def azure_read_result_to_djvu_xml(read_result: AzureOcrReadResult) -> str:
                 # coords is LBRT
                 word_el.set('coords', ','.join(
                     str(x) for x in (
-                        rect[0]["x"],
-                        rect[2]["y"],
-                        rect[1]["x"],
-                        rect[0]["y"],
+                        min(rect[0]["x"], rect[3]["x"]),
+                        max(rect[2]["y"], rect[3]["y"]),
+                        max(rect[1]["x"], rect[2]["x"]),
+                        min(rect[0]["y"], rect[1]["y"]),
                     )
                 ))
                 word_el.set('x-confidence', str(100 * word['confidence']))
