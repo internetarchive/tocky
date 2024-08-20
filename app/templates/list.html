@@ -21,6 +21,10 @@
             <p-column field="state" header="State"></p-column>
             <p-column field="record" header="Record" :body="recordTemplate"></p-column>
         </p-data-table>
+
+        <p-dialog v-model:visible="dialogVisible" header="Full Record" :modal="true" :style="{ width: '50vw' }">
+            <pre>{{ fullRecord }}</pre>
+        </p-dialog>
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -34,6 +38,8 @@
                     totalRecords: 0,
                     limit: 50,
                     offset: 0,
+                    dialogVisible: false,
+                    fullRecord: ''
                 };
             },
             methods: {
@@ -50,7 +56,12 @@
                     this.fetchData();
                 },
                 recordTemplate(record) {
-                    return JSON.stringify(record);
+                    const truncatedRecord = JSON.stringify(record).slice(0, 100) + '...';
+                    return `<span @click="showFullRecord(${JSON.stringify(record)})">${truncatedRecord}</span>`;
+                },
+                showFullRecord(record) {
+                    this.fullRecord = JSON.stringify(record, null, 2);
+                    this.dialogVisible = true;
                 }
             },
             mounted() {
@@ -70,6 +81,7 @@
 
         window.app.component('p-data-table', PrimeVue.DataTable);
         window.app.component('p-column', PrimeVue.Column);
+        window.app.component('p-dialog', PrimeVue.Dialog);
 
         window.app.mount("#app");
     </script>
