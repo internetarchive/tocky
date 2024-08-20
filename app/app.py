@@ -68,6 +68,7 @@ with app.app_context():
     static_templates = {
         'review.html': render_template('review.html'),
         'submit.html': render_template('submit.html'),
+        'list.html': render_template('list.html'),
     }
 
 
@@ -151,6 +152,11 @@ def push():
 @app.route('/list', methods=['GET'])
 def list():
     """Reads the limit and offset from the query string and returns a list of records"""
+    return static_templates['list.html']
+
+
+@app.route('/api/list', methods=['GET'])
+def api_list():
     limit = request.args.get('limit', 10, type=int)
     offset = request.args.get('offset', 0, type=int)
 

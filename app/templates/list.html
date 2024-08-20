@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>List | Tocky</title>
+
+    <style>
+        [v-cloak] {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" v-cloak>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/primevue/umd/primevue.min.js"></script>
+    <script src="https://unpkg.com/@primevue/themes/umd/aura.min.js"></script>
+    <script>
+        window.app = Vue.createApp({
+            data() {
+                return {};
+            },
+        });
+
+        window.app.use(PrimeVue.Config, {
+            theme: {
+                preset: PrimeVue.Themes.Aura,
+                options: {
+                    prefix: 'p',
+                    darkModeSelector: '.never',
+                }
+            }
+        });
+
+        window.app.component('p-data-table', PrimeVue.DataTable);
+        window.app.component('p-column', PrimeVue.Column);
+
+        window.app.mount("#app");
+    </script>
+</body>
+
+</html>
