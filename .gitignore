@@ -1,6 +1,6 @@
 # Private
 .env
-env*.py
+/env*.py
 
 # Editors
 .vscode/
