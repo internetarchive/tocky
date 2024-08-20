@@ -15,6 +15,12 @@
 
 <body>
     <div id="app" v-cloak>
+        <p-data-table :value="records" :virtual-scroll="true" :item-size="50" :lazy="true" :total-records="totalRecords" @virtual-scroll="onVirtualScroll">
+            <p-column field="id" header="ID"></p-column>
+            <p-column field="assignee" header="Assignee"></p-column>
+            <p-column field="state" header="State"></p-column>
+            <p-column field="record" header="Record" :body="recordTemplate"></p-column>
+        </p-data-table>
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -23,8 +29,33 @@
     <script>
         window.app = Vue.createApp({
             data() {
-                return {};
+                return {
+                    records: [],
+                    totalRecords: 0,
+                    limit: 50,
+                    offset: 0,
+                };
             },
+            methods: {
+                async fetchData() {
+                    const params = new URLSearchParams({ limit: this.limit, offset: this.offset });
+                    const response = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/api/list?${params}`);
+                    const data = await response.json();
+                    this.records = data;
+                    this.totalRecords = data.length; // Update this line to get the total count from the API if available
+                },
+                onVirtualScroll(event) {
+                    this.limit = event.last - event.first;
+                    this.offset = event.first;
+                    this.fetchData();
+                },
+                recordTemplate(record) {
+                    return JSON.stringify(record);
+                }
+            },
+            mounted() {
+                this.fetchData();
+            }
         });
 
         window.app.use(PrimeVue.Config, {
