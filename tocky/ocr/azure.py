@@ -86,13 +86,15 @@ def azure_read_result_to_djvu_xml(read_result: AzureOcrReadResult) -> str:
                 word_el = etree.Element('WORD')
                 rect = word['boundingPolygon']
                 # coords is LBRT
-                word_el.set('coords', ','.join([
-                    f'{rect[3]["x"]},{rect[3]["y"]}',
-                    f'{rect[2]["x"]},{rect[2]["y"]}',
-                    f'{rect[1]["x"]},{rect[1]["y"]}',
-                    f'{rect[0]["x"]},{rect[0]["y"]}',
-                ]))
-                word_el.set('x-confidence', str(word['confidence']))
+                word_el.set('coords', ','.join(
+                    str(x) for x in (
+                        rect[0]["x"],
+                        rect[2]["y"],
+                        rect[1]["x"],
+                        rect[0]["y"],
+                    )
+                ))
+                word_el.set('x-confidence', str(100 * word['confidence']))
                 word_el.text = word['text']
                 line_el.append(word_el)
             paragraph.append(line_el)
