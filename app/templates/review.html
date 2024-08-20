@@ -120,7 +120,11 @@
         </main>
 
         <footer class="controls">
-            <button class="ui primary button" @click="getNextToc">Get next TOC</button>
+            <button
+                class="ui primary button"
+                @click="getNextToc"
+                :disabled="!specific_id"
+            >Get next TOC</button>
         </footer>
     </div>
 
@@ -132,10 +136,25 @@
         window.app = new Vue({
             el: "#app",
             data() {
+                const m = location.pathname.match(/\/review\/(\d+)/);
                 return {
+                    specific_id: m ? parseFloat(m[1]) : null,
                     current_toc: null,
                     corrected_toc: null,
                 };
+            },
+
+            async mounted() {
+                if (this.specific_id) {
+                    const params = new URLSearchParams({ id: this.specific_id });
+                    const resp = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/api/list?${params}`, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    }).then((r) => r.json());
+                    this.current_toc = resp[0];
+                    this.corrected_toc = this.current_toc.record.structured_toc;
+                }
             },
 
             watch: {

@@ -160,14 +160,30 @@ def api_list():
     limit = request.args.get('limit', 10, type=int)
     offset = request.args.get('offset', 0, type=int)
 
+    where_clauses = []
+    params = []
+
+    if (_id := request.args.get('id', None, type=int)) is not None:
+        where_clauses.append('id = ?')
+        params.append(_id)
+
+    if state := request.args.get('state'):
+        where_clauses.append('state = ?')
+        params.append(state)
+    
+    if assignee := request.args.get('assignee'):
+        where_clauses.append('assignee = ?')
+        params.append(assignee)
+
     with closing(get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             # Execute the parameterized query
-            result = cur.execute("""
+            result = cur.execute(f"""
                 SELECT * FROM toc_queue
+                {"WHERE " + " AND ".join(where_clauses) if where_clauses else ""}
                 ORDER BY created DESC
                 LIMIT ? OFFSET ?
-            """, (limit, offset))
+            """, (*params, limit, offset))
             return jsonify([
                 {
                     **dict(row),
@@ -193,6 +209,10 @@ def stats():
 
 @app.route('/review', methods=['GET'])
 def review():
+    return static_templates['review.html']
+
+@app.route('/review/<int:id>', methods=['GET'])
+def review_single(id: int):
     return static_templates['review.html']
 
 @app.route('/submit', methods=['GET'])
