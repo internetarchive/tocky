@@ -368,7 +368,7 @@
                     this.response = null;
                     this.error = null;
                     try {
-                        const res = await fetch("/tocky/submit", {
+                        const res = await fetch("[[ config.env.TOCKY_APPLICATION_ROOT ]]/submit", {
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",

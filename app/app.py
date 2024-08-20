@@ -1,6 +1,7 @@
 from contextlib import closing
 import dataclasses
-from flask import Flask, request, jsonify
+from pathlib import Path
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import json
 import sqlite3
@@ -10,14 +11,14 @@ from tocky.detector import AbstractDetector
 from tocky.detector.ai_vision_detector import AiVisionDetector
 from tocky.detector.ocr_detector import OcrDetector
 from tocky.detector.manual_detector import ManualDetector
+from tocky.env import get_env
 from tocky.extractor.ai_extractor import AiExtractor
 from tocky.extractor.ai_vision_extractor import AiVisionExtractor
 
-DB_FILE = "/data/database.db"
-
+env = get_env()
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(env.TOCKY_QUEUE_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -48,13 +49,33 @@ init_db()
 
 
 app = Flask(__name__)
+app.config['env'] = env
+app.config['SERVER_NAME'] = env.TOCKY_SERVER_NAME
+app.config['APPLICATION_ROOT'] = env.TOCKY_APPLICATION_ROOT
+app.config['PREFERRED_URL_SCHEME'] = env.TOCKY_PREFERRED_URL_SCHEME
 CORS(app)
+
+# Configure Jinja to use different delimiters to avoid conflicts with Vue
+app.jinja_env.variable_start_string = '[['
+app.jinja_env.variable_end_string = ']]'
+app.jinja_env.block_start_string = '[%'
+app.jinja_env.block_end_string = '%]'
+app.jinja_env.comment_start_string = '[#'
+app.jinja_env.comment_end_string = '#]'
+
+# Pre-render the templates; they're effectively static, save for some `config` variables
+with app.app_context():
+    static_templates = {
+        'review.html': render_template('review.html'),
+        'submit.html': render_template('submit.html'),
+    }
+
 
 @app.route('/pop', methods=['GET'])
 def pop():
     # Check header for api key
     api_key = request.headers.get('X-API-Key')
-    if api_key != os.environ.get('TOCKY_SERVER_KEY'):
+    if api_key != env.TOCKY_SERVER_KEY:
         return jsonify({'success': False, 'message': 'Invalid API key'}), 401
 
     assignee = request.args.get('assignee')
@@ -87,7 +108,7 @@ def update(id: int):
     """Reads the record from the content body and writes it back to sqlite"""
     # Check header for api key
     api_key = request.headers.get('X-API-Key')
-    if api_key != os.environ.get('TOCKY_SERVER_KEY'):
+    if api_key != env.TOCKY_SERVER_KEY:
         return jsonify({'success': False, 'message': 'Invalid API key'}), 401
 
     content = request.get_json()
@@ -110,7 +131,7 @@ def push():
     """Reads a record from the content body and adds a new row to sqlite"""
     # Check header for api key
     api_key = request.headers.get('X-API-Key')
-    if api_key != os.environ.get('TOCKY_SERVER_KEY'):
+    if api_key != env.TOCKY_SERVER_KEY:
         return jsonify({'success': False, 'message': 'Invalid API key'}), 401
 
     content = request.get_json()
@@ -165,22 +186,18 @@ def stats():
             ])
 
 @app.route('/review', methods=['GET'])
-def root():
-    # Render the Vue.js frontend
-    return app.send_static_file('review.html')
+def review():
+    return static_templates['review.html']
 
 @app.route('/submit', methods=['GET'])
 def submit():
-    return app.send_static_file('submit.html')
-
-
-
+    return static_templates['submit.html']
 
 @app.route('/submit', methods=['POST'])
 def submit_post():
     # Check header for api key
     api_key = request.headers.get('X-API-Key')
-    if api_key != os.environ.get('TOCKY_SERVER_KEY'):
+    if api_key != env.TOCKY_SERVER_KEY:
         return jsonify({'success': False, 'message': 'Invalid API key'}), 401
 
     # Read the content from the request
@@ -259,7 +276,7 @@ def submit_post():
     })
 
 if __name__ == '__main__':
-    if not os.environ.get('TOCKY_SERVER_KEY'):
+    if not env.TOCKY_SERVER_KEY:
         raise ValueError('TOCKY_SERVER_KEY environment variable must be set')
 
     app.run(host='0.0.0.0', port=5000)

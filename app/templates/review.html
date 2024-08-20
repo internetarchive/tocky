@@ -171,9 +171,9 @@
                         "state": "Todo",
                     };
                     /* Read the session cookie to determine assignee */
-                    const assignee = document.cookie.match(/session=([^%]+)/)[1];
+                    const assignee = document.cookie.match(/session=([^%]+)/)?.[1];
                     const params = new URLSearchParams({ assignee });
-                    this.current_toc = await fetch(`/tocky/pop?${params}`, {
+                    this.current_toc = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/pop?${params}`, {
                         headers: {
                             'Content-Type': 'application/json',
                             'X-API-Key': window.TOCKEY_API_KEY = (window.TOCKEY_API_KEY || prompt("Tocky API key")),
@@ -187,7 +187,7 @@
                         body.corrected_toc = this.corrected_toc;
                     }
                     await fetch(
-                        `/tocky/update/${this.current_toc.id}`,
+                        `[[ config.env.TOCKY_APPLICATION_ROOT ]]/update/${this.current_toc.id}`,
                         {
                             method: "POST",
                             headers: {

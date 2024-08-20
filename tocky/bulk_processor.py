@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-import re
 from typing import Literal, TypedDict
 import json
 import traceback
@@ -9,6 +8,7 @@ import requests
 
 from tocky.detector import AbstractDetector
 from tocky.detector.ocr_detector import OcrDetector
+from tocky.env import get_env
 from tocky.extractor import AbstractExtractor
 from tocky.extractor.ai_extractor import AiExtractor
 from tocky.utils.ia import bulk_ia_to_ol, get_ia_metadata
@@ -135,9 +135,9 @@ def process_ia_book(
 
 def push_to_toc_queue(record: dict) -> int:
   resp = requests.put(
-      'https://testing.openlibrary.org/tocky/push',
+      f'{get_env().get_app_prefix()}/push',
       headers={
-          'X-API-KEY': os.environ['TOCKY_SERVER_KEY'],
+          'X-API-KEY': get_env().TOCKY_SERVER_KEY,
           'Content-Type': 'application/json',
       },
       data=json.dumps(record)
@@ -146,9 +146,9 @@ def push_to_toc_queue(record: dict) -> int:
 
 def update_toc_queue(row_id: int, record: dict):
   return requests.post(
-      f'https://testing.openlibrary.org/tocky/update/{row_id}',
+      f'{get_env().get_app_prefix()}/update/{row_id}',
       headers={
-          'X-API-KEY': os.environ['TOCKY_SERVER_KEY'],
+          'X-API-KEY': get_env().TOCKY_SERVER_KEY,
           'Content-Type': 'application/json',
       },
       data=json.dumps(record)
