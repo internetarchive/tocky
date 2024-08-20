@@ -7,6 +7,9 @@
     <title>List | Tocky</title>
 
     <style>
+        body {
+            font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
+        }
         [v-cloak] {
             display: none;
         }
@@ -15,11 +18,31 @@
 
 <body>
     <div id="app" v-cloak>
-        <p-data-table :value="records" :virtual-scroll="true" :item-size="50" :lazy="true" :total-records="totalRecords" @virtual-scroll="onVirtualScroll">
+        <p-data-table
+            size="small"
+            :value="records"
+            :virtual-scroll="true"
+            :item-size="40"
+            :lazy="true"
+            :total-records="totalRecords"
+            @virtual-scroll="onVirtualScroll"
+        >
             <p-column field="id" header="ID"></p-column>
             <p-column field="assignee" header="Assignee"></p-column>
-            <p-column field="state" header="State"></p-column>
-            <p-column field="record" header="Record" :body="recordTemplate"></p-column>
+            <p-column field="created" header="Created"></p-column>
+            <p-column field="state" header="State">
+                <template #body="{ data }">
+                    <p-tag v-if="data.state === 'Done'" value="Done" severity="success"></p-tag>
+                    <p-tag v-else-if="data.state === 'Errored'" value="Errored" severity="danger"></p-tag>
+                    <p-tag v-else :value="data.state" severity="info"></p-tag>
+                </template>
+            </p-column>
+            <p-column field="record.ocaid" header="IA ID"></p-column>
+            <p-column field="record" header="Record">
+                <template #body="{ data }">
+                    <p-button text size="small" @click="showFullRecord(data)">View JSON</p-button>
+                </template>
+            </p-column>
         </p-data-table>
 
         <p-dialog v-model:visible="dialogVisible" header="Full Record" :modal="true" :style="{ width: '50vw' }">
@@ -55,10 +78,6 @@
                     this.offset = event.first;
                     this.fetchData();
                 },
-                recordTemplate(record) {
-                    const truncatedRecord = JSON.stringify(record).slice(0, 100) + '...';
-                    return `<span @click="showFullRecord(${JSON.stringify(record)})">${truncatedRecord}</span>`;
-                },
                 showFullRecord(record) {
                     this.fullRecord = JSON.stringify(record, null, 2);
                     this.dialogVisible = true;
@@ -81,7 +100,10 @@
 
         window.app.component('p-data-table', PrimeVue.DataTable);
         window.app.component('p-column', PrimeVue.Column);
+        window.app.component('p-column-group', PrimeVue.ColumnGroup);
         window.app.component('p-dialog', PrimeVue.Dialog);
+        window.app.component('p-button', PrimeVue.Button);
+        window.app.component('p-tag', PrimeVue.Tag);
 
         window.app.mount("#app");
     </script>
