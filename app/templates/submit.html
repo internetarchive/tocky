@@ -55,6 +55,7 @@
                     <div class="column field">
                         <label>Internet Archive ID</label>
                         <input type="text" name="ia_id" v-model="ia_id" placeholder="e.g. goody">
+                        <p-button small text @click="tryRandomBook">Try a random book</p-button>
                     </div>
                 </div>
             </p-fieldset>
@@ -416,6 +417,16 @@
                         this.detector.options.leaf_numbers.value.sort();
                     } else {
                         this.detector.options.leaf_numbers.value.splice(index, 1);
+                    }
+                },
+                async tryRandomBook() {
+                    try {
+                        const response = await fetch('https://archive.org/advancedsearch.php?q=mediatype%3Atexts+AND+openlibrary_edition%3A*+AND+-ocr_converted%3A*+AND+language%3Aeng+AND+-collection%3Aopensource+AND+-collection%3Amicrofilm+AND++-repub_state%3A(10+OR+13)++AND+imagecount%3A[100+TO+99999]+AND+NOT+scanner%3Agoogle+AND+NOT+curatestate%3Adark&fl[]=identifier&sort[]=&sort[]=&sort[]=&rows=50&page=1&output=json&save=yes');
+                        const data = await response.json();
+                        const randomIndex = Math.floor(Math.random() * data.response.docs.length);
+                        this.ia_id = data.response.docs[randomIndex].identifier;
+                    } catch (error) {
+                        console.error('Error fetching random book:', error);
                     }
                 }
             },
