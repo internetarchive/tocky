@@ -7,6 +7,7 @@
     <title>Review | Tocky</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
     <style>
         [v-cloak] {
             display: none;
@@ -70,6 +71,7 @@
 
 <body>
     <div id="app" v-cloak>
+        <tocky-header></tocky-header>
         <main class="ui basic segment" v-if="current_toc">
             Status: {{current_toc.record.status}}
 
@@ -129,10 +131,13 @@
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/primevue/umd/primevue.min.js"></script>
+    <script src="https://unpkg.com/@primevue/themes/umd/aura.min.js"></script>
+    <script src="[[ url_for('static', filename='shared.js') ]]"></script>
     <script type="module">
         await import("https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js");
         await import("https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.js");
-        const app = Vue.createApp({
+        window.app = Vue.createApp({
             data() {
                 const m = location.pathname.match(/\/review\/(\d+)/);
                 return {
@@ -193,7 +198,7 @@
                     this.current_toc = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/pop?${params}`, {
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-API-Key': window.TOCKEY_API_KEY = (window.TOCKEY_API_KEY || prompt("Tocky API key")),
+                            'X-API-Key': TockyShared.getApiKey(true)
                         }
                     }).then((r) => r.json());
                     this.corrected_toc = this.current_toc.record.structured_toc;
@@ -209,7 +214,7 @@
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",
-                                "X-API-Key": window.TOCKEY_API_KEY = (window.TOCKEY_API_KEY || prompt("Tocky API key")),
+                                "X-API-Key": TockyShared.getApiKey(true),
                             },
                             body: JSON.stringify(Object.assign({}, body, { state: 'Done' })),
                         },
@@ -231,7 +236,21 @@
             },
         });
 
-        app.mount("#app");
+        window.app.use(PrimeVue.Config, {
+            theme: {
+                preset: PrimeVue.Themes.Aura,
+                options: {
+                    prefix: 'p',
+                    darkModeSelector: '.never',
+                }
+            }
+        });
+
+        TockyShared.registerAllPrimeVueComponents(window.app);
+
+        window.app.component('tocky-header', TockyShared.Header);
+
+        window.app.mount("#app");
 
         class OlTocParseError extends Error { }
         function parseOlToc(tocString) {
