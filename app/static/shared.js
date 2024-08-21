@@ -2,7 +2,7 @@ const TockyShared = {};
 
 TockyShared.Header = {
     template: `
-        <p-menu-bar class="app-toolbar" :model="nav_options">
+        <p-menubar class="app-toolbar" :model="nav_options">
             <template #start>
                 <h1>Tocky</h1>
             </template>
@@ -13,7 +13,7 @@ TockyShared.Header = {
                     {{ authenticated ? 'Edit Key' : 'Set Key' }}
                 </p-button>
             </template>
-        </p-menu-bar>
+        </p-menubar>
     `,
     data() {
         return {
@@ -67,6 +67,19 @@ TockyShared.getApiKey = function (ask = true) {
         }
     }
     return cookie;
+};
+
+TockyShared.registerAllPrimeVueComponents = function (app) {
+    function upperCamelCaseToKebabCase(str) {
+        return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase().slice(1);
+    }
+    for (const component in PrimeVue) {
+        const kebabCase = upperCamelCaseToKebabCase(component);
+        app.component(`p-${kebabCase}`, PrimeVue[component]);
+    }
+
+    // TODO
+    app.directive('tooltip', PrimeVue.Tooltip);
 };
 
 window.TockyShared = TockyShared;

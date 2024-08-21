@@ -180,16 +180,7 @@
             }
         });
 
-        window.app.component('p-data-table', PrimeVue.DataTable);
-        window.app.component('p-column', PrimeVue.Column);
-        window.app.component('p-column-group', PrimeVue.ColumnGroup);
-        window.app.component('p-row', PrimeVue.Row);
-        window.app.component('p-dialog', PrimeVue.Dialog);
-        window.app.component('p-button', PrimeVue.Button);
-        window.app.component('p-button-group', PrimeVue.ButtonGroup);
-        window.app.component('p-tag', PrimeVue.Tag);
-        window.app.component('p-multi-select', PrimeVue.MultiSelect);
-        window.app.component('p-menu-bar', PrimeVue.Menubar);
+        TockyShared.registerAllPrimeVueComponents(window.app);
 
         window.app.component('tocky-header', TockyShared.Header);
 
