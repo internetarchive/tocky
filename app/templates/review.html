@@ -191,18 +191,20 @@
                     if (this.corrected_toc != this.current_toc.record.structured_toc) {
                         body.corrected_toc = this.corrected_toc;
                     }
+                    const params = new URLSearchParams();
+                    const assignee = document.cookie.match(/session=([^%]+)/)?.[1];
+                    if (assignee) {
+                        params.append('assignee', assignee);
+                    }
                     await fetch(
-                        `[[ config.env.TOCKY_APPLICATION_ROOT ]]/update/${this.current_toc.id}`,
+                        `[[ config.env.TOCKY_APPLICATION_ROOT ]]/update/${this.current_toc.id}?${params}`,
                         {
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",
                                 "X-API-Key": TockyShared.getApiKey(true),
                             },
-                            body: JSON.stringify(Object.assign({}, body, {
-                                state: 'Done',
-                                assignee: document.cookie.match(/session=([^%]+)/)?.[1],
-                            })),
+                            body: JSON.stringify(Object.assign({}, body, { state: 'Done' })),
                         },
                     );
                 },

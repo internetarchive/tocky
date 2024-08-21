@@ -114,15 +114,25 @@ def update(id: int):
 
     content = request.get_json()
     state = content.get('state', 'Done')
+    
+    set_requests = [
+        'state = ?',
+        'record = ?',
+    ]
+    set_params = [state, json.dumps(content)]
+    if assignee := request.args.get('assignee'):
+        set_requests.append('assignee = ?')
+        set_params.append(assignee)
+
+
     with closing(get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             # Execute the parameterized query
-            cur.execute("""
+            cur.execute(f"""
                 UPDATE toc_queue
-                SET state = ?,
-                    record = ?
+                SET {", ".join(set_requests)}
                 WHERE id = ?
-            """, (state, json.dumps(content), id))
+            """, (*set_params, id))
             conn.commit()
             return jsonify({'success': True})
 
