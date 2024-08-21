@@ -34,7 +34,20 @@
                     <p-tag v-else :value="data.state" severity="info"></p-tag>
                 </template>
             </p-column>
-            <p-column field="record.ocaid" header="IA ID"></p-column>
+            <p-column field="record.ocaid" header="IA ID">
+                <template #body="{ data }">
+                    
+                    <p-button-group>
+                        <p-button small link as="a" :href="`https://openlibrary.org/ia/${data.record.ocaid}`" target="_blank" title="Find on OpenLibrary">
+                            <img src="https://openlibrary.org/favicon.ico" alt="" style="width: 16px; height: 16px;">
+                        </p-button>
+                        <p-button small link as="a" :href="`https://archive.org/details/${data.record.ocaid}`" target="_blank" title="View on Archive.org">
+                            <img src="https://archive.org/favicon.ico" alt="" style="width: 16px; height: 16px;">
+                            {{data.record.ocaid}}
+                        </p-button>
+                    </p-button-group>
+                </template>
+            </p-column>
             <p-column field="record" header="Record">
                 <template #body="{ data }">
                     <p-button text size="small" @click="showFullRecord(data)">View JSON</p-button>
@@ -100,6 +113,7 @@
         window.app.component('p-column-group', PrimeVue.ColumnGroup);
         window.app.component('p-dialog', PrimeVue.Dialog);
         window.app.component('p-button', PrimeVue.Button);
+        window.app.component('p-button-group', PrimeVue.ButtonGroup);
         window.app.component('p-tag', PrimeVue.Tag);
 
         window.app.mount("#app");
