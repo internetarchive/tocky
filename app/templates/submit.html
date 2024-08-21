@@ -365,6 +365,8 @@
                     this.response = null;
                     this.error = null;
                     try {
+                        // Open (or reload) the list view to monitor
+                        setTimeout(() => window.open("[[ config.env.TOCKY_APPLICATION_ROOT ]]/list", "List | Tocky"), 100);
                         const res = await fetch("[[ config.env.TOCKY_APPLICATION_ROOT ]]/submit", {
                             method: "POST",
                             headers: {
