@@ -7,6 +7,7 @@
     <title>Submit | Tocky</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
     <style>
         .page-carousel {
             height: 300px;
@@ -47,6 +48,7 @@
 
 <body>
     <div id="app" v-cloak>
+        <tocky-header></tocky-header>
         <form class="ui form container">
             <p-fieldset legend="Input Book" :toggleable="true">
                 <div class="ui segment basic">
@@ -239,6 +241,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/primevue/umd/primevue.min.js"></script>
     <script src="https://unpkg.com/@primevue/themes/umd/aura.min.js"></script>
+    <script src="[[ url_for('static', filename='shared.js') ]]"></script>
     <script>
         const DETECTORS = {
             ocr_detector: {
@@ -358,9 +361,7 @@
 
             methods: {
                 async extractToc() {
-                    window.TOCKEY_API_KEY = (window.TOCKEY_API_KEY || prompt("Tocky API key"));
-
-                    if (!window.TOCKEY_API_KEY) {
+                    if (!TockyShared.getApiKey()) {
                         alert("Please provide a Tocky API key");
                         return;
                     }
@@ -372,7 +373,7 @@
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",
-                                'X-API-Key': window.TOCKEY_API_KEY,
+                                'X-API-Key': TockyShared.getApiKey(),
                             },
                             body: JSON.stringify({
                                 input_book: {
@@ -451,6 +452,10 @@
         window.app.component('p-input-text', PrimeVue.InputText);
         window.app.component('p-tag', PrimeVue.Tag);
         window.app.component('p-virtual-scroller', PrimeVue.VirtualScroller);
+        window.app.component('p-button', PrimeVue.Button);
+        window.app.component('p-menu-bar', PrimeVue.Menubar);
+
+        window.app.component('tocky-header', TockyShared.Header);
 
         window.app.mount("#app");
     </script>
