@@ -236,20 +236,7 @@
             },
         });
 
-        window.app.use(PrimeVue.Config, {
-            theme: {
-                preset: PrimeVue.Themes.Aura,
-                options: {
-                    prefix: 'p',
-                    darkModeSelector: '.never',
-                }
-            }
-        });
-
-        TockyShared.registerAllPrimeVueComponents(window.app);
-
-        window.app.component('tocky-header', TockyShared.Header);
-
+        TockyShared.registerComponents(window.app);
         window.app.mount("#app");
 
         class OlTocParseError extends Error { }

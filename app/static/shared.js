@@ -69,17 +69,33 @@ TockyShared.getApiKey = function (ask = true) {
     return cookie;
 };
 
-TockyShared.registerAllPrimeVueComponents = function (app) {
+TockyShared.registerComponents = function (app) {
     function upperCamelCaseToKebabCase(str) {
         return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase().slice(1);
     }
+
+    // Configure PrimeVue
+    window.app.use(PrimeVue.Config, {
+        theme: {
+            preset: PrimeVue.Themes.Aura,
+            options: {
+                prefix: 'p',
+                darkModeSelector: '.never',
+            }
+        }
+    });
+
+    // Register all PrimeVue components
     for (const component in PrimeVue) {
         const kebabCase = upperCamelCaseToKebabCase(component);
         app.component(`p-${kebabCase}`, PrimeVue[component]);
     }
 
-    // TODO
+    // Register all PrimeVue directives
     app.directive('tooltip', PrimeVue.Tooltip);
+
+    // Register shared components
+    window.app.component('tocky-header', TockyShared.Header);
 };
 
 window.TockyShared = TockyShared;
