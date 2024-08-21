@@ -24,18 +24,7 @@
 
 <body>
     <div id="app" v-cloak>
-        <p-menu-bar class="app-toolbar" :model="nav_options">
-            <template #start>
-                <h1>Tocky</h1>
-            </template>
-
-            <template #end>
-                <p-button size="small" :outlined="authenticated" @click="authenticate">
-                    <i class="pi pi-key"></i>
-                    {{ authenticated ? 'Edit Key' : 'Set Key' }}
-                </p-button>
-            </template>
-        </p-menu-bar>
+        <tocky-header></tocky-header>
         <p-data-table
             size="small"
             scrollable 
@@ -243,6 +232,45 @@
         window.app.component('p-tag', PrimeVue.Tag);
         window.app.component('p-multi-select', PrimeVue.MultiSelect);
         window.app.component('p-menu-bar', PrimeVue.Menubar);
+
+        window.app.component('tocky-header', {
+            template: `
+                <p-menu-bar class="app-toolbar" :model="nav_options">
+                    <template #start>
+                        <h1>Tocky</h1>
+                    </template>
+
+                    <template #end>
+                        <p-button size="small" :outlined="authenticated" @click="authenticate">
+                            <i class="pi pi-key"></i>
+                            {{ authenticated ? 'Edit Key' : 'Set Key' }}
+                        </p-button>
+                    </template>
+                </p-menu-bar>
+            `,
+            data() {
+                return {
+                    authenticated: !!getApiKey(false),
+                    nav_options: [
+                        { label: 'List', url: '/list', icon: 'pi pi-list' },
+                        { label: 'Submit', url: '/submit', icon: 'pi pi-plus' },
+                    ],
+                };
+            },
+            methods: {
+                authenticate() {
+                    if (this.authenticated) {
+                        const newKey = prompt("Tocky API key", getApiKey(false));
+                        if (newKey !== null) {
+                            setCookie('TOCKY_API_KEY', newKey);
+                        }
+                    } else {
+                        getApiKey(true);
+                    }
+                    this.authenticated = !!getApiKey(false);
+                },
+            },
+        });
 
         window.app.mount("#app");
     </script>
