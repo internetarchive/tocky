@@ -55,7 +55,11 @@
                     <div class="column field">
                         <label>Internet Archive ID</label>
                         <input type="text" name="ia_id" v-model="ia_id" placeholder="e.g. goody">
-                        <p-button small text @click="tryRandomBook">Try a random book</p-button>
+                        <p-button small text
+                            @click="tryRandomBook"
+                            :loading="randomIaIds.loading"
+                            label="Try a random book"
+                        ></p-button>
                     </div>
                 </div>
             </p-fieldset>
@@ -333,6 +337,7 @@
                     state: "To Submit",
                     error: null,
                     response: null,
+                    randomIaIds: [],
                     
                     DETECTORS: DETECTORS,
                     detector: DETECTORS.ocr_detector,
@@ -420,14 +425,29 @@
                     }
                 },
                 async tryRandomBook() {
-                    try {
-                        const response = await fetch('https://archive.org/advancedsearch.php?q=mediatype%3Atexts+AND+openlibrary_edition%3A*+AND+-ocr_converted%3A*+AND+language%3Aeng+AND+-collection%3Aopensource+AND+-collection%3Amicrofilm+AND++-repub_state%3A(10+OR+13)++AND+imagecount%3A[100+TO+99999]+AND+NOT+scanner%3Agoogle+AND+NOT+curatestate%3Adark&fl[]=identifier&sort[]=&sort[]=&sort[]=&rows=50&page=1&output=json&save=yes');
-                        const data = await response.json();
-                        const randomIndex = Math.floor(Math.random() * data.response.docs.length);
-                        this.ia_id = data.response.docs[randomIndex].identifier;
-                    } catch (error) {
-                        console.error('Error fetching random book:', error);
+                    if (!this.randomIaIds.length) {
+                        try {
+                            this.randomIaIds.loading = true;
+                            const params = new URLSearchParams({
+                                q: "mediatype:texts AND openlibrary_edition:* AND -ocr_converted:* AND language:eng AND -collection:opensource AND -collection:microfilm AND  -repub_state:(10 OR 13)  AND imagecount:[100 TO 99999] AND NOT scanner:google AND NOT curatestate:dark",
+                                fl: "identifier",
+                                sort: "random",
+                                rows: 50,
+                                output: "json",
+                            });
+                            const response = await fetch(`https://archive.org/advancedsearch.php?${params}`);
+                            const data = await response.json();
+                            this.randomIaIds = data.response.docs.map(doc => doc.identifier);
+                        } catch (error) {
+                            console.error('Error fetching random book:', error);
+                            return;
+                        } finally {
+                            this.randomIaIds.loading = false;
+                        }
                     }
+
+                    const randomIndex = Math.floor(Math.random() * this.randomIaIds.length);
+                    this.ia_id = this.randomIaIds[randomIndex];
                 }
             },
         });
