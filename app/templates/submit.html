@@ -52,18 +52,10 @@
         <form class="ui form container">
             <p-fieldset legend="Input Book" :toggleable="true">
                 <div class="ui segment basic">
-                    <div class="ui two column very relaxed stackable grid">
-                        <div class="column field">
-                            <label>Internet Archive ID</label>
-                            <input type="text" name="ia_id" v-model="ia_id" placeholder="e.g. goody">
-                        </div>
-
-                        <div class="column field">
-                            <label>Open Library ID</label>
-                            <input type="text" name="ol_id" v-model="ol_id" placeholder="e.g. OL123M" pattern="^OL\d+M$">
-                        </div>
+                    <div class="column field">
+                        <label>Internet Archive ID</label>
+                        <input type="text" name="ia_id" v-model="ia_id" placeholder="e.g. goody">
                     </div>
-                    <div class="ui vertical divider">or</div>
                 </div>
             </p-fieldset>
 
@@ -337,7 +329,6 @@
             data() {
                 return {
                     ia_id: "",
-                    ol_id: "",
                     state: "To Submit",
                     error: null,
                     response: null,
@@ -356,7 +347,6 @@
                 // read from url params if empty
                 const urlParams = new URLSearchParams(window.location.search);
                 this.ia_id = this.ia_id || urlParams.get("ia_id") || "";
-                this.ol_id = this.ol_id || urlParams.get("ol_id") || "";
             },
 
             methods: {
@@ -378,7 +368,6 @@
                             body: JSON.stringify({
                                 input_book: {
                                     ia_id: this.ia_id,
-                                    ol_id: this.ol_id,
                                 },
                                 detector: {
                                     type: this.detector.value,
