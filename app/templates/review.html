@@ -38,16 +38,13 @@
             overflow: hidden;
         }
 
-        .tab {
-            overflow: auto;
+        .p-tabpanels {
             flex: 1;
+            overflow: auto;
         }
-
-        .tab[data-tab=book] {
-            margin: 0;
-            padding: 0;
+        .p-tabpanel {
+            height: 100%;
         }
-
         .main-split {
             display: flex;
             overflow: hidden;
@@ -76,43 +73,36 @@
             Status: {{current_toc.record.status}}
 
             <div class="main-split">
-                <div class="left">
-                    <div class="ui top attached tabular menu">
-                        <div class="active item" data-tab="ocr">OCR</div>
-                        <div class="item" data-tab="book">Book</div>
-                        <div class="item" data-tab="json">JSON</div>
-                    </div>
-                    <div class="ui bottom attached tab segment" data-tab="ocr">
-                        <pre class="page-ocr" v-for="page in current_toc.record.toc_raw_ocr">{{page}}</pre>
-                    </div>
-                    <div class="ui bottom attached tab loading segment" data-tab="book">
-                        <iframe
-                            :src="`https://archive.org/embed/${current_toc.record.ocaid}?admin=1#page/leaf${current_toc.record.detected_toc[0]}`"></iframe>
-                    </div>
-                    <div class="ui bottom attached tab segment" data-tab="json">
-                        <pre>{{JSON.stringify(current_toc, null, '  ')}}</pre>
-                    </div>
-                </div>
+                <p-tabs class="left" value="ocr">
+                    <p-tab-list>
+                        <p-tab value="ocr">OCR</p-tab>
+                        <p-tab value="book">Book</p-tab>
+                        <p-tab value="json">JSON</p-tab>
+                    </p-tab-list>
+                    <p-tab-panels>
+                        <p-tab-panel value="ocr">
+                            <pre class="page-ocr" v-for="page in current_toc.record.toc_raw_ocr">{{page}}</pre>
+                        </p-tab-panel>
+                        <p-tab-panel value="book">
+                            <iframe
+                                :src="`https://archive.org/embed/${current_toc.record.ocaid}?admin=1#page/leaf${current_toc.record.detected_toc[0]}`"></iframe>
+                        </p-tab-panel>
+                        <p-tab-panel value="json">
+                            <pre>{{JSON.stringify(current_toc, null, '  ')}}</pre>
+                        </p-tab-panel>
+                    </p-tab-panels>
+                </p-tabs>
                 <div class="right">
                     <textarea v-model="corrected_toc"></textarea>
                     <div>
-                        <select class="ui selection dropdown" v-model="current_toc.record.human_validation">
-                            <option value="Perfect">Perfect</option>
-                            <option value="Near Perfect">Near Perfect</option>
-                            <option value="Good">Good</option>
-                            <option value="Ok">Ok</option>
-                            <option value="Safe Wrong">Safe Wrong</option>
-                            <option value="Incomplete">Incomplete</option>
-                            <option value="Wrong">Wrong</option>
-                        </select>
+                        <p-select v-model="current_toc.record.human_validation" :options="validationOptions" placeholder="Select Validation"></p-select>
                         <div class="ui input">
                             <input type="text" placeholder="Comment..." v-model="current_toc.record.comment">
                         </div>
                     </div>
                     <div>
-                        <button class="ui primary button" @click="submitCorrections">Submit corrections</button>
-                        <button class="ui primary button" @click="saveToOL" :disabled="!corrected_toc">Save to Open
-                            Library</button>
+                        <p-button label="Submit corrections" @click="submitCorrections"></p-button>
+                        <p-button label="Save to Open Library" @click="saveToOL" :disabled="!corrected_toc"></p-button>
                     </div>
                 </div>
             </div>
@@ -122,11 +112,7 @@
         </main>
 
         <footer class="controls">
-            <button
-                class="ui primary button"
-                @click="getNextToc"
-                :disabled="!specific_id"
-            >Get next TOC</button>
+            <p-button label="Get next TOC" @click="getNextToc" :disabled="!specific_id"></p-button>
         </footer>
     </div>
 
@@ -135,8 +121,6 @@
     <script src="https://unpkg.com/@primevue/themes/umd/aura.min.js"></script>
     <script src="[[ url_for('static', filename='shared.js') ]]"></script>
     <script type="module">
-        await import("https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js");
-        await import("https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.js");
         window.app = Vue.createApp({
             data() {
                 const m = location.pathname.match(/\/review\/(\d+)/);
@@ -144,6 +128,15 @@
                     specific_id: m ? parseFloat(m[1]) : null,
                     current_toc: null,
                     corrected_toc: null,
+                    validationOptions: [
+                        'Perfect',
+                        'Near Perfect',
+                        'Good',
+                        'Ok',
+                        'Safe Wrong',
+                        'Incomplete',
+                        'Wrong',
+                    ],
                 };
             },
 
@@ -158,16 +151,6 @@
                     this.current_toc = resp[0];
                     this.corrected_toc = this.current_toc.record.structured_toc;
                 }
-            },
-
-            watch: {
-                async current_toc(newVal, oldVal) {
-                    if (!oldVal) {
-                        console.log("init tabs");
-                        await new Promise((res) => setTimeout(res, 100));
-                        $(".tabular.menu .item").tab();
-                    }
-                },
             },
 
             methods: {
