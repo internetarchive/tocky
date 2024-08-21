@@ -88,6 +88,10 @@
             </p-column>
         </p-data-table>
 
+        <p-message v-if="records.length == limit" severity="warn">
+            Only the first {{limit}} rows are displayed.
+        </p-message>
+
         <p-dialog v-model:visible="dialogVisible" header="Full Record" :modal="true" :style="{ width: '50vw' }">
             <pre>{{ fullRecord }}</pre>
         </p-dialog>
