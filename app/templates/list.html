@@ -13,11 +13,29 @@
         [v-cloak] {
             display: none;
         }
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
     </style>
+
+    <link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
 </head>
 
 <body>
     <div id="app" v-cloak>
+        <p-menu-bar class="app-toolbar" :model="nav_options">
+            <template #start>
+                <h1>Tocky</h1>
+            </template>
+
+            <template #end>
+                <p-button size="small" :outlined="authenticated" @click="authenticate">
+                    <i class="pi pi-key"></i>
+                    {{ authenticated ? 'Edit Key' : 'Set Key' }}
+                </p-button>
+            </template>
+        </p-menu-bar>
         <p-data-table
             size="small"
             scrollable 
@@ -96,9 +114,40 @@
     <script src="https://unpkg.com/primevue/umd/primevue.min.js"></script>
     <script src="https://unpkg.com/@primevue/themes/umd/aura.min.js"></script>
     <script>
+        function readFromCookie(key) {
+            const cookies = document.cookie.split(';');
+            for (const cookie of cookies) {
+                const [name, value] = cookie.split('=');
+                if (name.trim() === key) {
+                    return value;
+                }
+            }
+            return null;
+        }
+        function setCookie(key, value) {
+            document.cookie = `${key}=${value}`;
+        }
+
+        function getApiKey(ask = true) {
+            const cookie = readFromCookie('TOCKY_API_KEY');
+            if (!cookie && ask) {
+                const providedKey = prompt("Tocky API key");
+                if (providedKey) {
+                    setCookie('TOCKY_API_KEY', providedKey);
+                    return providedKey;
+                }
+            }
+            return cookie;
+        }
         window.app = Vue.createApp({
             data() {
                 return {
+                    authenticated: !!getApiKey(false),
+                    nav_options: [
+                        { label: 'List', url: '/list', icon: 'pi pi-list' },
+                        { label: 'Submit', url: '/submit', icon: 'pi pi-plus' },
+                    ],
+
                     records: [],
                     limit: 50,
                     offset: 0,
@@ -130,6 +179,17 @@
                 };
             },
             methods: {
+                authenticate() {
+                    if (this.authenticated) {
+                        const newKey = prompt("Tocky API key", getApiKey(false));
+                        if (newKey !== null) {
+                            setCookie('TOCKY_API_KEY', newKey);
+                        }
+                    } else {
+                        getApiKey(true);
+                    }
+                    this.authenticated = !!getApiKey(false);
+                },
                 async fetchData() {
                     this.loading = true;
                     const params = new URLSearchParams({
@@ -182,6 +242,7 @@
         window.app.component('p-button-group', PrimeVue.ButtonGroup);
         window.app.component('p-tag', PrimeVue.Tag);
         window.app.component('p-multi-select', PrimeVue.MultiSelect);
+        window.app.component('p-menu-bar', PrimeVue.Menubar);
 
         window.app.mount("#app");
     </script>
