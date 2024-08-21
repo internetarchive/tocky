@@ -19,8 +19,9 @@ TockyShared.Header = {
         return {
             authenticated: !!TockyShared.getApiKey(false),
             nav_options: [
-                { label: 'List', url: '/list', icon: 'pi pi-list' },
-                { label: 'Submit', url: '/submit', icon: 'pi pi-plus' },
+                // TODO: Should not hard-code the /tocky prefix
+                { label: 'List', url: '/tocky/list', icon: 'pi pi-list' },
+                { label: 'Submit', url: '/tocky/submit', icon: 'pi pi-plus' },
             ],
         };
     },
