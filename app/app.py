@@ -167,13 +167,17 @@ def api_list():
         where_clauses.append('id = ?')
         params.append(_id)
 
-    if state := request.args.get('state'):
-        where_clauses.append('state = ?')
-        params.append(state)
-    
-    if assignee := request.args.get('assignee'):
-        where_clauses.append('assignee = ?')
-        params.append(assignee)
+    for list_field in ['state', 'assignee', 'record.human_validation']:
+        if arg_val := request.args.get(list_field):
+            filter_list = arg_val.split('|')
+            field_parts = list_field.split('.')
+            sub_fields = field_parts[1:]
+            db_field = field_parts[0]
+            if sub_fields:
+                db_field += ' ->> ?'
+            where_clauses.append(f'{db_field} IN ({",".join(["?"] * len(filter_list))})')
+            params.extend(sub_fields)
+            params.extend(filter_list)
 
     with closing(get_conn()) as conn:
         with closing(conn.cursor()) as cur:

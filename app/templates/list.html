@@ -21,8 +21,14 @@
         <p-data-table
             size="small"
             scrollable 
+            data-key="id"
             :loading="loading"
             :value="records"
+
+            :filters="filters"
+            filter-display="menu"
+            lazy
+            @filter="handleFilter"
         >
             <p-column field="id" header="ID"></p-column>
             <p-column field="assignee" header="Assignee"></p-column>
@@ -32,6 +38,15 @@
                     <p-tag v-if="data.state === 'Done'" value="Done" severity="success"></p-tag>
                     <p-tag v-else-if="data.state === 'Errored'" value="Errored" severity="danger"></p-tag>
                     <p-tag v-else :value="data.state" severity="info"></p-tag>
+                </template>
+                <template #filter="{ filterModel, filterCallback }">
+                    <p-multi-select
+                        v-model="filterModel.value"
+                        @change="filterCallback()"
+                        :options="['To Detect', 'Detecting', 'To Extract', 'Extracting', 'To Review', 'Reviewing', 'Done', 'Errored']"
+                        placeholder="Filter"
+                        :showClear="true"
+                    ></p-multi-select>
                 </template>
             </p-column>
             <p-column field="record.ocaid" header="IA ID">
@@ -46,6 +61,18 @@
                             {{data.record.ocaid}}
                         </p-button>
                     </p-button-group>
+                </template>
+            </p-column>
+            <p-column field="record.human_validation" header="Human Validation">
+                <template #filter="{ filterModel, filterCallback }">
+                    <p-multi-select
+                        v-model="filterModel.value"
+                        @change="filterCallback()"
+                        :options="humanValidationOptions"
+                        placeholder="Filter"
+                        style="min-width: 12rem"
+                        :showClear="true"
+                    ></p-multi-select>
                 </template>
             </p-column>
             <p-column field="record" header="Record">
@@ -78,19 +105,57 @@
                     dialogVisible: false,
                     fullRecord: '',
                     loading: false,
+
+                    filters: {
+                        'state': {
+                            value: [],
+                            matchMode: 'in'
+                        },
+                        'record.human_validation': {
+                            value: [],
+                            matchMode: 'in'
+                        }
+                    },
+
+                    humanValidationOptions: [
+                        "Perfect",
+                        "Near Perfect",
+                        "Good",
+                        "Ok",
+                        "Safe Wrong",
+                        "Incomplete",
+                        "Wrong",
+                    ],
+
                 };
             },
             methods: {
                 async fetchData() {
                     this.loading = true;
-                    const params = new URLSearchParams({ limit: this.limit, offset: this.offset });
-                    const response = await fetch(`https://testing.openlibrary.org/tocky/api/list?${params}`);
+                    const params = new URLSearchParams({
+                        limit: this.limit,
+                        offset: this.offset,
+                    });
+                    for (const [key, value] of Object.entries(this.filters)) {
+                        if (value.value.length > 0) {
+                            params.append(key, value.value.join('|'));
+                        }
+                    }
+                    const response = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/api/list?${params}`);
                     this.records = await response.json();
                     this.loading = false;
                 },
                 showFullRecord(record) {
                     this.fullRecord = JSON.stringify(record, null, 2);
                     this.dialogVisible = true;
+                },
+                handleFilter(event) {
+                    if (JSON.stringify(this.filters) === JSON.stringify(event.filters)) {
+                        return;
+                    }
+                    this.filters = event.filters;
+                    console.log('FILTER', event);
+                    this.fetchData(event.filters);
                 }
             },
             mounted() {
@@ -111,10 +176,12 @@
         window.app.component('p-data-table', PrimeVue.DataTable);
         window.app.component('p-column', PrimeVue.Column);
         window.app.component('p-column-group', PrimeVue.ColumnGroup);
+        window.app.component('p-row', PrimeVue.Row);
         window.app.component('p-dialog', PrimeVue.Dialog);
         window.app.component('p-button', PrimeVue.Button);
         window.app.component('p-button-group', PrimeVue.ButtonGroup);
         window.app.component('p-tag', PrimeVue.Tag);
+        window.app.component('p-multi-select', PrimeVue.MultiSelect);
 
         window.app.mount("#app");
     </script>
