@@ -199,7 +199,10 @@
                                 "Content-Type": "application/json",
                                 "X-API-Key": TockyShared.getApiKey(true),
                             },
-                            body: JSON.stringify(Object.assign({}, body, { state: 'Done' })),
+                            body: JSON.stringify(Object.assign({}, body, {
+                                state: 'Done',
+                                assignee: document.cookie.match(/session=([^%]+)/)?.[1],
+                            })),
                         },
                     );
                 },
