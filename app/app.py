@@ -173,13 +173,12 @@ def api_list():
     where_clauses = []
     params = []
 
-    if (_id := request.args.get('id', None, type=int)) is not None:
-        where_clauses.append('id = ?')
-        params.append(_id)
-
-    for list_field in ['state', 'assignee', 'record.human_validation']:
+    for list_field in ['id', 'state', 'assignee', 'record.human_validation']:
         if arg_val := request.args.get(list_field):
             filter_list = arg_val.split('|')
+            if list_field == 'id':
+                filter_list = [int(x) for x in filter_list]
+
             field_parts = list_field.split('.')
             sub_fields = field_parts[1:]
             db_field = field_parts[0]

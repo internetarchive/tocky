@@ -10,6 +10,17 @@
         [v-cloak] {
             display: none;
         }
+
+        .flashing {
+            animation: flashing 1.6s infinite;
+        }
+
+        @keyframes flashing {
+            5% { opacity: 1; }
+            45% { opacity: 1; }
+            55% { opacity: 0; }
+            95% { opacity: 0; }
+        }
     </style>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
@@ -38,7 +49,7 @@
                 <template #body="{ data }">
                     <p-tag v-if="data.state === 'Done'" value="Done" severity="success"></p-tag>
                     <p-tag v-else-if="data.state === 'Errored'" value="Errored" severity="danger"></p-tag>
-                    <p-tag v-else :value="data.state" severity="info"></p-tag>
+                    <p-tag v-else :value="data.state" severity="info" :class="{'flashing': data.id in watchedRecords}"></p-tag>
                 </template>
                 <template #filter="{ filterModel, filterCallback }">
                     <p-multi-select
@@ -111,6 +122,11 @@
                     ],
 
                     records: [],
+                    watchedRecords: {},
+                    watchedRecordsTimeout: null,
+                    maxWatch: 60_000,
+                    watchStart: 0,
+
                     limit: 50,
                     offset: 0,
                     dialogVisible: false,
@@ -141,20 +157,62 @@
                 };
             },
             methods: {
+                async apiList(params) {
+                    const response = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/api/list?${new URLSearchParams(params).toString()}`);
+                    return await response.json();
+                },
                 async fetchData() {
                     this.loading = true;
-                    const params = new URLSearchParams({
+                    this.watchedRecords = {};
+                    clearTimeout(this.watchedRecordsTimeout);
+
+                    const params = {
                         limit: this.limit,
                         offset: this.offset,
-                    });
+                    };
                     for (const [key, value] of Object.entries(this.filters)) {
                         if (value.value.length > 0) {
-                            params.append(key, value.value.join('|'));
+                            params[key] = value.value.join('|');
                         }
                     }
-                    const response = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/api/list?${params}`);
-                    this.records = await response.json();
+
+                    this.records = await this.apiList(params);
+                    for (const [index, record] of this.records.entries()) {
+                        if (record.state === 'Detecting' || record.state === 'Extracting') {
+                            this.watchedRecords[record.id] = index;
+                        }
+                    }
+                    this.watchStart = Date.now();
+                    this.startWatching();
                     this.loading = false;
+                },
+                startWatching() {
+                    const watchedRecordsIds = Object.keys(this.watchedRecords);
+                    if (!watchedRecordsIds.length) {
+                        return;
+                    }
+
+                    if (Date.now() - this.watchStart > this.maxWatch) {
+                        for (const id of watchedRecordsIds) {
+                            delete this.watchedRecords[id];
+                        }
+                        return;
+                    }
+
+                    this.watchedRecordsTimeout = setTimeout(async () => {
+                        const records = await this.apiList({ id: watchedRecordsIds.join('|'), limit: watchedRecordsIds.length });
+                        for (const record of records) {
+                            if (record.id in this.watchedRecords && this.records[this.watchedRecords[record.id]].id === record.id) {
+                                this.records[this.watchedRecords[record.id]] = record;
+                            }
+
+                            if (record.state !== 'Detecting' && record.state !== 'Extracting') {
+                                delete this.watchedRecords[record.id];
+                            }
+                        }
+
+                        this.startWatching();
+                    }, 1000);
                 },
                 showFullRecord(record) {
                     this.fullRecord = JSON.stringify(record, null, 2);
