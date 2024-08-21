@@ -7,6 +7,9 @@ services:
       - .env
     environment:
       - TOCKY_QUEUE_DB_PATH=/data/database.db
+      - IA_CONFIG_FILE=/run/secrets/ia_config
+    secrets:
+      - ia_config
     ports:
       - "5000:5000"
     networks:
@@ -19,3 +22,7 @@ networks:
 
 volumes:
   queue_data: {}
+
+secrets:
+  ia_config:
+    file: ia_config.ini

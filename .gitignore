@@ -1,6 +1,7 @@
 # Private
 .env
 /env*.py
+ia_config.ini
 
 # Editors
 .vscode/
