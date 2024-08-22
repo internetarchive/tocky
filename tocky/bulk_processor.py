@@ -129,7 +129,6 @@ def process_ia_book(
     set_state('Errored')
     return state
 
-  set_state('To Extract')
   if not state.detector_result.result:
     state.status = 'No TOC detected'
   else:
