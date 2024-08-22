@@ -128,8 +128,19 @@
                     </div>
                     <p-toolbar>
                         <template #start>
-                            <p-button label="Submit corrections" @click="submitCorrections"></p-button>
-                            <p-button label="Save to Open Library" @click="saveToOL" :disabled="!corrected_toc"></p-button>
+                            <p-button
+                                label="Submit corrections"
+                                @click="submitCorrections"
+                                :loading="submitCorrectionsLoading"
+                                :text="!changesToSave"
+                            ></p-button>
+                            <p-button
+                                label="Save to Open Library"
+                                @click="saveToOL"
+                                :disabled="!corrected_toc"
+                                :loading="saveToOLLoading"
+                                :text="!changedSinceOlSave"
+                            ></p-button>
                         </template>
                     </p-toolbar>
                 </div>
@@ -192,6 +203,12 @@
                         'Wrong',
                     ],
 
+                    lastSubmitValue: null,
+                    submitCorrectionsLoading: false,
+                    
+                    lastSavedToOL: null,
+                    saveToOLLoading: false,
+
                     monacoEditor: null,
                     monacoOptions: {
                         wordWrap: 'off',
@@ -210,6 +227,13 @@
                     set(value) {
                         this.monacoOptions.wordWrap = value ? 'on' : 'off';
                     }
+                },
+
+                changesToSave() {
+                    return this.lastSubmitValue !== JSON.stringify(this.current_toc);
+                },
+                changedSinceOlSave() {
+                    return this.lastSavedToOL !== JSON.stringify(this.corrected_toc);
                 }
             },
 
@@ -222,6 +246,7 @@
                         }
                     }).then((r) => r.json());
                     this.current_toc = resp[0];
+                    this.lastSubmitValue = JSON.stringify(this.current_toc);
                     this.corrected_toc = this.current_toc.record.structured_toc;
                 }
             },
@@ -260,6 +285,7 @@
                             'X-API-Key': TockyShared.getApiKey(true)
                         }
                     }).then((r) => r.json());
+                    this.lastSubmitValue = JSON.stringify(this.current_toc);
                     this.corrected_toc = this.current_toc.record.structured_toc;
 
                     if (!this.current_toc) {
@@ -267,6 +293,8 @@
                     }
                 },
                 async submitCorrections() {
+                    this.submitCorrectionsLoading = true;
+
                     const body = Object.assign({}, this.current_toc.record);
                     if (this.corrected_toc != this.current_toc.record.structured_toc) {
                         body.corrected_toc = this.corrected_toc;
@@ -276,30 +304,40 @@
                     if (assignee) {
                         params.append('assignee', assignee);
                     }
-                    await fetch(
-                        `[[ config.env.TOCKY_APPLICATION_ROOT ]]/update/${this.current_toc.id}?${params}`,
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "X-API-Key": TockyShared.getApiKey(true),
+                    try {
+                        await fetch(
+                            `[[ config.env.TOCKY_APPLICATION_ROOT ]]/update/${this.current_toc.id}?${params}`,
+                            {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "X-API-Key": TockyShared.getApiKey(true),
+                                },
+                                body: JSON.stringify(Object.assign({}, body, { state: 'Done' })),
                             },
-                            body: JSON.stringify(Object.assign({}, body, { state: 'Done' })),
-                        },
-                    );
+                        );
+                    } finally {
+                        this.submitCorrectionsLoading = false;
+                    }
                 },
                 async saveToOL() {
+                    this.saveToOLLoading = true;
                     // Always fetch latest from prod endpoint!
                     const rec = await fetch(
                         `https://openlibrary.org/ia/${this.current_toc.record.ocaid}.json`,
                     ).then((r) => r.json());
                     rec.table_of_contents = parseOlToc(this.corrected_toc);
                     rec._comment = 'Add TOC from Tocky';
-                    await fetch(`${rec.key}.json`, {
-                        method: "PUT",
-                        credentials: "include",
-                        body: JSON.stringify(rec),
-                    });
+                    this.lastSavedToOL = JSON.stringify(this.corrected_toc);
+                    try {
+                        await fetch(`${rec.key}.json`, {
+                            method: "PUT",
+                            credentials: "include",
+                            body: JSON.stringify(rec),
+                        });
+                    } finally {
+                        this.saveToOLLoading = false;
+                    }
                 },
                 updateSelectedLines(editFn) {
                     function* range(start, end) {
