@@ -1,5 +1,25 @@
 const TockyShared = {};
 
+TockyShared.StateTag = {
+    template: `
+        <p-tag :value="state" :severity="mapStateToSeverity(state)"></p-tag>
+    `,
+    props: {
+        state: String,
+    },
+    methods: {
+        mapStateToSeverity(state) {
+            if (state === 'Done') {
+                return 'success';
+            }
+            if (state === 'Errored') {
+                return 'danger';
+            }
+            return 'info';
+        }
+    },
+};
+
 TockyShared.Header = {
     template: `
         <p-menubar class="app-toolbar" :model="nav_options">
@@ -97,6 +117,7 @@ TockyShared.registerComponents = function (app) {
 
     // Register shared components
     window.app.component('tocky-header', TockyShared.Header);
+    window.app.component('tocky-state-tag', TockyShared.StateTag);
 };
 
 window.TockyShared = TockyShared;

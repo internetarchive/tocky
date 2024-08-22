@@ -47,9 +47,10 @@
             <p-column field="created" header="Created"></p-column>
             <p-column field="state" header="State">
                 <template #body="{ data }">
-                    <p-tag v-if="data.state === 'Done'" value="Done" severity="success"></p-tag>
-                    <p-tag v-else-if="data.state === 'Errored'" value="Errored" severity="danger"></p-tag>
-                    <p-tag v-else :value="data.state" severity="info" :class="{'flashing': data.id in watchedRecords}"></p-tag>
+                    <tocky-state-tag
+                        :state="data.state"
+                        :class="{'flashing': data.id in watchedRecords}"
+                    ></tocky-state-tag>
                 </template>
                 <template #filter="{ filterModel, filterCallback }">
                     <p-multi-select
@@ -58,7 +59,11 @@
                         :options="['To Detect', 'Detecting', 'To Extract', 'Extracting', 'To Review', 'Reviewing', 'Done', 'Errored']"
                         placeholder="Filter"
                         :showClear="true"
-                    ></p-multi-select>
+                    >
+                        <template #option="{ option }">
+                            <tocky-state-tag :state="option"></tocky-state-tag>
+                        </template>
+                    </p-multi-select>
                 </template>
             </p-column>
             <p-column field="record.ocaid" header="IA ID">
