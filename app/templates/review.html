@@ -251,7 +251,7 @@
                     }).then((r) => r.json());
                     this.current_toc = resp[0];
                     this.lastSubmitValue = JSON.stringify(this.current_toc);
-                    this.corrected_toc = this.current_toc.record.structured_toc;
+                    this.corrected_toc = this.current_toc.record.corrected_toc || this.current_toc.record.structured_toc;
                 }
             },
 
