@@ -108,7 +108,7 @@
                         <p-button label="De-indent" @click="deIndentText"></p-button>
                         <p-toggle-button v-model="wrapText" onLabel="Wrap" offLabel="No Wrap"></p-toggle-button>
                     </div>
-                    <textarea v-model="corrected_toc" :style="{ whiteSpace: wrapText ? 'pre' : 'pre-wrap' }"></textarea>
+                    <textarea ref="textarea" v-model="corrected_toc" :style="{ whiteSpace: wrapText ? 'pre' : 'pre-wrap' }"></textarea>
                     <div>
                         <p-select v-model="current_toc.record.human_validation" :options="validationOptions" placeholder="Select Validation"></p-select>
                         <div class="ui input">
@@ -153,6 +153,8 @@
                         'Wrong',
                     ],
                     wrapText: false,
+                    selectionStart: 0,
+                    selectionEnd: 0,
                 };
             },
 
@@ -167,6 +169,7 @@
                     this.current_toc = resp[0];
                     this.corrected_toc = this.current_toc.record.structured_toc;
                 }
+                this.$refs.textarea.addEventListener('blur', this.saveSelection);
             },
 
             methods: {
@@ -238,20 +241,36 @@
                     });
                 },
                 indentText() {
+                    this.restoreSelection();
                     const textarea = this.$refs.textarea;
                     const start = textarea.selectionStart;
                     const end = textarea.selectionEnd;
                     const selectedText = textarea.value.substring(start, end);
                     const indentedText = selectedText.replace(/^/gm, '    ');
                     this.corrected_toc = this.corrected_toc.substring(0, start) + indentedText + this.corrected_toc.substring(end);
+                    textarea.focus();
+                    textarea.setSelectionRange(start, end + 4 * (end - start));
                 },
                 deIndentText() {
+                    this.restoreSelection();
                     const textarea = this.$refs.textarea;
                     const start = textarea.selectionStart;
                     const end = textarea.selectionEnd;
                     const selectedText = textarea.value.substring(start, end);
                     const deIndentedText = selectedText.replace(/^ {1,4}/gm, '');
                     this.corrected_toc = this.corrected_toc.substring(0, start) + deIndentedText + this.corrected_toc.substring(end);
+                    textarea.focus();
+                    textarea.setSelectionRange(start, end - 4 * (end - start));
+                },
+                saveSelection() {
+                    const textarea = this.$refs.textarea;
+                    this.selectionStart = textarea.selectionStart;
+                    this.selectionEnd = textarea.selectionEnd;
+                },
+                restoreSelection() {
+                    const textarea = this.$refs.textarea;
+                    textarea.focus();
+                    textarea.setSelectionRange(this.selectionStart, this.selectionEnd);
                 },
             },
         });
