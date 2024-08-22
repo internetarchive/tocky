@@ -100,14 +100,17 @@
                 </p-tabs>
                 <div class="right">
                     <div class="toolbar">
-                        <p-button label="Indent" @click="indentText"></p-button>
-                        <p-button label="De-indent" @click="deIndentText"></p-button>
-                        <p-toggle-button v-model="wrapText" on-label="Wrap" off-label="No Wrap"></p-toggle-button>
+                        <p-button small icon="pi pi-step-backward-alt" label="De-indent" @click="deIndentText"></p-button>
+                        <p-button small icon="pi pi-step-forward-alt" label="Indent" @click="indentText"></p-button>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <p-toggle-switch v-model="wrapText"></p-toggle-switch>
+                            {{ wrapText ? 'Text wrap' : 'No Wrap' }}
+                        </label>
                     </div>
-                    <textarea ref="textarea" v-model="corrected_toc" :style="{ whiteSpace: wrapText ? 'pre' : 'pre-wrap' }"></textarea>
+                    <textarea ref="textarea" v-model="corrected_toc" :style="{ whiteSpace: wrapText ? 'pre-wrap' : 'pre' }"></textarea>
                     <div class="toolbar">
                         <p-select v-model="current_toc.record.human_validation" :options="validationOptions" placeholder="Select Validation"></p-select>
-                        <p-input-text placeholder="Comment..." v-model="current_toc.record.comment">
+                        <p-input-text placeholder="Comment..." v-model="current_toc.record.comment" style="flex: 1;"></p-input-text>
                     </div>
                     <div class="toolbar">
                         <p-button label="Submit corrections" @click="submitCorrections"></p-button>
