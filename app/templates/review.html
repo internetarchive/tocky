@@ -86,7 +86,11 @@
                     </p-tab-list>
                     <p-tab-panels>
                         <p-tab-panel value="ocr">
-                            <pre class="page-ocr" v-for="page in current_toc.record.toc_raw_ocr">{{page}}</pre>
+                            <pre
+                                class="page-ocr"
+                                v-for="page in current_toc.record.toc_raw_ocr"
+                                :style="{ width: `${getCanvasWidth(page)}ch` }"
+                            >{{page}}</pre>
                         </p-tab-panel>
                         <p-tab-panel value="book">
                             <iframe
@@ -252,6 +256,9 @@
             },
 
             methods: {
+                getCanvasWidth(page) {
+                    return Math.max(...page.split("\n").map((l) => l.length));
+                },
                 handleMonacoMount(editor) {
                     this.monacoEditor = editor;
                 },
