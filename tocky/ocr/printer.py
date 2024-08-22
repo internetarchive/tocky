@@ -46,10 +46,12 @@ def ocr_printer_canvas(djvu_page: str | etree._Element) -> str:
     # Convert inches to pixels
     dpi = int((root.xpath(".//PARAM[@name='DPI']/@value") or [int(get_ia_metadata(ocaid)['metadata']['ppi'])])[0])
     line_rounding_size = round(0.0333 * dpi)
+    img_width = int(root.xpath('./@width')[0])
+    img_height = int(root.xpath('./@height')[0])
 
     canvas_width = 120  # dpi // 4
-    conv_factor = canvas_width / int(root.xpath('./@width')[0])
-    canvas_height = math.ceil(int(root.xpath('./@height')[0]) * conv_factor)
+    conv_factor = canvas_width / img_width
+    canvas_height = math.ceil(img_height * conv_factor)
     canvas = ((" " * canvas_width + '\n') * canvas_height)[:-1]
 
     used_regions = index.Index()
@@ -89,30 +91,13 @@ def ocr_printer_canvas(djvu_page: str | etree._Element) -> str:
                     #     break
                     canvas = canvas[0:start_idx] + word.text + canvas[end_idx:]
 
-    def crop_text_canvas(canvas: str) -> str:
+    def crop_text_canvas(canvas: str, used_regions: index.Index) -> str:
       lines = canvas.split('\n')
-      line_len = len(lines[0])
-      top = 0
-      left = line_len
-      right = 0
-      bottom = 0
+      left, bottom, right, top = list(map(int, used_regions.bounds))
 
-      for line in lines:
-        left = min(left, line_len - len(line.lstrip()))
-        right = max(right, len(line.rstrip()))
-
-      for line in lines:
-        if not line.isspace():
-          break
-        top += 1
-
-      for line in reversed(lines):
-        if not line.isspace():
-          break
-        bottom += 1
       return '\n'.join((
           line[left:right] if not line.isspace() else ''
-          for line in lines[top:-max(bottom, 1)]
+          for line in lines[bottom:top]
       ))
 
     def collapse_newlines(s: str):
@@ -129,7 +114,7 @@ def ocr_printer_canvas(djvu_page: str | etree._Element) -> str:
         return re.sub(r' ' * (min_newline_chain -1) + '( *)', r'\1', s, flags=re.MULTILINE)
         # return re.sub(r'(\S) +', r'\1 ', s)
 
-    return collapse_newlines(crop_text_canvas(canvas))
+    return collapse_newlines(crop_text_canvas(canvas, used_regions))
 
 def print_ocr(djvu_xml: str | etree._Element, printer: Literal['canvas', 'linear']='canvas') -> str:
   if printer == 'canvas':
