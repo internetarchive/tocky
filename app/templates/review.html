@@ -66,12 +66,8 @@
 
         .toolbar {
             display: flex;
-            justify-content: space-between;
             margin-bottom: 10px;
-        }
-
-        .toolbar button {
-            margin-right: 10px;
+            gap: 10px;
         }
     </style>
 </head>
@@ -106,16 +102,14 @@
                     <div class="toolbar">
                         <p-button label="Indent" @click="indentText"></p-button>
                         <p-button label="De-indent" @click="deIndentText"></p-button>
-                        <p-toggle-button v-model="wrapText" onLabel="Wrap" offLabel="No Wrap"></p-toggle-button>
+                        <p-toggle-button v-model="wrapText" on-label="Wrap" off-label="No Wrap"></p-toggle-button>
                     </div>
                     <textarea ref="textarea" v-model="corrected_toc" :style="{ whiteSpace: wrapText ? 'pre' : 'pre-wrap' }"></textarea>
-                    <div>
+                    <div class="toolbar">
                         <p-select v-model="current_toc.record.human_validation" :options="validationOptions" placeholder="Select Validation"></p-select>
-                        <div class="ui input">
-                            <input type="text" placeholder="Comment..." v-model="current_toc.record.comment">
-                        </div>
+                        <p-input-text placeholder="Comment..." v-model="current_toc.record.comment">
                     </div>
-                    <div>
+                    <div class="toolbar">
                         <p-button label="Submit corrections" @click="submitCorrections"></p-button>
                         <p-button label="Save to Open Library" @click="saveToOL" :disabled="!corrected_toc"></p-button>
                     </div>
@@ -153,8 +147,6 @@
                         'Wrong',
                     ],
                     wrapText: false,
-                    selectionStart: 0,
-                    selectionEnd: 0,
                 };
             },
 
@@ -240,37 +232,47 @@
                         body: JSON.stringify(rec),
                     });
                 },
+                updateSelectedLines(editFn) {
+                    const start = this.$refs.textarea.selectionStart;
+                    const end = this.$refs.textarea.selectionEnd;
+                    const lines = this.corrected_toc.split("\n");
+                    /** @type {Array<{start: number, end: number, line: string}>} */
+                    const line_regions = [];
+                    let offset = 0;
+                    for (const line of lines) {
+                        const end = offset + line.length + 1;
+                        line_regions.push({
+                            start: offset,
+                            end,
+                            line,
+                        });
+                        offset = end;
+                    }
+                    
+                    // Find the actual lines that are selected
+                    const start_line = line_regions
+                        .findIndex(line => line.start <= start && start < line.end);
+                    const end_line = line_regions
+                        .findIndex(line => line.start <= end && end < line.end);
+                    
+                    // Indent the selected lines
+                    for (const [i, line] of line_regions.entries()) {
+                        if (i >= start_line && i <= end_line) {
+                            line.line = editFn(line.line);
+                        }
+
+                        if (i > end_line) {
+                            break;
+                        }
+                    }
+
+                    this.corrected_toc = line_regions.map(l => l.line).join("\n");
+                },
                 indentText() {
-                    this.restoreSelection();
-                    const textarea = this.$refs.textarea;
-                    const start = textarea.selectionStart;
-                    const end = textarea.selectionEnd;
-                    const selectedText = textarea.value.substring(start, end);
-                    const indentedText = selectedText.replace(/^/gm, '    ');
-                    this.corrected_toc = this.corrected_toc.substring(0, start) + indentedText + this.corrected_toc.substring(end);
-                    textarea.focus();
-                    textarea.setSelectionRange(start, end + 4 * (end - start));
+                    this.updateSelectedLines(line => line.replace(/^( *)(\**)/, ($0, $1, $2) => $1 + '    *' + $2));
                 },
                 deIndentText() {
-                    this.restoreSelection();
-                    const textarea = this.$refs.textarea;
-                    const start = textarea.selectionStart;
-                    const end = textarea.selectionEnd;
-                    const selectedText = textarea.value.substring(start, end);
-                    const deIndentedText = selectedText.replace(/^ {1,4}/gm, '');
-                    this.corrected_toc = this.corrected_toc.substring(0, start) + deIndentedText + this.corrected_toc.substring(end);
-                    textarea.focus();
-                    textarea.setSelectionRange(start, end - 4 * (end - start));
-                },
-                saveSelection() {
-                    const textarea = this.$refs.textarea;
-                    this.selectionStart = textarea.selectionStart;
-                    this.selectionEnd = textarea.selectionEnd;
-                },
-                restoreSelection() {
-                    const textarea = this.$refs.textarea;
-                    textarea.focus();
-                    textarea.setSelectionRange(this.selectionStart, this.selectionEnd);
+                    this.updateSelectedLines(line => line.replace(/^( *)(\**)/, ($0, $1, $2) => $1.slice(0, -4) + ($2.length > 1 ? $2.slice(0, -1) : $2)));
                 },
             },
         });
