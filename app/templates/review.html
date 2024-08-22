@@ -76,9 +76,7 @@
 <body>
     <div id="app" v-cloak>
         <tocky-header></tocky-header>
-        <main class="ui basic segment" v-if="current_toc">
-            Status: {{current_toc.record.status}}
-
+        <main v-if="current_toc">
             <div class="main-split">
                 <p-tabs class="left" value="ocr">
                     <p-tab-list>
@@ -100,7 +98,7 @@
                     </p-tab-panels>
                 </p-tabs>
                 <div class="right">
-                    <p-toolbar>
+                    <p-toolbar style="padding: 0 10px;">
                         <template #start>
                             <p-button small text icon="pi pi-step-backward-alt" label="De-indent" @click="deIndentText"></p-button>
                             <p-button small text icon="pi pi-step-forward-alt" label="Indent" @click="indentText"></p-button>
@@ -120,7 +118,12 @@
                         @mount="handleMonacoMount"
                     ></vue-monaco-editor>
                     <div class="toolbar">
-                        <p-select v-model="current_toc.record.human_validation" :options="validationOptions" placeholder="Select Validation"></p-select>
+                        <p-select
+                            v-model="current_toc.record.human_validation"
+                            :options="validationOptions"
+                            placeholder="Select Validation"
+                            style="min-width: 20ch;"
+                        ></p-select>
                         <p-input-text placeholder="Comment..." v-model="current_toc.record.comment" style="flex: 1;"></p-input-text>
                     </div>
                     <p-toolbar>
@@ -143,6 +146,8 @@
                 <div>State: <tocky-state-tag :state="current_toc.state"></tocky-state-tag></div>
                 <p-divider layout="vertical"></p-divider>
                 <div>IA ID: <tocky-ia-link :ocaid="current_toc.record.ocaid"></tocky-ia-link></div>
+                <p-divider layout="vertical"></p-divider>
+                <div>Status: {{current_toc.record.status}}</div>
             </template>
 
             <template #end>
