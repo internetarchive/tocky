@@ -323,6 +323,7 @@
                                 body: JSON.stringify(Object.assign({}, body, { state: 'Done' })),
                             },
                         );
+                        this.lastSubmitValue = JSON.stringify(this.current_toc);
                     } finally {
                         this.submitCorrectionsLoading = false;
                     }
