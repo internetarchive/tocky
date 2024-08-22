@@ -130,7 +130,7 @@
         </main>
 
         <footer class="controls">
-            <p-button label="Get next TOC" @click="getNextToc" :disabled="!specific_id"></p-button>
+            <p-button label="Get next TOC" @click="getNextToc" v-tooltip="`Get the next TOC to review`"></p-button>
         </footer>
     </div>
 
@@ -235,6 +235,10 @@
                         }
                     }).then((r) => r.json());
                     this.corrected_toc = this.current_toc.record.structured_toc;
+
+                    if (!this.current_toc) {
+                        alert("No more TOCs to review right now!");
+                    }
                 },
                 async submitCorrections() {
                     const body = Object.assign({}, this.current_toc.record);
