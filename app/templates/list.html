@@ -86,6 +86,11 @@
                         :showClear="true"
                     ></p-multi-select>
                 </template>
+
+                <template #body="{ data }">
+                    {{ data.record.human_validation }}
+                    <i v-if="data.record.comment" class="pi pi-comment" v-tooltip="data.record.comment"></i>
+                </template>
             </p-column>
             <p-column field="record" header="Record">
                 <template #body="{ data }">
