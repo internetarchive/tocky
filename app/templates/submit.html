@@ -397,7 +397,12 @@
                     this.state = "Submitted";
                 },
                 getImageUrl(leafNumber) {
-                    return `https://archive.org/download/${this.ia_id}/page/leaf${leafNumber}.jpg?scale=8`;
+                    return `[[ config.env.TOCKY_APPLICATION_ROOT ]]/ia_img?${
+                        new URLSearchParams({
+                            id: this.ia_id,
+                            leaf: leafNumber,
+                        }).toString()
+                    }`;
                 },
                 getLeafNumbersWithContext(leafNumbers) {
                     return Array.from(this._genLeafNumbersWithContext(leafNumbers));

@@ -53,15 +53,23 @@ def get_page_image(
   reduce=2,
   quality=80,
   jp2_zip=None,
+  stream=False,
 ) -> Image.Image:
   jp2_zip = jp2_zip or f"{ocaid}_jp2.zip"
   file_prefix = jp2_zip.replace('_jp2.zip', '')
   url = f"https://archive.org/download/{ocaid}/{jp2_zip}/{jp2_zip.replace('.zip', '')}%2F{file_prefix}_{leaf_num:04}.jp2"
-  img = ia_session.get(url, params={
+  img = ia_session.get(
+    url,
+    params={
       'ext': ext,
       'reduce': str(reduce),
       'quality': str(quality),
-  })
+    },
+    stream=stream
+  )
+
+  if stream:
+    return img  # TODO: Fix type
 
   img.raise_for_status()
 

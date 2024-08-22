@@ -1,12 +1,13 @@
 from contextlib import closing
 import dataclasses
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 import json
 import sqlite3
 from tocky import DETECTERS_BY_NAME, EXTRACTORS_BY_NAME
 from tocky.bulk_processor import process_ia_book
 from tocky.env import get_env
+from tocky.utils.ia import get_page_image
 
 env = get_env()
 
@@ -224,6 +225,36 @@ def review_single(id: int):
 @app.route('/submit', methods=['GET'])
 def submit():
     return static_templates['submit.html']
+
+def generate_stream(server_response):
+    for chunk in server_response.iter_content(chunk_size=4096):
+        yield chunk
+
+@app.route('/ia_img', methods=['GET'])
+def ia_img():
+    """Serves a low res image from IA"""
+    # Check cookie for TOCKY_API_KEY
+    api_key = request.cookies.get('TOCKY_API_KEY')
+    if api_key != env.TOCKY_SERVER_KEY:
+        return jsonify({'success': False, 'message': 'Invalid API key'}), 401
+
+    ia_id = request.args.get('id')
+    leaf_num = request.args.get('leaf', type=int)
+
+    if not ia_id:
+        return jsonify({'success': False, 'message': 'IA ID is required'}), 400
+
+    if leaf_num is None:
+        return jsonify({'success': False, 'message': 'Leaf number is required'}), 400
+
+    if leaf_num > 30:
+        return jsonify({'success': False, 'message': 'Leaf number must be less than 30'}), 400
+
+    return Response(
+        stream_with_context(generate_stream(get_page_image(ia_id, leaf_num, ext='jpg', reduce=3, quality=20, stream=True))),
+        content_type='image/jpeg',
+    )
+
 
 @app.route('/submit', methods=['POST'])
 def submit_post():
