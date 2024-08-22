@@ -103,9 +103,6 @@
                         <p-message severity="warn" v-else-if="detector.options.ocr_engine.value === 'tesseract'">
                             <p>Tesseract can perform poorly when detecting page numbers on a table of contents page, but runs on CPU.</p>
                         </p-message>
-                        <p-message severity="warn" v-else-if="detector.options.ocr_engine.value === 'azure'">
-                            <p>Azure OCR is a paid service.</p>
-                        </p-message>
                     </div>
                 </p-fieldset>
                 <p-fieldset legend="AI Vision Detector Options" :toggleable="true" v-else-if="detector == DETECTORS.ai_vision_detector">
@@ -193,9 +190,6 @@
                         </p-message>
                         <p-message severity="warn" v-else-if="extractor.options.ocr_engine.value === 'tesseract'">
                             <p>Tesseract can perform poorly when detecting page numbers on a table of contents page, but runs on CPU.</p>
-                        </p-message>
-                        <p-message severity="warn" v-else-if="extractor.options.ocr_engine.value === 'azure'">
-                            <p>Azure OCR is a paid service.</p>
                         </p-message>
                     </div>
                 </p-fieldset>
@@ -431,7 +425,7 @@
                         try {
                             this.randomIaIds.loading = true;
                             const params = new URLSearchParams({
-                                q: "mediatype:texts AND openlibrary_edition:* AND -ocr_converted:* AND language:eng AND -collection:opensource AND -collection:microfilm AND  -repub_state:(10 OR 13)  AND imagecount:[100 TO 99999] AND NOT scanner:google AND NOT curatestate:dark",
+                                q: "mediatype:texts AND openlibrary_edition:* AND -ocr_converted:* AND language:eng AND ocr_detected_lang:eng AND -collection:opensource AND -collection:microfilm AND  -repub_state:(10 OR 13)  AND imagecount:[100 TO 99999] AND NOT scanner:google AND NOT curatestate:dark",
                                 fl: "identifier",
                                 sort: "random",
                                 rows: 50,
