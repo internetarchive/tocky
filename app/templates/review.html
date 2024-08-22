@@ -68,6 +68,7 @@
             display: flex;
             margin-bottom: 10px;
             gap: 10px;
+            align-items: baseline;
         }
     </style>
 </head>
@@ -99,14 +100,18 @@
                     </p-tab-panels>
                 </p-tabs>
                 <div class="right">
-                    <div class="toolbar">
-                        <p-button small icon="pi pi-step-backward-alt" label="De-indent" @click="deIndentText"></p-button>
-                        <p-button small icon="pi pi-step-forward-alt" label="Indent" @click="indentText"></p-button>
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <p-toggle-switch v-model="monacoWordWrapBool"></p-toggle-switch>
-                            {{ monacoWordWrapBool ? 'Text wrap' : 'No Wrap' }}
-                        </label>
-                    </div>
+                    <p-toolbar>
+                        <template #start>
+                            <p-button small text icon="pi pi-step-backward-alt" label="De-indent" @click="deIndentText"></p-button>
+                            <p-button small text icon="pi pi-step-forward-alt" label="Indent" @click="indentText"></p-button>
+                        </template>
+                        <template #end>
+                            <label style="display: flex; align-items: center; gap: 5px;">
+                                <p-toggle-switch v-model="monacoWordWrapBool"></p-toggle-switch>
+                                {{ monacoWordWrapBool ? 'Text wrap' : 'No Wrap' }}
+                            </label>
+                        </template>
+                    </p-toolbar>
                     <vue-monaco-editor
                         class="tocky-monaco-editor"
                         v-model:value="corrected_toc"
@@ -118,10 +123,12 @@
                         <p-select v-model="current_toc.record.human_validation" :options="validationOptions" placeholder="Select Validation"></p-select>
                         <p-input-text placeholder="Comment..." v-model="current_toc.record.comment" style="flex: 1;"></p-input-text>
                     </div>
-                    <div class="toolbar">
-                        <p-button label="Submit corrections" @click="submitCorrections"></p-button>
-                        <p-button label="Save to Open Library" @click="saveToOL" :disabled="!corrected_toc"></p-button>
-                    </div>
+                    <p-toolbar>
+                        <template #start>
+                            <p-button label="Submit corrections" @click="submitCorrections"></p-button>
+                            <p-button label="Save to Open Library" @click="saveToOL" :disabled="!corrected_toc"></p-button>
+                        </template>
+                    </p-toolbar>
                 </div>
             </div>
         </main>
@@ -129,9 +136,23 @@
             <i>No TOC loaded</i>
         </main>
 
-        <footer class="controls">
-            <p-button label="Get next TOC" @click="getNextToc" v-tooltip="`Get the next TOC to review`"></p-button>
-        </footer>
+        <p-toolbar>
+            <template #start v-if="current_toc">
+                <div>ID: #{{current_toc.id}}</div>
+                <p-divider layout="vertical"></p-divider>
+                <div>State: <tocky-state-tag :state="current_toc.state"></tocky-state-tag></div>
+                <p-divider layout="vertical"></p-divider>
+                <div>IA ID: <tocky-ia-link :ocaid="current_toc.record.ocaid"></tocky-ia-link></div>
+            </template>
+
+            <template #end>
+                <p-button
+                    label="Get next TOC"
+                    @click="getNextToc"
+                    v-tooltip.top="`Get the next TOC to review`"
+                ></p-button>
+            </template>
+        </p-menubar>
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>

@@ -20,6 +20,23 @@ TockyShared.StateTag = {
     },
 };
 
+TockyShared.IaLink = {
+    template: `
+        <p-button-group>
+            <p-button small link as="a" :href="\`https://openlibrary.org/ia/\${ocaid}\`" target="_blank" title="Find on OpenLibrary">
+                <img src="https://openlibrary.org/favicon.ico" alt="" style="width: 16px; height: 16px;">
+            </p-button>
+            <p-button small link as="a" :href="\`https://archive.org/details/\${ocaid}\`" target="_blank" title="View on Archive.org">
+                <img src="https://archive.org/favicon.ico" alt="" style="width: 16px; height: 16px;">
+                {{ocaid}}
+            </p-button>
+        </p-button-group>
+    `,
+    props: {
+        ocaid: String,
+    },
+};
+
 TockyShared.Header = {
     template: `
         <p-menubar class="app-toolbar" :model="nav_options">
@@ -118,6 +135,7 @@ TockyShared.registerComponents = function (app) {
     // Register shared components
     window.app.component('tocky-header', TockyShared.Header);
     window.app.component('tocky-state-tag', TockyShared.StateTag);
+    window.app.component('tocky-ia-link', TockyShared.IaLink);
 };
 
 window.TockyShared = TockyShared;

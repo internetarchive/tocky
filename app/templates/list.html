@@ -68,16 +68,7 @@
             </p-column>
             <p-column field="record.ocaid" header="IA ID">
                 <template #body="{ data }">
-                    
-                    <p-button-group>
-                        <p-button small link as="a" :href="`https://openlibrary.org/ia/${data.record.ocaid}`" target="_blank" title="Find on OpenLibrary">
-                            <img src="https://openlibrary.org/favicon.ico" alt="" style="width: 16px; height: 16px;">
-                        </p-button>
-                        <p-button small link as="a" :href="`https://archive.org/details/${data.record.ocaid}`" target="_blank" title="View on Archive.org">
-                            <img src="https://archive.org/favicon.ico" alt="" style="width: 16px; height: 16px;">
-                            {{data.record.ocaid}}
-                        </p-button>
-                    </p-button-group>
+                    <tocky-ia-link :ocaid="data.record.ocaid"></tocky-ia-link>
                 </template>
             </p-column>
             <p-column field="record.human_validation" header="Human Validation">
