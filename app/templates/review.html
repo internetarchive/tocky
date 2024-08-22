@@ -63,6 +63,16 @@
             flex: 1;
             font-family: monospace;
         }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .toolbar button {
+            margin-right: 10px;
+        }
     </style>
 </head>
 
@@ -93,7 +103,12 @@
                     </p-tab-panels>
                 </p-tabs>
                 <div class="right">
-                    <textarea v-model="corrected_toc"></textarea>
+                    <div class="toolbar">
+                        <p-button label="Indent" @click="indentText"></p-button>
+                        <p-button label="De-indent" @click="deIndentText"></p-button>
+                        <p-toggle-button v-model="wrapText" onLabel="Wrap" offLabel="No Wrap"></p-toggle-button>
+                    </div>
+                    <textarea v-model="corrected_toc" :style="{ whiteSpace: wrapText ? 'pre' : 'pre-wrap' }"></textarea>
                     <div>
                         <p-select v-model="current_toc.record.human_validation" :options="validationOptions" placeholder="Select Validation"></p-select>
                         <div class="ui input">
@@ -137,6 +152,7 @@
                         'Incomplete',
                         'Wrong',
                     ],
+                    wrapText: false,
                 };
             },
 
@@ -220,6 +236,22 @@
                         credentials: "include",
                         body: JSON.stringify(rec),
                     });
+                },
+                indentText() {
+                    const textarea = this.$refs.textarea;
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const selectedText = textarea.value.substring(start, end);
+                    const indentedText = selectedText.replace(/^/gm, '    ');
+                    this.corrected_toc = this.corrected_toc.substring(0, start) + indentedText + this.corrected_toc.substring(end);
+                },
+                deIndentText() {
+                    const textarea = this.$refs.textarea;
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const selectedText = textarea.value.substring(start, end);
+                    const deIndentedText = selectedText.replace(/^ {1,4}/gm, '');
+                    this.corrected_toc = this.corrected_toc.substring(0, start) + deIndentedText + this.corrected_toc.substring(end);
                 },
             },
         });
