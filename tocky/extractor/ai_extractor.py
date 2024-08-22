@@ -119,12 +119,12 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
         if leaf_num in djvu_xml_to_fetch:
           self.S.ocr_cache[leaf_num] = etree.tostring(elem, encoding='unicode')
 
+    if self.P.redo_ocr:
+      for leaf_num in detector_result:
+        self.S.ocr_cache[leaf_num] = self.redo_ocr(ocaid, leaf_num, self.S.ocr_cache[leaf_num])
+
     self.toc_raw_ocr = [
-      print_ocr(
-        self.redo_ocr(ocaid, leaf_num, self.S.ocr_cache[leaf_num])
-        if self.P.redo_ocr
-        else self.S.ocr_cache[leaf_num]
-      )
+      print_ocr(self.S.ocr_cache[leaf_num])
       for leaf_num in detector_result
     ]
 
