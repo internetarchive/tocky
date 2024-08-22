@@ -7,53 +7,51 @@ from tocky.extractor import AbstractExtractor, TocResponse
 from tocky.utils import ShareableState
 from tocky.utils.ia import get_book_images
 
+SYSTEM_PROMPT = """
+You are a bot that helps to extract the full table of contents data in a structured format. The format you will need to output is as follows:
+
+```
+* {label (optional)} | {title} | {page number}
+```
+
+Notes:
+- The label is used for unimportant data like numerals.
+- Don't output text in ALL CAPS.
+
+### Examples:
+
+```
+* | Preface | ix
+* Part 1 | This World | 1
+    ** Chapter I | Of the Nature of Flatland | 3
+    ** Chapter II | Of the Climate and Houses in Flatland | 5
+* Part 2 | Other Worlds | 42
+```
+
+```
+* | Chapter 1 | 1
+* | Chapter 2 | 25
+* | Chapter 3 | 38
+* | Chapter 4 | 48
+```
+
+You can nest when necessary:
+
+```
+* A | Technology |
+    ** I | Computers | 1
+        *** | Hard-drives | 2
+        *** | Software | 8
+    ** II | Machinery | 11
+    ** III | Hardware | 37
+* B | Agriculture |
+```
+"""
 
 @dataclass
 class AiVisionExtractorOptions:
     model: str = "gpt-4o-mini"
     target_height: int = 512
-    system_prompt: str = textwrap.dedent(
-        """
-        You are a bot that helps to extract the full table of contents data in a structured format. The format you will need to output is as follows:
-
-        ```
-        * {label (optional)} | {title} | {page number}
-        ```
-
-        Notes:
-        - The label is used for unimportant data like numerals.
-        - Don't output text in ALL CAPS.
-
-        ### Examples:
-
-        ```
-        * | Preface | ix
-        * Part 1 | This World | 1
-            ** Chapter I | Of the Nature of Flatland | 3
-            ** Chapter II | Of the Climate and Houses in Flatland | 5
-        * Part 2 | Other Worlds | 42
-        ```
-
-        ```
-        * | Chapter 1 | 1
-        * | Chapter 2 | 25
-        * | Chapter 3 | 38
-        * | Chapter 4 | 48
-        ```
-
-        You can nest when necessary:
-
-        ```
-        * A | Technology |
-            ** I | Computers | 1
-                *** | Hard-drives | 2
-                *** | Software | 8
-            ** II | Machinery | 11
-            ** III | Hardware | 37
-        * B | Agriculture |
-        ```
-        """
-    )
 
 
 class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
@@ -72,7 +70,7 @@ class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
             messages=[
                 {
                     "role": "system",
-                    "content": self.P.system_prompt,
+                    "content": SYSTEM_PROMPT,
                 },
                 {
                     "role": "user",

@@ -12,18 +12,19 @@ from tocky.detector import AbstractDetector
 from tocky.utils.ia import get_book_images
 from tocky.utils.llm import MODEL_PRICES
 
+SYSTEM_PROMPT: str = """
+You are a bot that helps in the detection of all table of contents pages in a book.
+
+Notes:
+- Make sure to get all the pages, not just the first page of the table of contents
+- AVOID things like the copyright page or table of figures/illustrations
+- If you cannot detect a table of contents, output an empty array instead of guessing
+
+Please output only JSON of this format: { "toc_pages": [7,8], "notes": "<anything you want to share>" }
+"""
+
 @dataclass
 class AiVisionDetectorOptions:
-    system_prompt: str = textwrap.dedent("""
-        You are a bot that helps in the detection of all table of contents pages in a book.
-
-        Notes:
-        - Make sure to get all the pages, not just the first page of the table of contents
-        - AVOID things like the copyright page or table of figures/illustrations
-        - If you cannot detect a table of contents, output an empty array instead of guessing
-
-        Please output only JSON of this format: { "toc_pages": [7,8], "notes": "<anything you want to share>" }
-    """)
     model: str = "gpt-4o-mini"
     max_tokens: int = 200
     image_size: tuple[int, int] = (1024, 512)
@@ -44,7 +45,7 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
         return MODEL_PRICES[self.P.model]
 
     def predict_cost(self):
-        return self.model.predict_cost([self.P.system_prompt], self.P.max_tokens, [self.P.image_size])
+        return self.model.predict_cost([SYSTEM_PROMPT], self.P.max_tokens, [self.P.image_size])
 
     def detect(self, ocaid: str):
         small_images = list(get_book_images(ocaid, range(0, 28), reduce=3))
@@ -65,7 +66,7 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
             messages=[
                 {
                     "role": "system",
-                    "content": self.P.system_prompt,
+                    "content": SYSTEM_PROMPT,
                 },
                 {
                     "role": "user",
