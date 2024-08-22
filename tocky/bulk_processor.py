@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 from typing import Literal, TypedDict
 import json
 import traceback
-import os
 import requests
 
 
@@ -29,12 +28,14 @@ TockyItemState = Literal[
 @dataclass
 class ItemProcessingState:
   ocaid: str
-  state: TockyItemState = 'To Detect'
-  status: str = ''
+  detector: AbstractDetector
+  extractor: AbstractExtractor
 
   detector_result: ResultStat[list[int]] | None = None
   extractor_result: ResultStat[str] | None = None
 
+  state: TockyItemState = 'To Detect'
+  status: str = ''
   toc_raw_ocr: list[str] | None = None
   detected_toc: list[tuple[str, str]] = field(default_factory=list)
   toc_ocr: str = ''
@@ -43,20 +44,44 @@ class ItemProcessingState:
   prompt_tokens: int = 0
   completion_tokens: int = 0
 
+  def to_response_dict(self):
+    return {
+        'success': all(
+            result and result.success
+            for result in [self.detector_result, self.extractor_result]
+        ),
+        'input_book': {
+          'type': 'ia_book',
+          'ia_id': self.ocaid,
+        },
+        'detector': {
+            'type': self.detector.name,
+            'options': self.detector.P.__dict__,
+            'results': self.detector_result.to_dict() if self.detector_result else None,
+        },
+        'extractor': {
+            'type': self.extractor.name,
+            'options': self.extractor.P.__dict__,
+            'results': self.extractor_result.to_dict() if self.extractor_result else None,
+        },
+    }
+
   def to_db_dict(self):
     return {
-      'code_version': 'v2.E.1',
-      'ocaid': self.ocaid,
       'state': self.state,
       'status': self.status,
+
+      **self.to_response_dict(),
+
+      # Legacy?
+      'code_version': 'v2.E.1',
+      'ocaid': self.ocaid,
       'prompt_tokens': self.prompt_tokens,
       'completion_tokens': self.completion_tokens,
       'error': str(self.error) if self.error else None,
       'toc_raw_ocr': self.toc_raw_ocr,
       'structured_toc': self.structured_toc,
       'detected_toc': self.detector_result.result if self.detector_result else None,
-      'detector_result': self.detector_result.to_dict() if self.detector_result else None,
-      'extractor_result': self.extractor_result.to_dict() if self.extractor_result else None,
   }
 
 
@@ -65,15 +90,18 @@ def process_ol_book(
   detector: AbstractDetector,
   extractor: AbstractExtractor,
 ) -> ItemProcessingState:
-  state = ItemProcessingState(ocaid=ol_record['ocaid'])
-  ol_toc = ol_record.get('table_of_contents')
-  if ol_toc:
+  if ol_toc := ol_record.get('table_of_contents'):
     toc_missing_pagenums = not any(chapter.get('pagenum') for chapter in ol_toc)
-    if ol_toc and not toc_missing_pagenums:
-      state.status = 'Already has good TOC'
-      return state
+    if not toc_missing_pagenums:
+      return ItemProcessingState(
+        ocaid=ol_record['ocaid'],
+        detector=detector,
+        extractor=extractor,
+        state='Done',
+        status='Already has good TOC'
+      )
   
-  return process_ia_book(state.ocaid, detector, extractor)
+  return process_ia_book(ol_record['ocaid'], detector, extractor)
 
 
 def process_ia_book(
@@ -82,7 +110,7 @@ def process_ia_book(
   extractor: AbstractExtractor,
   push: bool = False,
 ) -> ItemProcessingState:
-  state = ItemProcessingState(ocaid=ocaid)
+  state = ItemProcessingState(ocaid=ocaid, detector=detector, extractor=extractor)
   toc_queue_id = 0
   if push:
     toc_queue_id = push_to_toc_queue(state.to_db_dict())

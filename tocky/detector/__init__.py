@@ -4,6 +4,7 @@ from tocky.utils import ShareableState
 TParams = TypeVar("TParams")
 
 class AbstractDetector(Generic[TParams]):
+    name: str
     P: TParams
     S: ShareableState
     debug = True

@@ -22,6 +22,8 @@ class OcrDetectorOptions:
   allow_reocr: bool = True
 
 class OcrDetector(AbstractDetector[OcrDetectorOptions]):
+  name = 'ocr_detector'
+
   def __init__(self):
     super().__init__()
     self.P = OcrDetectorOptions()

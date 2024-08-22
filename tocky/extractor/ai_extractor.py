@@ -101,6 +101,8 @@ class AiExtractorOptions:
 
 
 class AiExtractor(AbstractExtractor[AiExtractorOptions]):
+  name = 'ai_extractor'
+
   def __init__(self):
     super().__init__()
     self.P = AiExtractorOptions()

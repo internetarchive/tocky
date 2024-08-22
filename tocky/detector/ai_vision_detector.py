@@ -33,6 +33,7 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
     This detector uses multi-modal AI models ability to process images and text together
     to detect table of contents pages in a book.
     """
+    name = 'ai_vision_detector'
 
     def __init__(self):
         super().__init__()

@@ -57,6 +57,8 @@ class AiVisionExtractorOptions:
 
 
 class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
+    name = 'ai_vision_extractor'
+
     def __init__(self):
         super().__init__()
         self.P = AiVisionExtractorOptions()

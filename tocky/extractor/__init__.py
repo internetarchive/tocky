@@ -14,6 +14,7 @@ class TocResponse:
 TParams = TypeVar("TParams")
 
 class AbstractExtractor(Generic[TParams]):
+    name: str
     P: TParams
     S: ShareableState
     debug = True

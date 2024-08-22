@@ -9,6 +9,8 @@ class ManualDetectorOptions:
 
 
 class ManualDetector(AbstractDetector[ManualDetectorOptions]):
+    name = 'manual_detector'
+
     def __init__(self):
         super().__init__()
         self.P = ManualDetectorOptions()

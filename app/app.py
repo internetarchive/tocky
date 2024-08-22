@@ -1,19 +1,12 @@
 from contextlib import closing
 import dataclasses
-from pathlib import Path
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import json
 import sqlite3
-import os
+from tocky import DETECTERS_BY_NAME, EXTRACTORS_BY_NAME
 from tocky.bulk_processor import process_ia_book
-from tocky.detector import AbstractDetector
-from tocky.detector.ai_vision_detector import AiVisionDetector
-from tocky.detector.ocr_detector import OcrDetector
-from tocky.detector.manual_detector import ManualDetector
 from tocky.env import get_env
-from tocky.extractor.ai_extractor import AiExtractor
-from tocky.extractor.ai_vision_extractor import AiVisionExtractor
 
 env = get_env()
 
@@ -247,14 +240,8 @@ def submit_post():
 
     ia_id = submit_options['input_book']['ia_id']
 
-    DETECTORS: dict[str, type[AbstractDetector]] = {
-        'ocr_detector': OcrDetector,
-        'ai_vision_detector': AiVisionDetector,
-        'manual_detector': ManualDetector,
-    }
-
     # Set up detector
-    DETECTOR_CLS = DETECTORS.get(submit_options['detector']['type'])
+    DETECTOR_CLS = DETECTERS_BY_NAME.get(submit_options['detector']['type'])
     if not DETECTOR_CLS:
         return jsonify({'success': False, 'message': f'Invalid detector type: {submit_options["detector"]["type"]}'}), 400
 
@@ -265,14 +252,8 @@ def submit_post():
         # TODO: This will not error if things are set to the wrong type
         return jsonify({'success': False, 'message': f'Invalid detector options: {e}'}), 400
 
-    # Set up extractor
-    EXTRACTORS = {
-        'ai_extractor': AiExtractor,
-        'ai_vision_extractor': AiVisionExtractor,
-    }
-
     # Run extractor
-    EXTRACTOR_CLS = EXTRACTORS.get(submit_options['extractor']['type'])
+    EXTRACTOR_CLS = EXTRACTORS_BY_NAME.get(submit_options['extractor']['type'])
     if not EXTRACTOR_CLS:
         return jsonify({'success': False, 'message': f'Invalid extractor type: {submit_options["extractor"]["type"]}'}), 400
 
@@ -288,31 +269,7 @@ def submit_post():
     # Now let's run some stuff!
     detector.debug = False    
     state = process_ia_book(ia_id, detector, extractor, push=True)
-
-
-    return jsonify({
-        'success': (
-            state.detector_result
-            and state.detector_result.success
-            and state.extractor_result
-            and state.extractor_result.success
-        ),
-        'options': {
-            'input_book': submit_options['input_book'],
-            'detector': {
-                'type': submit_options['detector']['type'],
-                'options': detector.P.__dict__,
-            },
-            'extractor': {
-                'type': submit_options['extractor']['type'],
-                'options': extractor.P.__dict__,
-            },
-        },
-        'results': {
-            'detector': state.detector_result.to_dict() if state.detector_result else None,
-            'extractor': state.extractor_result.to_dict() if state.extractor_result else None,
-        }
-    })
+    return jsonify(state.to_response_dict())
 
 if __name__ == '__main__':
     if not env.TOCKY_SERVER_KEY:
