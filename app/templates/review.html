@@ -59,9 +59,9 @@
             overflow: hidden;
         }
 
-        .main-split .right textarea {
-            flex: 1;
-            font-family: monospace;
+        .tocky-monaco-editor {
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
 
         .toolbar {
@@ -103,11 +103,17 @@
                         <p-button small icon="pi pi-step-backward-alt" label="De-indent" @click="deIndentText"></p-button>
                         <p-button small icon="pi pi-step-forward-alt" label="Indent" @click="indentText"></p-button>
                         <label style="display: flex; align-items: center; gap: 5px;">
-                            <p-toggle-switch v-model="wrapText"></p-toggle-switch>
-                            {{ wrapText ? 'Text wrap' : 'No Wrap' }}
+                            <p-toggle-switch v-model="monacoWordWrapBool"></p-toggle-switch>
+                            {{ monacoWordWrapBool ? 'Text wrap' : 'No Wrap' }}
                         </label>
                     </div>
-                    <textarea ref="textarea" v-model="corrected_toc" :style="{ whiteSpace: wrapText ? 'pre-wrap' : 'pre' }"></textarea>
+                    <vue-monaco-editor
+                        class="tocky-monaco-editor"
+                        v-model:value="corrected_toc"
+                        language="plaintext"
+                        :options="monacoOptions"
+                        @mount="handleMonacoMount"
+                    ></vue-monaco-editor>
                     <div class="toolbar">
                         <p-select v-model="current_toc.record.human_validation" :options="validationOptions" placeholder="Select Validation"></p-select>
                         <p-input-text placeholder="Comment..." v-model="current_toc.record.comment" style="flex: 1;"></p-input-text>
@@ -132,8 +138,18 @@
     <script src="https://unpkg.com/primevue/umd/primevue.min.js"></script>
     <script src="https://unpkg.com/@primevue/themes/umd/aura.min.js"></script>
     <script src="[[ url_for('static', filename='shared.js') ]]"></script>
+
+    <script src="https://unpkg.com/vue-demi@0.14.6/lib/index.iife.js"></script>
+    <script src="https://unpkg.com/@monaco-editor/loader@1.4.0/lib/umd/monaco-loader.js"></script>
+    <script src="https://unpkg.com/@guolao/vue-monaco-editor@1.5.4/lib/umd/monaco-vue.js"></script>
+
     <script type="module">
+        const { VueMonacoEditor } = monaco_vue;
+
         window.app = Vue.createApp({
+            components: {
+                VueMonacoEditor,
+            },
             data() {
                 const m = location.pathname.match(/\/review\/(\d+)/);
                 return {
@@ -149,8 +165,26 @@
                         'Incomplete',
                         'Wrong',
                     ],
-                    wrapText: false,
+
+                    monacoEditor: null,
+                    monacoOptions: {
+                        wordWrap: 'off',
+                        minimap: {
+                            enabled: false,
+                        },
+                    }
                 };
+            },
+
+            computed: {
+                monacoWordWrapBool: {
+                    get() {
+                        return this.monacoOptions.wordWrap === 'on';
+                    },
+                    set(value) {
+                        this.monacoOptions.wordWrap = value ? 'on' : 'off';
+                    }
+                }
             },
 
             async mounted() {
@@ -164,10 +198,12 @@
                     this.current_toc = resp[0];
                     this.corrected_toc = this.current_toc.record.structured_toc;
                 }
-                this.$refs.textarea.addEventListener('blur', this.saveSelection);
             },
 
             methods: {
+                handleMonacoMount(editor) {
+                    this.monacoEditor = editor;
+                },
                 async getNextToc() {
                     const example = {
                         "assignee": null,
@@ -236,40 +272,22 @@
                     });
                 },
                 updateSelectedLines(editFn) {
-                    const start = this.$refs.textarea.selectionStart;
-                    const end = this.$refs.textarea.selectionEnd;
-                    const lines = this.corrected_toc.split("\n");
-                    /** @type {Array<{start: number, end: number, line: string}>} */
-                    const line_regions = [];
-                    let offset = 0;
-                    for (const line of lines) {
-                        const end = offset + line.length + 1;
-                        line_regions.push({
-                            start: offset,
-                            end,
-                            line,
-                        });
-                        offset = end;
+                    function* range(start, end) {
+                        for (let i = start; i <= end; i++) {
+                            yield i;
+                        }
                     }
-                    
-                    // Find the actual lines that are selected
-                    const start_line = line_regions
-                        .findIndex(line => line.start <= start && start < line.end);
-                    const end_line = line_regions
-                        .findIndex(line => line.start <= end && end < line.end);
+
+                    const selections = this.monacoEditor.getSelections();
+                    const selectedLineNums = new Set(selections.flatMap(s => Array.from(range(s.startLineNumber, s.endLineNumber))));
+                    const lines = this.corrected_toc.split("\n");
                     
                     // Indent the selected lines
-                    for (const [i, line] of line_regions.entries()) {
-                        if (i >= start_line && i <= end_line) {
-                            line.line = editFn(line.line);
-                        }
-
-                        if (i > end_line) {
-                            break;
-                        }
+                    for (const i of selectedLineNums) {
+                        lines[i - 1] = editFn(lines[i - 1]);
                     }
 
-                    this.corrected_toc = line_regions.map(l => l.line).join("\n");
+                    this.corrected_toc = lines.join("\n");
                 },
                 indentText() {
                     this.updateSelectedLines(line => line.replace(/^( *)(\**)/, ($0, $1, $2) => $1 + '    *' + $2));
