@@ -209,14 +209,14 @@
                     <p>{{ error }}</p>
                 </p-message>
 
-                <p-message severity="error" v-if="response && !response.results.detector.success">
+                <p-message severity="error" v-if="response && !response.detector.results.success">
                     <details>
-                        <summary>Error in Detector: <code>{{ response.results.detector.error }}</code></summary>
-                        <pre>{{ response.results.detector.traceback }}</pre>
+                        <summary>Error in Detector: <code>{{ response.detector.results.error }}</code></summary>
+                        <pre>{{ response.detector.results.traceback }}</pre>
                     </details>
                 </p-message>
-                <p-message severity="success" v-else-if="response && response.results.detector.success">
-                    Detector Success: {{ response.results.detector.result }}
+                <p-message severity="success" v-else-if="response && response.detector.results.success">
+                    Detector Success: {{ response.detector.results.result }}
                 </p-message>
 
                 <button
