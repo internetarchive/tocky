@@ -43,6 +43,21 @@
         [v-cloak] {
             display: none;
         }
+
+        .flex-row {
+            display: flex;
+            flex-direction: row;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        /** Override some PrimeVue defaults */
+        .p-floatlabel {
+            margin-top: 22px;
+        }
+        .p-floatlabel label {
+            pointer-events: all !important;
+        }
     </style>
 </head>
 
@@ -70,23 +85,17 @@
                     the table of contents in a book.
                 </p>
                 
-                <div class="ui segment basic">
-                    <p-float-label>
-                        <p-select v-model="detector" :options="detector_options" option-label="name"></p-select>
-                        <label>Detector</label>
-                    </p-float-label>
-                </div>
+                <p-float-label>
+                    <p-select v-model="detector" :options="detector_options" option-label="name"></p-select>
+                    <label>Detector</label>
+                </p-float-label>
 
                 <p-fieldset legend="OCR Detector Options" :toggleable="true" v-if="detector == DETECTORS.ocr_detector">
-                    <div class="ui segment basic">
+                    <div class="flex-row">
                         <label>
                             <p-checkbox v-model="detector.options.allow_reocr.value" :binary="true"></p-checkbox>
                             Allow Re-OCR <i class="ui icon question circle outline" v-tooltip="`Allow custom regenerating of the OCR when deemed useful. Useful to fix errors in IA OCR.`"></i>
                         </label>
-    
-                        <br>
-                        <br>
-                        <br>
     
                         <p-float-label>
                             <p-select
@@ -106,27 +115,29 @@
                     </div>
                 </p-fieldset>
                 <p-fieldset legend="AI Vision Detector Options" :toggleable="true" v-else-if="detector == DETECTORS.ai_vision_detector">
-                    <div class="ui segment basic">
+                    <div class="flex-row">
                         <p-float-label>
                             <p-select v-model="detector.options.model.value" :options="detector.options.model.options"></p-select>
                             <label>Model</label>
                         </p-float-label>
                         <br>
-                        <div>
-                            <label>Max Tokens <i class="ui icon question circle outline" v-tooltip="`The maximum number of tokens to generate. This is the maximum number of tokens the model will generate for the completion.`"></i></label>
+                        <p-float-label>
                             <p-input-number v-model="detector.options.max_tokens.value" mode="decimal" :min="1" :max="500"></p-input-number>
-                        </div>
+                            <label>Max Tokens <i class="ui icon question circle outline" v-tooltip="`The maximum number of tokens to generate. This is the maximum number of tokens the model will generate for the completion.`"></i></label>
+                        </p-float-label>
                     </div>
                 </p-fieldset>
                 <p-fieldset legend="Manual Detector Options" :toggleable="true" v-else-if="detector == DETECTORS.manual_detector">
                     <blockquote>"Why don't you just tell me where the TOC is?"</blockquote>
                     <div class="ui segment basic">
-                        <label>Leaf Numbers</label>
-                        <p-input-text
-                            v-model="detector.options.leaf_numbers.value_str"
-                            placeholder="e.g. 1,2,3"
-                            pattern="^\d+(, ?\d+)*$"
-                        ></p-input-text>
+                        <div class="field">
+                            <label>Leaf Numbers</label>
+                            <p-input-text
+                                v-model="detector.options.leaf_numbers.value_str"
+                                placeholder="e.g. 1,2,3"
+                                pattern="^\d+(, ?\d+)*$"
+                            ></p-input-text>
+                        </div>
                         <p-virtual-scroller
                             class="page-carousel"
                             orientation="horizontal"
@@ -152,35 +163,33 @@
                     Given the pages containing the table of contents, this phase is responsible
                     for converting those pages to a structured format.
                 </p>
-                <div class="ui segment basic">
-                    <p-float-label>
-                        <p-select v-model="extractor" :options="extractor_options" option-label="name"></p-select>
-                        <label>Extractor</label>
-                    </p-float-label>
-                </div>
+
+                <p-float-label>
+                    <p-select v-model="extractor" :options="extractor_options" option-label="name"></p-select>
+                    <label>Extractor</label>
+                </p-float-label>
 
                 <p-fieldset legend="AI Extractor Options" :toggleable="true" v-if="extractor == EXTRACTORS.ai_extractor">
-                    <div class="ui segment basic">
+                    <div class="flex-row">
                         <p-float-label>
                             <p-select v-model="extractor.options.model.value" :options="extractor.options.model.options"></p-select>
                             <label>Model</label>
                         </p-float-label>
 
+                        <p-float-label>
+                            <p-input-number v-model="extractor.options.max_sent_tokens.value" :min="1000"></p-input-number>
+                            <label>
+                                Max Sent Tokens <i class="ui icon question circle outline" v-tooltip="`This could be limited by your model. E.g. gpt 4o mini can handle 128k tokens.`"></i>
+                            </label>
+                        </p-float-label>
+
+                    </div>
+                    <div class="flex-row">
                         <label>
                             <p-checkbox v-model="extractor.options.redo_ocr.value" :binary="true"></p-checkbox>
-                            Redo OCR <i class="ui icon question circle outline" v-tooltip="`Allow custom regenerating of the OCR when deemed useful. Useful to fix errors in IA OCR.`"></i>
+                            Redo OCR <i class="ui icon question circle outline" v-tooltip="`Re-generate the OCR for all the detected TOC pages.`"></i>
                         </label>
 
-                        <label>
-                            Max Sent Tokens <i class="ui icon question circle outline" v-tooltip="`This could be limited by your model. E.g. gpt 4o mini can handle 128k tokens.`"></i>
-                            <p-input-number v-model="extractor.options.max_sent_tokens.value" :min="1000"></p-input-number>
-                        </label>
-
-    
-                        <br>
-                        <br>
-                        <br>
-    
                         <p-float-label>
                             <p-select
                                 v-model="extractor.options.ocr_engine.value"
@@ -200,12 +209,10 @@
                 </p-fieldset>
 
                 <p-fieldset legend="AI Vision Extractor Options" :toggleable="true" v-if="extractor == EXTRACTORS.ai_vision_extractor">
-                    <div class="ui segment basic">
-                        <p-float-label>
-                            <p-select v-model="extractor.options.model.value" :options="extractor.options.model.options"></p-select>
-                            <label>Model</label>
-                        </p-float-label>
-                    </div>
+                    <p-float-label>
+                        <p-select v-model="extractor.options.model.value" :options="extractor.options.model.options"></p-select>
+                        <label>Model</label>
+                    </p-float-label>
                 </p-fieldset>
             </p-fieldset>
 
