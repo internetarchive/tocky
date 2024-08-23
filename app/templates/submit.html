@@ -425,7 +425,7 @@
                     const index = this.detector.options.leaf_numbers.value.indexOf(leafNumber);
                     if (index === -1) {
                         this.detector.options.leaf_numbers.value.push(leafNumber);
-                        this.detector.options.leaf_numbers.value.sort();
+                        this.detector.options.leaf_numbers.value.sort((a, b) => a - b);
                     } else {
                         this.detector.options.leaf_numbers.value.splice(index, 1);
                     }
