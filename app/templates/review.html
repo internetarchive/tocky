@@ -75,7 +75,7 @@
             border-radius: 4px;
             flex-shrink: 0;
             object-fit: contain;
-            object-position: bottom;
+            object-position: top left;
             min-height: 150px;
         }
     </style>
@@ -109,13 +109,11 @@
                                 loading="lazy"
                             />
                         </p-tab-panel>
-                        <p-tab-panel class="toc-pages-panel" v-else value="toc_pages" style="overflow-y: auto; display: flex; gap: 8px; flex-wrap: wrap;">
-                            <img
-                                v-for="leafnum in range(0, 30)"
-                                :src="getImageUrl(leafnum)"
-                                loading="lazy"
-                                width="150"
-                            />
+                        <p-tab-panel class="toc-pages-panel" v-else value="toc_pages">
+                            <tocky-page-selector
+                                v-model="corrected_toc_pages"
+                                :get-image-url="getImageUrl"
+                            ></tocky-page-selector>
                         </p-tab-panel>
                         <p-tab-panel value="book">
                             <iframe
@@ -222,6 +220,8 @@
                     specific_id: m ? parseFloat(m[1]) : null,
                     current_toc: null,
                     corrected_toc: null,
+                    // The corrected leaf nums of the toc pages
+                    corrected_toc_pages: [],
                     validationOptions: [
                         'Perfect',
                         'Near Perfect',
@@ -259,7 +259,9 @@
                 },
 
                 changesToSave() {
-                    return this.lastSubmitValue !== JSON.stringify(this.current_toc);
+                    return this.lastSubmitValue !== JSON.stringify(this.current_toc) ||
+                    this.corrected_toc != this.current_toc.record.structured_toc ||
+                    JSON.stringify(this.corrected_toc_pages) !== JSON.stringify(this.current_toc.record.detected_toc);
                 },
                 changedSinceOlSave() {
                     return this.lastSavedToOL !== JSON.stringify(this.corrected_toc);
@@ -277,6 +279,7 @@
                     this.current_toc = resp[0];
                     this.lastSubmitValue = JSON.stringify(this.current_toc);
                     this.corrected_toc = this.current_toc.record.corrected_toc || this.current_toc.record.structured_toc;
+                    this.corrected_toc_pages = deepcopy(this.current_toc.record.detected_toc);
                 }
             },
 
@@ -327,6 +330,7 @@
                     }).then((r) => r.json());
                     this.lastSubmitValue = JSON.stringify(this.current_toc);
                     this.corrected_toc = this.current_toc.record.structured_toc;
+                    this.corrected_toc_pages = deepcopy(this.current_toc.record.detected_toc);
 
                     if (!this.current_toc) {
                         alert("No more TOCs to review right now!");
@@ -338,6 +342,9 @@
                     const body = Object.assign({}, this.current_toc.record);
                     if (this.corrected_toc != this.current_toc.record.structured_toc) {
                         body.corrected_toc = this.corrected_toc;
+                    }
+                    if (JSON.stringify(body.detected_toc) !== JSON.stringify(this.corrected_toc_pages)) {
+                        body.corrected_toc_pages = this.corrected_toc_pages;
                     }
                     const params = new URLSearchParams();
                     const assignee = document.cookie.match(/session=([^%]+)/)?.[1];
@@ -434,6 +441,10 @@
             for (let i = start; i <= end; i++) {
                 yield i;
             }
+        }
+
+        function deepcopy(obj) {
+            return JSON.parse(JSON.stringify(obj));
         }
     </script>
 </body>

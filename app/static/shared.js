@@ -23,28 +23,26 @@ TockyShared.StateTag = {
 // v-models
 TockyShared.PageSelector = {
     template: `
-        <p-virtual-scroller
+        <div
             class="tocky-page-selector"
-            orientation="horizontal"
-            :items="getLeafNumbersWithContext()"
-            :item-size="160"
+            :data-mode="mode"
         >
-            <template #item="{ item: page }">
-                <div
-                    class="page-carousel__page"
-                    :key="page.number"
+            <div
+                class="tocky-page-selector__page"
+                v-for="page in getLeafNumbersWithContext()"
+                :key="page.number"
+            >
+                <img
+                    loading="lazy"
+                    :src="getImageUrl(page.number)"
+                    :class="{ 'selected': page.selected }"
+                    @click="toggleLeafNumber(page.number)"
                 >
-                    <img
-                        :src="getImageUrl(page.number)"
-                        :class="{ 'selected': page.selected }"
-                        @click="toggleLeafNumber(page.number)"
-                    />
-                    <p-tag :severity="page.selected ? 'success': 'secondary'">
-                        {{ page.number }}
-                    </p-tag>
-                </div>
-            </template>
-        </p-virtual-scroller>
+                <p-tag :severity="page.selected ? 'success': 'secondary'">
+                    {{ page.number }}
+                </p-tag>
+            </div>
+        </div>
     `,
     props: {
         getImageUrl: Function,
@@ -83,9 +81,12 @@ TockyShared.PageSelector = {
 
             .tocky-page-selector img {
                 border-radius: 5px;
-                width: 150px;
-                cursor: pointer;
                 transition: opacity 0.2s;
+
+                object-fit: cover;
+                object-position: top left;
+                width: 100%;
+                height: 100%;
             }
 
             .tocky-page-selector:has(.selected) img:not(.selected) {
@@ -97,11 +98,16 @@ TockyShared.PageSelector = {
             }
 
 
-            .page-carousel__page {
+            .tocky-page-selector__page {
                 position: relative;
                 padding: 0 5px;
+
+                display: inline-block;
+                width: 160px;
+                height: 160px;
+                cursor: pointer;
             }
-            .page-carousel__page .p-tag {
+            .tocky-page-selector__page .p-tag {
                 position: absolute;
                 bottom: 12px;
                 left: 50%;
