@@ -171,6 +171,7 @@
                                 @click="submitCorrections"
                                 :loading="submitCorrectionsLoading"
                                 :text="!changesToSave"
+                                :icon="!changesToSave && current_toc.record.state === 'Done' ? 'pi pi-check' : null"
                             ></p-button>
                             <p-button
                                 label="Save to Open Library"
@@ -406,6 +407,8 @@
                                 body: JSON.stringify(Object.assign({}, body, { state: 'Done' })),
                             },
                         );
+                        body.state = 'Done';
+                        this.current_toc.record = body;
                         this.lastSubmitValue = JSON.stringify(this.current_toc);
                     } finally {
                         this.submitCorrectionsLoading = false;
