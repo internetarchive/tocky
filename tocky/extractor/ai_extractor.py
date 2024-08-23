@@ -100,6 +100,11 @@ class AiExtractorOptions:
   redo_ocr: bool = True
   ocr_engine: Literal['easyocr', 'tesseract', 'azure'] = 'easyocr'
   model: str = "gpt-4o-mini"
+  max_sent_tokens: int = 1_000
+  """
+  GPT 4o mini can handle up to 128k input tokens and 16k output tokens.
+  TODO: Experiment with larger input sizes.
+  """
 
 
 class AiExtractor(AbstractExtractor[AiExtractorOptions]):
@@ -160,7 +165,7 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
     chunks = ['']
     for page_ocr in pages_ocr:
       extended_chunk = chunks[-1] + '\n' + page_ocr
-      if len(tiktoken.encoding_for_model(self.P.model).encode(extended_chunk)) > 1_000:
+      if len(tiktoken.encoding_for_model(self.P.model).encode(extended_chunk)) > self.P.max_sent_tokens:
         chunks.append(page_ocr)
       else:
         chunks[-1] += '\n' + page_ocr

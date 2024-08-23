@@ -171,6 +171,11 @@
                             Redo OCR <i class="ui icon question circle outline" v-tooltip="`Allow custom regenerating of the OCR when deemed useful. Useful to fix errors in IA OCR.`"></i>
                         </label>
 
+                        <label>
+                            Max Sent Tokens <i class="ui icon question circle outline" v-tooltip="`This could be limited by your model. E.g. gpt 4o mini can handle 128k tokens.`"></i>
+                            <p-input-number v-model="extractor.options.max_sent_tokens.value" :min="1000"></p-input-number>
+                        </label>
+
     
                         <br>
                         <br>
@@ -296,6 +301,9 @@
                             "gpt-4o-mini",
                             "gpt-3.5-turbo",
                         ]
+                    },
+                    max_sent_tokens: {
+                        value: 1000,
                     },
                     redo_ocr: {
                         value: true,
