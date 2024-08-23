@@ -23,10 +23,7 @@ TockyShared.StateTag = {
 // v-models
 TockyShared.PageSelector = {
     template: `
-        <div
-            class="tocky-page-selector"
-            :data-mode="mode"
-        >
+        <div class="tocky-page-selector">
             <div
                 class="tocky-page-selector__page"
                 v-for="page in getLeafNumbersWithContext()"
@@ -219,7 +216,7 @@ TockyShared.registerComponents = function (app) {
     }
 
     // Configure PrimeVue
-    window.app.use(PrimeVue.Config, {
+    app.use(PrimeVue.Config, {
         theme: {
             preset: PrimeVue.Themes.Aura,
             options: {
