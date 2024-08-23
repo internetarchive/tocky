@@ -1,5 +1,151 @@
 const TockyShared = {};
 
+TockyShared.DETECTORS = {
+    ocr_detector: {
+        name: "OCR Detector",
+        value: "ocr_detector",
+        description: "Uses text extracted from the book pages, combined with manual heuristics to detect the TOC pages.",
+        options: {
+            allow_reocr: {
+                value: true,
+            },
+            ocr_engine: {
+                value: "azure",
+                options: [
+                    "tesseract",
+                    "easyocr",
+                    "azure",
+                ]
+            }
+        }
+    },
+    ai_vision_detector: {
+        name: "AI Vision Detector",
+        value: "ai_vision_detector",
+        description: "Uses AI with vision capabilities to visually detect the TOC pages.",
+        options: {
+            model: {
+                value: 'gpt-4o-mini',
+                options: [
+                    "gpt-4o-mini"
+                ]
+            },
+            max_tokens: {
+                value: 200,
+            }
+        }
+    },
+    manual_detector: {
+        name: "Manual Detector",
+        value: "manual_detector",
+        description: '"Why don\'t you just tell me where the TOC is?"',
+        options: {
+            leaf_numbers: {
+                value: [],
+                
+                get value_str() {
+                    return this.value.join(",");
+                },
+                set value_str(value) {
+                    this.value = value.split(",").map(x => x.trim()).filter(x => x).map(x => parseFloat(x));
+                },
+            }
+        }
+    }
+};
+
+TockyShared.EXTRACTORS = {
+    ai_extractor: {
+        name: "AI Extractor",
+        value: "ai_extractor",
+        description: "Sends the OCR from the TOC pages to AI to extract in a structured format.",
+        options: {
+            model: {
+                value: 'gpt-4o-mini',
+                options: [
+                    "gpt-4o-mini",
+                    "gpt-3.5-turbo",
+                ]
+            },
+            max_sent_tokens: {
+                value: 1000,
+            },
+            redo_ocr: {
+                value: true,
+            },
+            ocr_engine: {
+                value: "azure",
+                options: [
+                    "tesseract",
+                    "easyocr",
+                    "azure",
+                ]
+            }
+        }
+    },
+    ai_vision_extractor: {
+        name: "AI Vision Extractor",
+        value: "ai_vision_extractor",
+        description: "Sends the raw images of the TOC pages to AI to 'read' and extract in a structured format.",
+        options: {
+            model: {
+                value: 'gpt-4o-mini',
+                options: [
+                    "gpt-4o-mini",
+                    "gpt-3.5-turbo",
+                ]
+            }
+        }
+    },
+};
+
+TockyShared.DEFAULT_DETECTOR = TockyShared.DETECTORS.ocr_detector;
+TockyShared.DEFAULT_EXTRACTOR = TockyShared.EXTRACTORS.ai_extractor;
+
+TockyShared.apiSubmit = async function (base_url, data) {
+    if (!TockyShared.getApiKey()) {
+        alert("Please provide a Tocky API key");
+        return;
+    }
+
+    const detector = TockyShared.DETECTORS[data.detector?.type || TockyShared.DEFAULT_DETECTOR.value];
+    if (!detector) {
+        throw new Error(`Invalid detector type: ${data.detector.type}`);
+    }
+    const extractor = TockyShared.EXTRACTORS[data.extractor?.type || TockyShared.DEFAULT_EXTRACTOR.value];
+    if (!extractor) {
+        throw new Error(`Invalid extractor type: ${data.extractor.type}`);
+    }
+
+    const res = await fetch(`${base_url}/submit`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            'X-API-Key': TockyShared.getApiKey(),
+        },
+        body: JSON.stringify({
+            input_book: data.input_book,
+            detector: {
+                type: detector.value,
+                options: Object.fromEntries(
+                    Object.entries(detector.options)
+                        .map(([key, value]) => [key, (data.detector?.options && key in data.detector.options) ? data.detector.options[key] : value.value])
+                )
+            },
+            extractor: {
+                type: extractor.value,
+                options: Object.fromEntries(
+                    Object.entries(extractor.options)
+                        .map(([key, value]) => [key, (data.extractor?.options && key in data.extractor.options) ? data.extractor.options[key] : value.value])
+                )
+            }
+        })
+    });
+    if (!res.ok) {
+        throw new Error("Failed to extract TOC");
+    }
+    return await res.json();
+};
 TockyShared.StateTag = {
     template: `
         <p-tag :value="state" :severity="mapStateToSeverity(state)"></p-tag>

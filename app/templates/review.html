@@ -114,6 +114,17 @@
                                 v-model="corrected_toc_pages"
                                 :get-image-url="getImageUrl"
                             ></tocky-page-selector>
+                            <p-toolbar style="position: sticky; bottom: 0;">
+                                <template #end>
+                                    <p-button
+                                        label="Re-extract"
+                                        :disabled="!hasModifiedTocPages || reExtractTocLoading"
+                                        v-tooltip.top="hasModifiedTocPages ? 'Re-extract the TOC with the selected pages' : 'Select the TOC pages to re-extract'"
+                                        @click="reExtractToc"
+                                        :loading="reExtractTocLoading"
+                                    ></p-button>
+                                </template>
+                            </p-toolbar>
                         </p-tab-panel>
                         <p-tab-panel value="book">
                             <iframe
@@ -238,6 +249,8 @@
                     lastSavedToOL: null,
                     saveToOLLoading: false,
 
+                    reExtractTocLoading: false,
+
                     monacoEditor: null,
                     monacoOptions: {
                         wordWrap: 'off',
@@ -265,7 +278,10 @@
                 },
                 changedSinceOlSave() {
                     return this.lastSavedToOL !== JSON.stringify(this.corrected_toc);
-                }
+                },
+                hasModifiedTocPages() {
+                    return JSON.stringify(this.corrected_toc_pages) !== JSON.stringify(this.current_toc.record.detected_toc);
+                },
             },
 
             async mounted() {
@@ -335,6 +351,33 @@
                     if (!this.current_toc) {
                         alert("No more TOCs to review right now!");
                     }
+                },
+                async reExtractToc() {
+                    this.reExtractTocLoading = true;
+                    if (!this.current_toc.record.human_validation) {
+                        // If no toc was detected, then the validation is safe wrong
+                        if (this.current_toc.record.detected_toc.length === 0) {
+                            this.current_toc.record.human_validation = "Safe Wrong";
+                        }
+                    }
+                    await this.submitCorrections();
+
+                    TockyShared.apiSubmit('[[ config.env.TOCKY_APPLICATION_ROOT ]]', {
+                        input_book: {
+                            ia_id: this.current_toc.record.ocaid,
+                        },
+                        detector: {
+                            type: "manual_detector",
+                            options: {
+                                leaf_numbers: this.corrected_toc_pages,
+                            }
+                        },
+                    });
+
+                    // and go the list page after a few seconds
+                    setTimeout(() => {
+                        location.href = `[[ config.env.TOCKY_APPLICATION_ROOT ]]/list`;
+                    }, 1000);
                 },
                 async submitCorrections() {
                     this.submitCorrectionsLoading = true;
