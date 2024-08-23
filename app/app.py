@@ -247,14 +247,62 @@ def ia_img():
     if leaf_num is None:
         return jsonify({'success': False, 'message': 'Leaf number is required'}), 400
 
-    if leaf_num > 30:
-        return jsonify({'success': False, 'message': 'Leaf number must be less than 30'}), 400
+    if leaf_num > 30 or leaf_num < 0:
+        return jsonify({'success': False, 'message': 'Leaf number must be between 0 and 30'}), 400
 
     return Response(
         stream_with_context(generate_stream(get_page_image(ia_id, leaf_num, ext='jpg', reduce=3, quality=20, stream=True))),
         content_type='image/jpeg',
     )
 
+@app.route('/ia_toc_img', methods=['GET'])
+def ia_toc_img():
+    # Check cookie for TOCKY_API_KEY
+    api_key = request.cookies.get('TOCKY_API_KEY')
+    if api_key != env.TOCKY_SERVER_KEY:
+        return jsonify({'success': False, 'message': 'Invalid API key'}), 401
+
+    toc_id = request.args.get('id', type=int)
+    index = request.args.get('index', type=int)
+
+    if not toc_id or toc_id < 0:
+        return jsonify({'success': False, 'message': 'TOC ID is required'}), 400
+    
+    if index is None:
+        return jsonify({'success': False, 'message': 'Index is required'}), 400
+
+    with closing(get_conn()) as conn:
+        with closing(conn.cursor()) as cur:
+            cur.execute("SELECT record FROM toc_queue WHERE id = ?", (toc_id,))
+            row = cur.fetchone()
+            if not row:
+                return jsonify({'success': False, 'message': 'TOC ID not found'}), 404
+
+            record = json.loads(row['record'])
+
+            ia_id = record['ocaid']
+            detected_toc = record['detected_toc']
+
+            if not detected_toc:
+                return jsonify({'success': False, 'message': 'TOC not detected'}), 404
+
+            # Truncate to max 10 entries
+            detected_toc = detected_toc[0:10]
+
+            if not(-2 <= index <= len(detected_toc) + 2):
+                return jsonify({'success': False, 'message': 'Index out of range'}), 400
+            
+            if index < 0:
+                leaf_num = detected_toc[0] + index
+            elif index < len(detected_toc):
+                leaf_num = detected_toc[index]
+            else:
+                leaf_num = detected_toc[-1] + (index - len(detected_toc))
+
+            return Response(
+                stream_with_context(generate_stream(get_page_image(ia_id, leaf_num, ext='jpg', reduce=2, quality=70, stream=True))),
+                content_type='image/jpeg',
+            )
 
 @app.route('/submit', methods=['POST'])
 def submit_post():

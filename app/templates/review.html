@@ -81,6 +81,7 @@
                 <p-tabs class="left" value="ocr">
                     <p-tab-list>
                         <p-tab value="ocr">OCR</p-tab>
+                        <p-tab value="toc_pages">TOC Pages</p-tab>
                         <p-tab value="book">Book</p-tab>
                         <p-tab value="json">JSON</p-tab>
                     </p-tab-list>
@@ -91,6 +92,15 @@
                                 v-for="page in current_toc.record.toc_raw_ocr"
                                 :style="{ width: `${getCanvasWidth(page)}ch` }"
                             >{{page}}</pre>
+                        </p-tab-panel>
+
+                        <p-tab-panel value="toc_pages" style="overflow-y: auto; display: flex; gap: 8px; flex-direction: column; align-items: center;">
+                            <img
+                                v-for="(page, index) in current_toc.record.detected_toc"
+                                :src="`[[ config.env.TOCKY_APPLICATION_ROOT ]]/ia_toc_img?id=${current_toc.id}&index=${index}`"
+                                loading="lazy"
+                                style="border-radius: 4px; flex-shrink: 0;"
+                            />
                         </p-tab-panel>
                         <p-tab-panel value="book">
                             <iframe
