@@ -20,6 +20,97 @@ TockyShared.StateTag = {
     },
 };
 
+// v-models
+TockyShared.PageSelector = {
+    template: `
+        <p-virtual-scroller
+            class="tocky-page-selector"
+            orientation="horizontal"
+            :items="getLeafNumbersWithContext()"
+            :item-size="160"
+        >
+            <template #item="{ item: page }">
+                <div
+                    class="page-carousel__page"
+                    :key="page.number"
+                >
+                    <img
+                        :src="getImageUrl(page.number)"
+                        :class="{ 'selected': page.selected }"
+                        @click="toggleLeafNumber(page.number)"
+                    />
+                    <p-tag :severity="page.selected ? 'success': 'secondary'">
+                        {{ page.number }}
+                    </p-tag>
+                </div>
+            </template>
+        </p-virtual-scroller>
+    `,
+    props: {
+        getImageUrl: Function,
+        modelValue: Array,
+    },
+    emits: ['update:modelValue'],
+    methods: {
+        toggleLeafNumber(leafNumber) {
+            const index = this.modelValue.indexOf(leafNumber);
+            if (index === -1) {
+                this.modelValue.push(leafNumber);
+                this.modelValue.sort((a, b) => a - b);
+            } else {
+                this.modelValue.splice(index, 1);
+            }
+        },
+        getLeafNumbersWithContext() {
+            return Array.from(this._genLeafNumbersWithContext());
+        },
+        *_genLeafNumbersWithContext() {
+            const max = Math.max(...this.modelValue);
+            for (let i = 0; i <= Math.max(30, max + 2); i++) {
+                yield {
+                    number: i,
+                    selected: this.modelValue.includes(i),
+                };
+            }
+        },
+    },
+    mounted() {
+        registerStyleTag('tocky-page-selector', `
+            .tocky-page-selector {
+                min-height: 300px !important;
+                width: 100%;
+            }
+
+            .tocky-page-selector img {
+                border-radius: 5px;
+                width: 150px;
+                cursor: pointer;
+                transition: opacity 0.2s;
+            }
+
+            .tocky-page-selector:has(.selected) img:not(.selected) {
+                opacity: 0.8;
+            }
+            
+            .tocky-page-selector img.selected {
+                border: 4px solid green;
+            }
+
+
+            .page-carousel__page {
+                position: relative;
+                padding: 0 5px;
+            }
+            .page-carousel__page .p-tag {
+                position: absolute;
+                bottom: 12px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+        `);
+    }
+};
+
 TockyShared.IaLink = {
     template: `
         <p-button-group>
@@ -145,6 +236,19 @@ TockyShared.registerComponents = function (app) {
     window.app.component('tocky-header', TockyShared.Header);
     window.app.component('tocky-state-tag', TockyShared.StateTag);
     window.app.component('tocky-ia-link', TockyShared.IaLink);
+    window.app.component('tocky-page-selector', TockyShared.PageSelector);
 };
+
+function registerStyleTag(component, css) {
+    const styleId = `style-${component}`;
+    if (document.getElementById(styleId)) {
+        return;
+    }
+
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = css;
+    document.head.appendChild(style);
+}
 
 window.TockyShared = TockyShared;
