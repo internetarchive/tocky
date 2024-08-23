@@ -70,6 +70,13 @@
             gap: 10px;
             align-items: baseline;
         }
+
+        .toc-pages-panel img {
+            border-radius: 4px;
+            flex-shrink: 0;
+            object-fit: contain;
+            object-position: bottom;
+        }
     </style>
 </head>
 
@@ -78,7 +85,7 @@
         <tocky-header></tocky-header>
         <main v-if="current_toc">
             <div class="main-split">
-                <p-tabs class="left" value="ocr">
+                <p-tabs class="left" value="toc_pages">
                     <p-tab-list>
                         <p-tab value="ocr">OCR</p-tab>
                         <p-tab value="toc_pages">TOC Pages</p-tab>
@@ -94,12 +101,19 @@
                             >{{page}}</pre>
                         </p-tab-panel>
 
-                        <p-tab-panel value="toc_pages" style="overflow-y: auto; display: flex; gap: 8px; flex-direction: column; align-items: center;">
+                        <p-tab-panel class="toc-pages-panel" v-if="current_toc.record.detected_toc.length" value="toc_pages" style="overflow-y: auto; display: flex; gap: 8px; flex-direction: column; align-items: center;">
                             <img
                                 v-for="(page, index) in current_toc.record.detected_toc"
                                 :src="`[[ config.env.TOCKY_APPLICATION_ROOT ]]/ia_toc_img?id=${current_toc.id}&index=${index}`"
                                 loading="lazy"
-                                style="border-radius: 4px; flex-shrink: 0;"
+                            />
+                        </p-tab-panel>
+                        <p-tab-panel class="toc-pages-panel" v-else value="toc_pages" style="overflow-y: auto; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <img
+                                v-for="leafnum in range(0, 30)"
+                                :src="getImageUrl(leafnum)"
+                                loading="lazy"
+                                width="150"
                             />
                         </p-tab-panel>
                         <p-tab-panel value="book">
@@ -266,6 +280,14 @@
             },
 
             methods: {
+                range(start, end) {
+                    return Array.from(range(start, end));
+                },
+                getImageUrl(leafNumber) {
+                    return `[[ config.env.TOCKY_APPLICATION_ROOT ]]/${
+                        TockyShared.getImageUrl(this.current_toc.record.ocaid, leafNumber)
+                    }`;
+                },
                 getCanvasWidth(page) {
                     return Math.max(...page.split("\n").map((l) => l.length));
                 },
@@ -358,12 +380,6 @@
                     }
                 },
                 updateSelectedLines(editFn) {
-                    function* range(start, end) {
-                        for (let i = start; i <= end; i++) {
-                            yield i;
-                        }
-                    }
-
                     const selections = this.monacoEditor.getSelections();
                     const selectedLineNums = new Set(selections.flatMap(s => Array.from(range(s.startLineNumber, s.endLineNumber))));
                     const lines = this.corrected_toc.split("\n");
@@ -411,6 +427,12 @@
             }
 
             return tocEntries;
+        }
+
+        function* range(start, end) {
+            for (let i = start; i <= end; i++) {
+                yield i;
+            }
         }
     </script>
 </body>

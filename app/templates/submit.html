@@ -397,11 +397,8 @@
                     this.state = "Submitted";
                 },
                 getImageUrl(leafNumber) {
-                    return `[[ config.env.TOCKY_APPLICATION_ROOT ]]/ia_img?${
-                        new URLSearchParams({
-                            id: this.ia_id,
-                            leaf: leafNumber,
-                        }).toString()
+                    return `[[ config.env.TOCKY_APPLICATION_ROOT ]]/${
+                        TockyShared.getImageUrl(this.ia_id, leafNumber)
                     }`;
                 },
                 getLeafNumbersWithContext(leafNumbers) {

@@ -77,6 +77,15 @@ TockyShared.Header = {
     },
 };
 
+TockyShared.getImageUrl = function(ia_id, leafNumber) {
+    return `ia_img?${
+        new URLSearchParams({
+            id: ia_id,
+            leaf: leafNumber,
+        }).toString()
+    }`;
+},
+
 TockyShared.setCookie = function (name, value, days = 365) {
     const d = new Date();
     d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
