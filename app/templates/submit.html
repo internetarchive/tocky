@@ -58,6 +58,19 @@
         .p-floatlabel label {
             pointer-events: all !important;
         }
+        .p-select-overlay.block-options .p-select-option {
+            display: block !important;
+            white-space: wrap !important;
+        }
+
+        .p-select-overlay.block-options {
+            max-width: 300px;
+        }
+
+        .p-select-overlay.block-options .p-select-list-container {
+            scrollbar-width: thin;
+            max-height: 300px !important;
+        }
     </style>
 </head>
 
@@ -86,7 +99,17 @@
                 </p>
                 
                 <p-float-label>
-                    <p-select v-model="detector" :options="detector_options" option-label="name"></p-select>
+                    <p-select
+                        v-model="detector"
+                        overlay-class="block-options"
+                        :options="detector_options"
+                        option-label="name"
+                    >
+                        <template #option="{ option }">
+                            <div style="font-weight: bold">{{ option.name }}</div>
+                            <div>{{ option.description }}</div>
+                        </template>
+                    </p-select>
                     <label>Detector</label>
                 </p-float-label>
 
@@ -165,7 +188,17 @@
                 </p>
 
                 <p-float-label>
-                    <p-select v-model="extractor" :options="extractor_options" option-label="name"></p-select>
+                    <p-select
+                        overlay-class="block-options"
+                        v-model="extractor"
+                        :options="extractor_options"
+                        option-label="name"
+                    >
+                        <template #option="{ option }">
+                            <div style="font-weight: bold">{{ option.name }}</div>
+                            <div>{{ option.description }}</div>
+                        </template>
+                    </p-select>
                     <label>Extractor</label>
                 </p-float-label>
 
@@ -250,6 +283,7 @@
             ocr_detector: {
                 name: "OCR Detector",
                 value: "ocr_detector",
+                description: "Uses text extracted from the book pages, combined with manual heuristics to detect the TOC pages.",
                 options: {
                     allow_reocr: {
                         value: true,
@@ -267,6 +301,7 @@
             ai_vision_detector: {
                 name: "AI Vision Detector",
                 value: "ai_vision_detector",
+                description: "Uses AI with vision capabilities to visually detect the TOC pages.",
                 options: {
                     model: {
                         value: 'gpt-4o-mini',
@@ -282,6 +317,7 @@
             manual_detector: {
                 name: "Manual Detector",
                 value: "manual_detector",
+                description: '"Why don\'t you just tell me where the TOC is?"',
                 options: {
                     leaf_numbers: {
                         value: [],
@@ -301,6 +337,7 @@
             ai_extractor: {
                 name: "AI Extractor",
                 value: "ai_extractor",
+                description: "Sends the OCR from the TOC pages to AI to extract in a structured format.",
                 options: {
                     model: {
                         value: 'gpt-4o-mini',
@@ -328,6 +365,7 @@
             ai_vision_extractor: {
                 name: "AI Vision Extractor",
                 value: "ai_vision_extractor",
+                description: "Sends the raw images of the TOC pages to AI to 'read' and extract in a structured format.",
                 options: {
                     model: {
                         value: 'gpt-4o-mini',
