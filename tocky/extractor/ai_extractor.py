@@ -166,7 +166,7 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
         chunks[-1] += '\n' + page_ocr
     for chunk in chunks:
       toc_response = self.extract_structured_toc_chunk(chunk, book_title, prev_toc=structured_toc)
-      structured_toc += '\n' + toc_response.toc.strip().strip('`').strip()
+      structured_toc += '\n' + toc_response.toc.strip('\n').strip('`').strip('\n')
       prompt_tokens += toc_response.prompt_tokens
       completion_tokens += toc_response.completion_tokens
     
