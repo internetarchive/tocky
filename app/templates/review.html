@@ -261,7 +261,7 @@
                 changesToSave() {
                     return this.lastSubmitValue !== JSON.stringify(this.current_toc) ||
                     this.corrected_toc != this.current_toc.record.structured_toc ||
-                    JSON.stringify(this.corrected_toc_pages) !== JSON.stringify(this.current_toc.record.detected_toc);
+                    JSON.stringify(this.corrected_toc_pages) !== JSON.stringify(this.current_toc.record.corrected_toc_pages || this.current_toc.record.detected_toc);
                 },
                 changedSinceOlSave() {
                     return this.lastSavedToOL !== JSON.stringify(this.corrected_toc);
@@ -330,7 +330,7 @@
                     }).then((r) => r.json());
                     this.lastSubmitValue = JSON.stringify(this.current_toc);
                     this.corrected_toc = this.current_toc.record.structured_toc;
-                    this.corrected_toc_pages = deepcopy()
+                    this.corrected_toc_pages = deepcopy(this.current_toc.record.corrected_toc_pages || this.current_toc.record.detected_toc);
 
                     if (!this.current_toc) {
                         alert("No more TOCs to review right now!");
@@ -344,7 +344,7 @@
                         body.corrected_toc = this.corrected_toc;
                     }
                     if (JSON.stringify(body.detected_toc) !== JSON.stringify(this.corrected_toc_pages)) {
-                        body.corrected_toc_pages = deepcopy(this.current_toc.record.corrected_toc_pages || this.current_toc.record.detected_toc);
+                        body.corrected_toc_pages = deepcopy(this.corrected_toc_pages);
                     }
                     const params = new URLSearchParams();
                     const assignee = document.cookie.match(/session=([^%]+)/)?.[1];
