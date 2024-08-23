@@ -271,8 +271,8 @@
                     this.state = "Submitting";
                     this.response = null;
                     this.error = null;
-                    // Open (or reload) the list view to monitor
-                    setTimeout(() => window.open("[[ config.env.TOCKY_APPLICATION_ROOT ]]/list", "List | Tocky"), 100);
+                    // Navigate to the list page after submission
+                    setTimeout(() => window.location.href = "[[ config.env.TOCKY_APPLICATION_ROOT ]]/list", 1000);
                     try {
                         // Settings saved to the DETECTORS/EXTRACTORS in TockyShared (awkward: To fix)
                         this.response = await TockyShared.apiSubmit('[[ config.env.TOCKY_APPLICATION_ROOT ]]', {
