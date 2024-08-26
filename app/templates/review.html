@@ -414,12 +414,27 @@
                         this.submitCorrectionsLoading = false;
                     }
                 },
-                async saveToOL() {
+                async saveToOL({ importIfNotExists = true } = {}) {
                     this.saveToOLLoading = true;
                     // Always fetch latest from prod endpoint!
                     const rec = await fetch(
                         `https://openlibrary.org/ia/${this.current_toc.record.ocaid}.json`,
                     ).then((r) => r.json());
+                    if (rec.key.startsWith("/books/ia:")) {
+                        if (importIfNotExists) {
+                            // Book hasn't been imported yet, so import it. Note this API
+                            // is likely also restricted in some way.
+                            const params = new URLSearchParams({
+                                identifier: this.current_toc.record.ocaid,
+                                require_marc: false,
+                            });
+                            await fetch(`https://openlibrary.org/api/import/ia?${params}`, {method: 'POST'}).then(r=>r.json());
+                            return this.saveToOL({ importIfNotExists: false });
+                        } else {
+                            alert("Book appears to not be in Open Library yet.");
+                            return;
+                        }
+                    }
                     rec.table_of_contents = parseOlToc(this.corrected_toc);
                     rec._comment = 'Add TOC from Tocky';
                     this.lastSavedToOL = JSON.stringify(this.corrected_toc);
