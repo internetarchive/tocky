@@ -11,6 +11,7 @@ from tocky.ocr import ocr_djvu_page
 from tocky.utils import avg_ocr_conf
 
 TOC_PAGE_DETECTOR_VERSION = [
+    ('v2.E.4', 'Check more pages for TOC if TOC has begun'),
     ('v2.E.3', 'Handle pages with all non-numeric pagenums'),
     ('v2.E.2', 'Add support for appendix page numbers like [A-C]123'),
     ('v2.E.1', 'Fix: Don\'t check every page after TOC found!'),
@@ -100,10 +101,11 @@ class OcrDetector(AbstractDetector[OcrDetectorOptions]):
         yield (page_name, elem_str)
 
   def analyze_djvu_for_toc(self, djvu_url: str):
+    P = TOCDetectorHyperParams()
     has_begun = False
     reocrs_done = 0
     last_result: tuple[str, etree._Element, PageTocDetectionResult] = None
-    for page_name, elem in get_djvu_pages(djvu_url, 1, 28):
+    for page_name, elem in get_djvu_pages(djvu_url, 1, end=None):
       toc_analysis = self.analyze_page_for_toc(elem, has_begun, allow_reocr=self.P.allow_reocr and (has_begun or reocrs_done < 10))
       if toc_analysis.reran_ocr:
         reocrs_done += 1
@@ -152,6 +154,12 @@ class OcrDetector(AbstractDetector[OcrDetectorOptions]):
 
       has_begun = toc_analysis.is_toc
       last_result = (page_name, elem, toc_analysis)
+
+      leaf_num = extract_leaf_num(page_name)
+      if has_begun and leaf_num > P.max_leaf_to_check_while_in_toc:
+        break
+      if not has_begun and leaf_num > P.max_leaf_to_check:
+        break
 
     if last_result:
       yield (last_result[0], etree.tostring(last_result[1], encoding='unicode'), last_result[2])
@@ -312,6 +320,8 @@ class TOCDetectorHyperParams:
   min_small_nums_count_for_first: int = 4
   min_avg_word_len: float = 3.8
   min_increasing_percent: float = 0.75
+  max_leaf_to_check: int = 28
+  max_leaf_to_check_while_in_toc: int = 30
 
 
 @dataclass
