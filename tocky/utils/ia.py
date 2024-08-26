@@ -12,10 +12,12 @@ from lxml import etree
 import pycountry
 from requests import HTTPError
 import concurrent.futures
-
+from dotenv import load_dotenv
 import requests
 
 from tocky.utils import PageScan
+
+load_dotenv()  # take environment variables from .env.
 
 ia_session = get_session()
 
