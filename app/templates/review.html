@@ -170,8 +170,8 @@
                                 label="Submit corrections"
                                 @click="submitCorrections"
                                 :loading="submitCorrectionsLoading"
-                                :text="!changesToSave"
-                                :icon="!changesToSave && current_toc.record.state === 'Done' ? 'pi pi-check' : null"
+                                :text="!changesToSubmit"
+                                :icon="(!changesToSubmit && current_toc.record.state === 'Done') ? 'pi pi-check' : null"
                             ></p-button>
                             <p-button
                                 label="Save to Open Library"
@@ -272,7 +272,7 @@
                     }
                 },
 
-                changesToSave() {
+                changesToSubmit() {
                     return this.lastSubmitValue !== JSON.stringify(this.current_toc) ||
                     this.corrected_toc != this.current_toc.record.structured_toc ||
                     JSON.stringify(this.corrected_toc_pages) !== JSON.stringify(this.current_toc.record.corrected_toc_pages || this.current_toc.record.detected_toc);
@@ -408,6 +408,7 @@
                             },
                         );
                         body.state = 'Done';
+                        this.current_toc.state = 'Done';
                         this.current_toc.record = body;
                         this.lastSubmitValue = JSON.stringify(this.current_toc);
                     } finally {
