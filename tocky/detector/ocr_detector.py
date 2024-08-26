@@ -11,6 +11,7 @@ from tocky.ocr import ocr_djvu_page
 from tocky.utils import avg_ocr_conf
 
 TOC_PAGE_DETECTOR_VERSION = [
+    ('v2.E.3', 'Handle pages with all non-numeric pagenums'),
     ('v2.E.2', 'Add support for appendix page numbers like [A-C]123'),
     ('v2.E.1', 'Fix: Don\'t check every page after TOC found!'),
     ('v2.E.0', 'Add support for re-ocring when ending TOC range to avoid missing last page(s)'),
@@ -42,6 +43,24 @@ def match_possible_pagenum(text: str) -> re.Match | None:
   """
   if (m := POSSIBLE_PAGENUM_RE.search(text)) and NEGATIVE_RE.search(text) is None:
     return m
+  else:
+    return None
+
+def pagenum_word_to_int(n: str) -> int | None:
+  """
+  >>> pagenum_word_to_int('1')
+  1
+  >>> pagenum_word_to_int('A1')
+  1
+  >>> pagenum_word_to_int('xii')
+  >>> pagenum_word_to_int('   432')
+  432
+  """
+  n = n.strip()
+  if n.isnumeric():
+    return int(n)
+  elif n[0].isalpha() and n[1:].isnumeric():
+    return int(n[1:])
   else:
     return None
 
@@ -238,21 +257,23 @@ class OcrDetector(AbstractDetector[OcrDetectorOptions]):
       return PageTocDetectionResult(False, 'Too many lines with nums')
 
     nums = [
-        int(n.strip())
+        num
         for n in numbers_at_end_of_lines
-        if n.strip().isnumeric()
+        if (num := pagenum_word_to_int(n)) is not None
     ]
-    increasing_count = 0
-    non_increasing_count = 0
-    for (prev, cur) in itertools.pairwise([0] + nums):
-      if prev <= cur:
-        increasing_count += 1
-      else:
-        non_increasing_count += 1
 
-    increasing_percent = increasing_count / (increasing_count + non_increasing_count)
-    if len(nums) > 4 and increasing_percent < P.min_increasing_percent:
-      return PageTocDetectionResult(False, f'Not enough of the nums are increasing {increasing_percent:.2f} < {P.min_increasing_percent}')
+    if len(nums) > 4:
+      increasing_count = 0
+      non_increasing_count = 0
+      for (prev, cur) in itertools.pairwise([0] + nums):
+        if prev <= cur:
+          increasing_count += 1
+        else:
+          non_increasing_count += 1
+
+      increasing_percent = increasing_count / (increasing_count + non_increasing_count)
+      if increasing_percent < P.min_increasing_percent:
+        return PageTocDetectionResult(False, f'Not enough of the nums are increasing {increasing_percent:.2f} < {P.min_increasing_percent}')
 
     if has_begun:
       first_line = ' '.join(word.text for word in hiddentext.find(".//LINE").findall(".//WORD"))
