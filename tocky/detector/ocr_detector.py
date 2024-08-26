@@ -11,10 +11,39 @@ from tocky.ocr import ocr_djvu_page
 from tocky.utils import avg_ocr_conf
 
 TOC_PAGE_DETECTOR_VERSION = [
+    ('v2.E.2', 'Add support for appendix page numbers like [A-C]123'),
     ('v2.E.1', 'Fix: Don\'t check every page after TOC found!'),
     ('v2.E.0', 'Add support for re-ocring when ending TOC range to avoid missing last page(s)'),
     ('v2.D.0', 'Add support for re-ocring previous page once first TOC page detected to avoid missing first page'),
 ]
+
+POSSIBLE_PAGENUM_RE = re.compile(r'\b([ABC]?\d+|[xvil]+)$', re.IGNORECASE)
+NEGATIVE_RE = re.compile(r'\d[.,-]\d+$')
+
+def match_possible_pagenum(text: str) -> re.Match | None:
+  """
+  Matches things like:
+  - 1
+  - A1 (eg https://archive.org/details/calculusearlytra0000stew_08th/page/n13)
+  - xii
+
+  >>> bool(match_possible_pagenum('1'))
+  True
+  >>> bool(match_possible_pagenum('Appendix 1: Science A1'))
+  True
+  >>> bool(match_possible_pagenum('preface xii'))
+  True
+  >>> bool(match_possible_pagenum('1.32'))
+  False
+  >>> bool(match_possible_pagenum('1,32'))
+  False
+  >>> bool(match_possible_pagenum('1-32'))
+  False
+  """
+  if (m := POSSIBLE_PAGENUM_RE.search(text)) and NEGATIVE_RE.search(text) is None:
+    return m
+  else:
+    return None
 
 @dataclass
 class OcrDetectorOptions:
@@ -67,13 +96,24 @@ class OcrDetector(AbstractDetector[OcrDetectorOptions]):
             words = line.findall(".//WORD")
             if words:
               last_word = words[-1]
+              # Roman numerals are usually at the beginning of the book,
+              # so need to check the previous page
               if bool(re.search(r'\b([xvil]+)$', last_word.text)):
                 recheck_previous = False
                 break
 
+              # If it's just a normal numbers, if the number is too high,
+              # then we should recheck the previous page
               if number_m := re.search(r'\b(\d+)$', last_word.text):
                 n = int(number_m[1])
                 recheck_previous = n > 25
+                break
+            
+              # Other page numbers, like A1, B1, C1, etc are usually at
+              # the end of the book in the appendix, so we should recheck
+              # the previous page
+              if match_possible_pagenum(last_word.text):
+                recheck_previous = True
                 break
 
         if recheck_previous:
@@ -162,7 +202,7 @@ class OcrDetector(AbstractDetector[OcrDetectorOptions]):
         numeric_words_near_right = len([
             word
             for word in words_near_right_text
-            if re.search(r'\b([\dxvil]+)$', word) and re.search(r'\d[.,-]\d+$', word) is None
+            if match_possible_pagenum(word)
         ])
         # print(f'{words_near_right=}, {numeric_words_near_right=} of {len(word_rights)=}')
         if (words_near_right - numeric_words_near_right) < 3:
@@ -175,7 +215,7 @@ class OcrDetector(AbstractDetector[OcrDetectorOptions]):
         words = line.findall(".//WORD")
         if words:
           last_word = words[-1]
-          if (m := re.search(r'\b([\dxvil]+)$', last_word.text)) and re.search(r'\d[.,-]\d+$', last_word.text) is None:
+          if m := match_possible_pagenum(last_word.text):
               confidence = last_word.xpath('./@x-confidence')
               bad_ocr = confidence and float(confidence[0]) < P.min_word_confidence
               if len(m.group()) == 1 and bad_ocr:
@@ -227,7 +267,8 @@ class OcrDetector(AbstractDetector[OcrDetectorOptions]):
       word_lens = [
           len(word.text.strip())
           for word in elem.findall('.//WORD')
-          if not re.search(r'^(\d+|[xvil]+|[\.^;:{}]+)$', word.text.strip(), re.IGNORECASE)
+          # Skip non-word-y things
+          if not match_possible_pagenum(word.text) and not re.search(r'^[\.^;:{}]+$', word.text.strip())
       ]
       avg_word_len = sum(word_lens) / len(word_lens)
       if avg_word_len < P.min_avg_word_len:
