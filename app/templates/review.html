@@ -444,7 +444,10 @@
                                 identifier: this.current_toc.record.ocaid,
                                 require_marc: false,
                             });
-                            await fetch(`https://openlibrary.org/api/import/ia?${params}`, {method: 'POST'}).then(r=>r.json());
+                            await fetch(`https://openlibrary.org/api/import/ia?${params}`, {
+                                method: 'POST',
+                                credentials: 'include',
+                            }).then(r=>r.json());
                             return this.saveToOL({ importIfNotExists: false });
                         } else {
                             alert("Book appears to not be in Open Library yet.");
