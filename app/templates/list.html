@@ -71,6 +71,18 @@
                     <tocky-ia-link :ocaid="data.record.ocaid"></tocky-ia-link>
                 </template>
             </p-column>
+            <p-column field="record.status" header="Status">
+                <template #filter="{ filterModel, filterCallback }">
+                    <p-multi-select
+                        v-model="filterModel.value"
+                        @change="filterCallback()"
+                        :options="extractionStatusOptions"
+                        placeholder="Filter"
+                        style="min-width: 12rem"
+                        :showClear="true"
+                    ></p-multi-select>
+                </template>
+            </p-column>
             <p-column field="record.human_validation" header="Human Validation">
                 <template #filter="{ filterModel, filterCallback }">
                     <p-multi-select
@@ -139,11 +151,31 @@
                             value: [],
                             matchMode: 'in'
                         },
+                        'record.status': {
+                            value: [],
+                            matchMode: 'in'
+                        },
                         'record.human_validation': {
                             value: [],
                             matchMode: 'in'
-                        }
+                        },
                     },
+
+                    // Keep in sync with bulk_processor.py
+                    extractionStatusOptions: [
+                        "TOC Extracted",
+                        "No TOC detected",
+                        "Errored",
+                        "Already has good TOC",
+                        "No TOC detected",
+                        "TOC Validation: Unparseable TOC",
+                        "TOC Validation: Label/Title Too Long",
+                        "TOC Validation: No Numbers",
+                        "TOC Validation: Not Enough Numbers",
+                        "TOC Validation: Too Few Lines With Numbers",
+                        "TOC Validation: Starts Too High",
+                        "TOC Validation: End Too Low",
+                    ],
 
                     humanValidationOptions: [
                         "Perfect",
@@ -172,7 +204,7 @@
                         offset: this.offset,
                     };
                     for (const [key, value] of Object.entries(this.filters)) {
-                        if (value.value.length > 0) {
+                        if (value.value?.length > 0) {
                             params[key] = value.value.join('|');
                         }
                     }

@@ -165,7 +165,7 @@ def api_list():
     where_clauses = []
     params = []
 
-    for list_field in ['id', 'state', 'assignee', 'record.human_validation']:
+    for list_field in ['id', 'state', 'assignee', 'record.status', 'record.human_validation']:
         if arg_val := request.args.get(list_field):
             filter_list = arg_val.split('|')
             if list_field == 'id':
