@@ -1,11 +1,9 @@
 from contextlib import closing
-import dataclasses
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 import json
 import sqlite3
-from tocky import DETECTERS_BY_NAME, EXTRACTORS_BY_NAME
-from tocky.bulk_processor import process_ia_book
+from tocky.bulk_processor import TockyOptionsError, process_from_options, process_ia_book
 from tocky.env import get_env
 from tocky.utils.ia import get_page_image
 
@@ -313,42 +311,12 @@ def submit_post():
 
     # Read the content from the request
     submit_options = request.get_json()
-    
-    if not submit_options['input_book']['ia_id']:
-        return jsonify({'success': False, 'message': 'IA ID is required'}), 400
 
-    ia_id = submit_options['input_book']['ia_id']
-
-    # Set up detector
-    DETECTOR_CLS = DETECTERS_BY_NAME.get(submit_options['detector']['type'])
-    if not DETECTOR_CLS:
-        return jsonify({'success': False, 'message': f'Invalid detector type: {submit_options["detector"]["type"]}'}), 400
-
-    detector = DETECTOR_CLS()
     try:
-        detector.P = dataclasses.replace(detector.P, **submit_options['detector']['options'])
-    except TypeError as e:
-        # TODO: This will not error if things are set to the wrong type
-        return jsonify({'success': False, 'message': f'Invalid detector options: {e}'}), 400
-
-    # Run extractor
-    EXTRACTOR_CLS = EXTRACTORS_BY_NAME.get(submit_options['extractor']['type'])
-    if not EXTRACTOR_CLS:
-        return jsonify({'success': False, 'message': f'Invalid extractor type: {submit_options["extractor"]["type"]}'}), 400
-
-    extractor = EXTRACTOR_CLS()
-    try:
-        extractor.P = dataclasses.replace(extractor.P, **submit_options['extractor']['options'])
-    except TypeError as e:
-        # TODO: This will not error if things are set to the wrong type
-        return jsonify({'success': False, 'message': f'Invalid extractor options: {e}'}), 400
-    # Share cache
-    extractor.S = detector.S
-
-    # Now let's run some stuff!
-    detector.debug = False    
-    state = process_ia_book(ia_id, detector, extractor, push=True)
-    return jsonify(state.to_response_dict())
+        state = process_from_options(submit_options, push=True)
+        return jsonify(state.to_response_dict())
+    except TockyOptionsError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
 
 if __name__ == '__main__':
     if not env.TOCKY_SERVER_KEY:

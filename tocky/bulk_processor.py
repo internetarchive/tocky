@@ -1,10 +1,12 @@
 from dataclasses import dataclass, field
+import dataclasses
 from typing import Literal, TypedDict
 import json
 import traceback
 import requests
 
 
+from tocky import DETECTERS_BY_NAME, EXTRACTORS_BY_NAME
 from tocky.detector import AbstractDetector
 from tocky.detector.ocr_detector import OcrDetector
 from tocky.env import get_env
@@ -159,6 +161,46 @@ def process_ia_book(
   set_state('To Review')
 
   return state
+
+class TockyOptionsError(ValueError):
+    pass
+
+def process_from_options(options: dict, push=False):
+    if not options['input_book']['ia_id']:
+        raise TockyOptionsError('IA ID is required')
+
+    ia_id = options['input_book']['ia_id']
+
+    # Set up detector
+    DETECTOR_CLS = DETECTERS_BY_NAME.get(options['detector']['type'])
+    if not DETECTOR_CLS:
+        raise TockyOptionsError(f'Invalid detector type: {options["detector"]["type"]}')
+
+    detector = DETECTOR_CLS()
+    try:
+        detector.P = dataclasses.replace(detector.P, **options['detector']['options'])
+    except TypeError as e:
+        # TODO: This will not error if things are set to the wrong type
+      raise TockyOptionsError(f'Invalid detector options: {e}')
+
+    # Run extractor
+    EXTRACTOR_CLS = EXTRACTORS_BY_NAME.get(options['extractor']['type'])
+    if not EXTRACTOR_CLS:
+        raise TockyOptionsError(f'Invalid extractor type: {options["extractor"]["type"]}')
+
+    extractor = EXTRACTOR_CLS()
+    try:
+        extractor.P = dataclasses.replace(extractor.P, **options['extractor']['options'])
+    except TypeError as e:
+        # TODO: This will not error if things are set to the wrong type
+        raise TockyOptionsError(f'Invalid extractor options: {e}')
+    # Share cache
+    extractor.S = detector.S
+
+    # Now let's run some stuff!
+    detector.debug = False    
+    return process_ia_book(ia_id, detector, extractor, push=push)
+
 
 def push_to_toc_queue(record: dict) -> int:
   resp = requests.put(
