@@ -63,6 +63,12 @@ with app.app_context():
         'list.html': render_template('list.html'),
     }
 
+def render_static_template(template_name):
+    # Check if running in reload mode
+    if app.debug:
+        return render_template(template_name)
+    else:
+        return static_templates[template_name]
 
 @app.route('/pop', methods=['GET'])
 def pop():
@@ -154,7 +160,7 @@ def push():
 @app.route('/list', methods=['GET'])
 def list():
     """Reads the limit and offset from the query string and returns a list of records"""
-    return static_templates['list.html']
+    return render_static_template('list.html')
 
 
 @app.route('/api/list', methods=['GET'])
@@ -214,15 +220,15 @@ def stats():
 
 @app.route('/review', methods=['GET'])
 def review():
-    return static_templates['review.html']
+    return render_static_template('review.html')
 
 @app.route('/review/<int:id>', methods=['GET'])
 def review_single(id: int):
-    return static_templates['review.html']
+    return render_static_template('review.html')
 
 @app.route('/submit', methods=['GET'])
 def submit():
-    return static_templates['submit.html']
+    return render_static_template('submit.html')
 
 def generate_stream(server_response):
     for chunk in server_response.iter_content(chunk_size=4096):
