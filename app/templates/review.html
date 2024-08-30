@@ -58,6 +58,10 @@
             flex: 1;
             overflow: hidden;
         }
+        .main-split .right .p-tabs {
+            flex: 1;
+            overflow: hidden;
+        }
 
         .tocky-monaco-editor {
             border: 1px solid #ccc;
@@ -91,6 +95,30 @@
             mask-repeat: no-repeat;
             -webkit-mask-size: 100% 100%;
             mask-size: 100% 100%;
+        }
+        .toc-table.has-nesting tr {
+            --toc-entry-level: 1;
+            font-size: max(.8em, calc(1em - (var(--toc-entry-level) * 1em / 10)));
+            font-weight: max(500, calc(600 - var(--toc-entry-level) * 100));
+        }
+
+        .toc-table tr td:nth-child(1) {
+            text-align: right;
+            translate: calc(var(--toc-entry-level) * 20px) !important;
+            vertical-align: top;
+        }
+        .toc-table tr td:nth-child(2) {
+            padding-right: calc(var(--toc-entry-level) * 20px) !important;
+            translate: calc(var(--toc-entry-level) * 20px) !important;
+            pointer-events: none;
+        }
+        .toc-table tr td:nth-child(2) > * {
+            pointer-events: all;
+        }
+
+        .toc-table .p-button-icon-only {
+            --p-icon-size: .9em;
+            --p-button-icon-only-width: 1.5em;
         }
     </style>
 </head>
@@ -163,13 +191,98 @@
                             </label>
                         </template>
                     </p-toolbar>
-                    <vue-monaco-editor
-                        class="tocky-monaco-editor"
-                        v-model:value="corrected_toc"
-                        language="plaintext"
-                        :options="monacoOptions"
-                        @mount="handleMonacoMount"
-                    ></vue-monaco-editor>
+                    <p-tabs v-model:value="activeEditor">
+                        <p-tab-list>
+                            <p-tab value="monaco">Text Editor</p-tab>
+                            <p-tab value="table">Table Preview</p-tab>
+                        </p-tab-list>
+                        <p-tab-panels>
+                            <p-tab-panel value="monaco">
+                                <vue-monaco-editor
+                                    class="tocky-monaco-editor"
+                                    v-model:value="monacoValue"
+                                    language="plaintext"
+                                    :options="monacoOptions"
+                                    @mount="handleMonacoMount"
+                                ></vue-monaco-editor>
+                            </p-tab-panel>
+                            <p-tab-panel value="table">
+                                <p-data-table
+                                    class="toc-table"
+                                    :class="{ 'has-nesting': hasNesting }"
+                                    :value="corrected_toc"
+                                    scrollable
+                                    style="overflow:auto"
+                                    size="small"
+                                    v-model:selection="selectedTocRows"
+                                    selection-mode="multiple"
+                                    :row-style="row => ({ '--toc-entry-level': row.level })"
+                                >
+                                    <template #header>
+                                        <p-toolbar>
+                                            <template #start>
+                                                <p-button
+                                                    :disabled="!selectedTocRows.length"
+                                                    @click="selectedTocRows = []"
+                                                    text
+                                                    v-tooltip.bottom="!selectedTocRows.length ? 'No rows selected. Click on a row to select it.' : null"
+                                                >Clear Selection</p-button>
+                                            </template>
+                                            <template #end>
+                                                <p-multi-select
+                                                    v-model="selectedColumns"
+                                                    :options="columns"
+                                                    display="chip"
+                                                    placeholder="Add Columns"
+                                                ></p-multi-select>
+                                            </template>
+                                        </p-toolbar>
+                                    </template>
+                                    <p-column field="label" header="Label">
+                                        <template #editor="{ data, field }">
+                                            <p-input-text v-model="data[field]"></p-input-text>
+                                        </template>
+                                    </p-column>
+                                    <p-column field="title" header="Title">
+                                        <template #editor="{ data, field }">
+                                            <p-input-text v-model="data[field]"></p-input-text>
+                                        </template>
+            
+                                        <template #body="{ data: row }">
+                                            <div>
+                                                {{ row.title }}
+                                                <div v-if="row.authors" style="font-size: 0.8em; color: #666;">
+                                                    {{ row.authors.join(' | ') }}
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </p-column>
+                                    <p-column field="pagenum" header="Page" style="width: 100px;"></p-column>
+                                    <p-column>
+                                        <template #body="{ data: row }">
+                                            <p-button
+                                                :disabled="!row.pagenum"
+                                                as="a"
+                                                :href="`https://archive.org/details/${current_toc.record.ocaid}/page/${row.pagenum}`"
+                                                target="_blank"
+                                                icon="pi pi-external-link"
+                                                rounded
+                                                text
+                                                small
+                                            ></p-button>
+                                        </template>
+                                    </p-column>
+                                    <p-column
+                                        v-for="(col, index) of selectedColumns"
+                                        :field="col"
+                                        :header="col"
+                                        :key="col + '_' + index"
+                                    >
+                                    </p-column>
+                                </p-data-table>
+                            </p-tab-panel>
+                        </p-tab-panels>
+                    </p-tabs>
                     <div class="toolbar">
                         <p-select
                             v-model="current_toc.record.human_validation"
@@ -233,6 +346,7 @@
     <script src="https://unpkg.com/vue-demi@0.14.6/lib/index.iife.js"></script>
     <script src="https://unpkg.com/@monaco-editor/loader@1.4.0/lib/umd/monaco-loader.js"></script>
     <script src="https://unpkg.com/@guolao/vue-monaco-editor@1.5.4/lib/umd/monaco-vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
 
     <script type="module">
         const { VueMonacoEditor } = monaco_vue;
@@ -267,17 +381,35 @@
 
                     reExtractTocLoading: false,
 
+                    activeEditor: 'monaco',
+
+                    // Text editor
                     monacoEditor: null,
+                    monacoValue: '',
                     monacoOptions: {
                         wordWrap: 'off',
                         minimap: {
                             enabled: false,
                         },
-                    }
+                    },
+
+                    // Table editor
+                    selectedColumns: [],
+                    columns: ['authors', 'subtitle', 'description', 'level'],
+                    selectedTocRows: [],
                 };
             },
 
+            watch: {
+                monacoValue: _.debounce(function (value) {
+                    this.updateTocFromMonaco();
+                }, 500),
+            },
+
             computed: {
+                hasNesting() {
+                    return this.corrected_toc.some((entry) => entry.level > 0);
+                },
                 monacoWordWrapBool: {
                     get() {
                         return this.monacoOptions.wordWrap === 'on';
@@ -308,14 +440,36 @@
                             'Content-Type': 'application/json',
                         }
                     }).then((r) => r.json());
-                    this.current_toc = resp[0];
-                    this.lastSubmitValue = JSON.stringify(this.current_toc);
-                    this.corrected_toc = this.current_toc.record.corrected_toc || this.current_toc.record.structured_toc;
-                    this.corrected_toc_pages = deepcopy(this.current_toc.record.corrected_toc_pages || this.current_toc.record.detected_toc);
+                    this.loadFromDb(resp[0]);
                 }
             },
 
             methods: {
+                updateTocFromMonaco() {
+                    try {
+                        this.corrected_toc = parseMarkdownToc(this.monacoValue);
+                        monaco.editor.setModelMarkers(this.monacoEditor.getModel(), "owner", []);
+                    } catch (e) {
+                        console.error(e);
+                        monaco.editor.setModelMarkers(this.monacoEditor.getModel(), "owner", [
+                            e.toMonacoMarker(),
+                        ]);
+                    }
+                },
+                loadFromDb(full_db_record) {
+                    this.current_toc = full_db_record;
+                    this.lastSubmitValue = JSON.stringify(this.current_toc);
+                    const corrected_toc = this.current_toc.record.corrected_toc || this.current_toc.record.structured_toc;
+                    // convert from markdown if string
+                    if (typeof this.corrected_toc === 'string') {
+                        this.monacoValue = this.corrected_toc;
+                        this.corrected_toc = parseMarkdownToc(corrected_toc);
+                    } else {
+                        this.monacoValue = tocToMarkdown(corrected_toc);
+                        this.corrected_toc = corrected_toc;
+                    }
+                    this.corrected_toc_pages = deepcopy(this.current_toc.record.corrected_toc_pages || this.current_toc.record.detected_toc);
+                },
                 range(start, end) {
                     return Array.from(range(start, end));
                 },
@@ -354,15 +508,13 @@
                     /* Read the session cookie to determine assignee */
                     const assignee = document.cookie.match(/session=([^%]+)/)?.[1];
                     const params = new URLSearchParams({ assignee });
-                    this.current_toc = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/pop?${params}`, {
+                    const next_toc_record = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/pop?${params}`, {
                         headers: {
                             'Content-Type': 'application/json',
                             'X-API-Key': TockyShared.getApiKey(true)
                         }
                     }).then((r) => r.json());
-                    this.lastSubmitValue = JSON.stringify(this.current_toc);
-                    this.corrected_toc = this.current_toc.record.structured_toc;
-                    this.corrected_toc_pages = deepcopy(this.current_toc.record.corrected_toc_pages || this.current_toc.record.detected_toc);
+                    this.loadFromDb(next_toc_record);
 
                     if (!this.current_toc) {
                         alert("No more TOCs to review right now!");
@@ -454,7 +606,7 @@
                             return;
                         }
                     }
-                    rec.table_of_contents = parseOlToc(this.corrected_toc);
+                    rec.table_of_contents = parseMarkdownToc(this.corrected_toc);
                     rec._comment = 'Add TOC from Tocky';
                     this.lastSavedToOL = JSON.stringify(this.corrected_toc);
                     try {
@@ -467,27 +619,36 @@
                         this.saveToOLLoading = false;
                     }
                 },
-                updateSelectedLines(editFn) {
-                    const selections = this.monacoEditor.getSelections();
-                    const selectedLineNums = new Set(selections.flatMap(s => Array.from(range(s.startLineNumber, s.endLineNumber))));
-                    const lines = this.corrected_toc.split("\n");
-                    
-                    // Indent the selected lines
-                    for (const i of selectedLineNums) {
-                        lines[i - 1] = editFn(lines[i - 1]);
+                getSelectedChapters() {
+                    if (this.activeEditor == 'monaco') {
+                        const selections = this.monacoEditor.getSelections();
+                        const selectedLineNums = new Set(selections.flatMap(s => Array.from(range(s.startLineNumber, s.endLineNumber))));
+                        
+                        return Array.from(selectedLineNums).map(i => this.corrected_toc[i - 1]);
+                    } else if (this.activeEditor == 'table') {
+                        return this.selectedTocRows;
+                    } else {
+                        throw new Error("Unknown editor");
                     }
-
-                    this.corrected_toc = lines.join("\n");
                 },
                 enumerateText() {
                     let i = 1;
-                    this.updateSelectedLines(line => line.replace(/^( *\*+)( \d+)?/, ($0, $1, $2) => $1 + ' ' + i++));
+                    for (const chapter of this.getSelectedChapters()) {
+                        chapter.label = `${i++}`;
+                    }
+                    this.monacoValue = tocToMarkdown(this.corrected_toc);
                 },
                 indentText() {
-                    this.updateSelectedLines(line => line.replace(/^( *)(\**)/, ($0, $1, $2) => $1 + '    *' + $2));
+                    for (const chapter of this.getSelectedChapters()) {
+                        chapter.level++;
+                    }
+                    this.monacoValue = tocToMarkdown(this.corrected_toc);
                 },
                 deIndentText() {
-                    this.updateSelectedLines(line => line.replace(/^( *)(\**)/, ($0, $1, $2) => $1.slice(0, -4) + ($2.length > 1 ? $2.slice(0, -1) : $2)));
+                    for (const chapter of this.getSelectedChapters()) {
+                        chapter.level = Math.max(0, chapter.level - 1);
+                    }
+                    this.monacoValue = tocToMarkdown(this.corrected_toc);
                 },
             },
         });
@@ -495,30 +656,112 @@
         TockyShared.registerComponents(window.app);
         window.app.mount("#app");
 
-        class OlTocParseError extends Error { }
-        function parseOlToc(tocString) {
+        class OlTocParseError extends Error {
+            constructor({
+                line_number,
+                message,
+                line,
+            }) {
+                super(message);
+                this.name = "OlTocParseError";
+                this.line_number = line_number;
+                this.line = line;
+            }
+
+            toMonacoMarker() {
+                return {
+                    startLineNumber: this.line_number,
+                    endLineNumber: this.line_number,
+                    startColumn: 1,
+                    endColumn: this.line.length + 1,
+                    message: this.message,
+                    severity: monaco.MarkerSeverity.Error,
+                };
+            }
+        }
+        function parseMarkdownToc(tocString) {
             const tocEntries = [];
             const lines = tocString.trim().split("\n").map((l) => l.trim());
 
-            for (const line of lines) {
+            for (const [i, line] of lines.entries()) {
+                if (!line.trim()) continue;
+
                 const parts = line.split("|");
-                if (parts) {
-                    const [label, title, pagenum] = parts;
-                    if (!label.startsWith("*")) {
-                        throw new OlTocParseError(`no stars: ${parts}`);
-                    }
-                    tocEntries.push({
-                        level: label.trim().match(/^\*+/)[0].length,
-                        label: label.replace(/^\*+\s*/g, "").trim(),
-                        title: title.trim(),
-                        pagenum: pagenum.trim(),
+                if (!parts.length) {
+                    throw new OlTocParseError({
+                        line_number: i + 1,
+                        message: `Does not have any pipes`,
+                        line,
                     });
-                } else {
-                    throw new OlTocParseError("does not match pattern");
                 }
+
+                if (parts.length < 3) {
+                    throw new OlTocParseError({
+                        line_number: i + 1,
+                        message: `Must have at least 3 parts`,
+                        line,
+                    });
+                }
+
+                if (parts.length > 4) {
+                    throw new OlTocParseError({
+                        line_number: i + 1,
+                        message: `Too many parts`,
+                        line,
+                    });
+                }
+
+                const [label, title, pagenum, ...extra] = parts;
+                if (!label.startsWith("*")) {
+                    throw new OlTocParseError({
+                        line_number: i + 1,
+                        message: `no stars: ${parts}`,
+                        line,
+                    });
+                }
+                let extraJson = {};
+                if (extra.length && extra[0].trim().length) {
+                    try {
+                        extraJson = JSON.parse(extra.join("|"));
+                    } catch (e) {
+                        throw new OlTocParseError({
+                            line_number: i + 1,
+                            message: `Invalid JSON: ${extra.join("|")}`,
+                            line,
+                        });
+                    }
+                }
+                tocEntries.push({
+                    level: label.trim().match(/^\*+/)[0].length - 1,
+                    label: label.replace(/^\*+\s*/g, "").trim(),
+                    title: title.trim(),
+                    pagenum: pagenum.trim(),
+                    ...extraJson,
+                });
             }
 
             return tocEntries;
+        }
+
+        function tocToMarkdown(tocJson) {
+            return tocJson.map((entry) => {
+                let result = '    '.repeat(entry.level) + '*'.repeat(entry.level + 1);
+                if (entry.label) {
+                    result += ` ${entry.label}`;
+                }
+                result += ` | ${entry.title || ''} | ${entry.pagenum || ''}`;
+
+                const otherFields = new Set(Object.keys(entry));
+                otherFields.delete('level');
+                otherFields.delete('label');
+                otherFields.delete('title');
+                otherFields.delete('pagenum');
+                if (otherFields.size) {
+                    result += ` | ${JSON.stringify(Object.fromEntries(Array.from(otherFields).map((f) => [f, entry[f]])))}`;
+                }
+
+                return result;
+            }).join("\n");
         }
 
         function* range(start, end) {
