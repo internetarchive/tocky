@@ -190,8 +190,11 @@ def get_git_sha() -> str | None:
 
 @functools.cache
 def get_tocky_version() -> str:
-  from importlib.metadata import version
-  tocky_version = version('tocky')
+  from importlib.metadata import version, PackageNotFoundError
+  try:
+    tocky_version = version('tocky')
+  except PackageNotFoundError:
+    tocky_version = 'local'
 
   if git_sha := get_git_sha():
     return f'{tocky_version}+{git_sha[:8]}'
