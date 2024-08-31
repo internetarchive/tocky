@@ -434,7 +434,7 @@
 
                 changesToSubmit() {
                     return this.lastSubmitValue !== JSON.stringify(this.current_toc) ||
-                    this.corrected_toc != (this.current_toc.record.corrected_toc || this.current_toc.record.structured_toc) ||
+                    JSON.stringify(this.corrected_toc) != JSON.stringify(this.current_toc.record.corrected_toc || this.current_toc.record.structured_toc) ||
                     JSON.stringify(this.corrected_toc_pages) !== JSON.stringify(this.current_toc.record.corrected_toc_pages || this.current_toc.record.detected_toc);
                 },
                 changedSinceOlSave() {
@@ -569,7 +569,7 @@
                     this.submitCorrectionsLoading = true;
 
                     const body = Object.assign({}, this.current_toc.record);
-                    if (this.corrected_toc != this.current_toc.record.structured_toc) {
+                    if (JSON.stringify(this.corrected_toc) != JSON.stringify(this.current_toc.record.structured_toc)) {
                         body.corrected_toc = this.corrected_toc;
                     }
                     if (JSON.stringify(body.detected_toc) !== JSON.stringify(this.corrected_toc_pages)) {
@@ -624,7 +624,15 @@
                             return;
                         }
                     }
-                    rec.table_of_contents = parseMarkdownToc(this.corrected_toc);
+                    rec.table_of_contents = deepcopy(this.corrected_toc);
+                    for (const chapter of rec.table_of_contents) {
+                        if (chapter.authors) {
+                            // Errrr something vaguely inspired by https://openlibrary.org/type/author_role ?
+                            chapter.authors = chapter.authors.map(a => ({
+                                name: a,
+                            }))
+                        }
+                    }
                     rec._comment = 'Add TOC from Tocky';
                     this.lastSavedToOL = JSON.stringify(this.corrected_toc);
                     try {
