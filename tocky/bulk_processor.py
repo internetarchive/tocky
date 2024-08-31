@@ -35,7 +35,6 @@ ExtractionStatus = Literal[
   "No TOC detected",
   "Errored",
   "Already has good TOC",
-  "No TOC detected",
   "TOC Validation: Unparseable TOC",
   "TOC Validation: Label/Title Too Long",
   "TOC Validation: No Numbers",
