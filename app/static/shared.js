@@ -1,5 +1,9 @@
 const TockyShared = {};
 
+TockyShared.config = {
+    darkMode: localStorage.getItem('tocky--dark-mode') === 'true',
+};
+
 TockyShared.DETECTORS = {
     ocr_detector: {
         name: "OCR Detector",
@@ -303,7 +307,8 @@ TockyShared.Header = {
                     size="small"
                     :icon="darkMode ? 'pi pi-moon' : 'pi pi-sun'"
                     text
-                    @click="darkMode = !darkMode"
+                    @click="config.darkMode = !config.darkMode"
+                    title="Toggle Dark Mode"
                 ></p-button>
                 <p-button size="small" :outlined="authenticated" @click="authenticate">
                     <i class="pi pi-key"></i>
@@ -320,11 +325,11 @@ TockyShared.Header = {
                 { label: 'List', url: '/tocky/list', icon: 'pi pi-list' },
                 { label: 'Submit', url: '/tocky/submit', icon: 'pi pi-plus' },
             ],
-            darkMode: localStorage.getItem('tocky--dark-mode') === 'true',
+            config: TockyShared.config,
         };
     },
     watch: {
-        darkMode: {
+        'config.darkMode': {
             handler(value) {
                 localStorage.setItem('tocky--dark-mode', value);
                 document.documentElement.classList.toggle('tocky-dark-mode', value);

@@ -79,7 +79,7 @@
         }
 
         .tocky-monaco-editor {
-            border: 1px solid #ccc;
+            border: 1px solid var(--p-content-border-color);
             border-radius: 4px;
         }
 
@@ -260,6 +260,7 @@
                                     language="plaintext"
                                     :options="monacoOptions"
                                     @mount="handleMonacoMount"
+                                    :theme="config.darkMode ? 'vs-dark' : null"
                                 ></vue-monaco-editor>
                             </p-tab-panel>
                             <p-tab-panel value="table">
@@ -411,6 +412,8 @@
             data() {
                 const m = location.pathname.match(/\/review\/(\d+)/);
                 return {
+                    config: TockyShared.config,
+
                     specific_id: m ? parseFloat(m[1]) : null,
                     current_toc: null,
                     corrected_toc: null,
