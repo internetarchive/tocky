@@ -421,7 +421,7 @@
 
             computed: {
                 hasNesting() {
-                    return this.corrected_toc.some((entry) => entry.level > 0);
+                    return this.corrected_toc?.some((entry) => entry.level > 0);
                 },
                 monacoWordWrapBool: {
                     get() {
@@ -474,11 +474,16 @@
                     this.lastSubmitValue = JSON.stringify(this.current_toc);
                     const corrected_toc = this.current_toc.record.corrected_toc || this.current_toc.record.structured_toc;
                     // convert from markdown if string
-                    if (typeof this.corrected_toc === 'string') {
-                        this.monacoValue = this.corrected_toc;
-                        this.corrected_toc = parseMarkdownToc(corrected_toc);
+                    if (corrected_toc) {
+                        if (typeof this.corrected_toc === 'string') {
+                            this.monacoValue = this.corrected_toc;
+                            this.corrected_toc = parseMarkdownToc(corrected_toc);
+                        } else {
+                            this.monacoValue = tocToMarkdown(corrected_toc);
+                            this.corrected_toc = corrected_toc;
+                        }
                     } else {
-                        this.monacoValue = tocToMarkdown(corrected_toc);
+                        this.monacoValue = '';
                         this.corrected_toc = corrected_toc;
                     }
                     this.corrected_toc_pages = deepcopy(this.current_toc.record.corrected_toc_pages || this.current_toc.record.detected_toc);
