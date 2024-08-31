@@ -19,8 +19,11 @@
         [v-cloak] {
             display: none !important;
         }
-        body {
-            background: var(--p-content-background);
+        html, body {
+            background-color: var(--p-content-background);
+        }
+        html.tocky-dark-mode {
+            color-scheme: dark;
         }
         .flex-row {
             display: flex;
