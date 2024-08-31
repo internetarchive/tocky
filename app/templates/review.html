@@ -154,6 +154,7 @@
 
         /** Scroll animation so that when you've scrolled, the toolbar gets a box-shadow */
         .floating-toolbar--container {
+            overflow: auto;
             scroll-timeline: --floating-toolbar-scroll-tl y;
             /* Firefox supports the older "vertical" syntax */
             scroll-timeline: --floating-toolbar-scroll-tl vertical;
@@ -252,7 +253,7 @@
                             <p-tab value="monaco">Text Editor</p-tab>
                             <p-tab value="table">Table Preview</p-tab>
                         </p-tab-list>
-                        <p-tab-panels class="floating-toolbar--container">
+                        <p-tab-panels>
                             <p-tab-panel value="monaco">
                                 <vue-monaco-editor
                                     class="tocky-monaco-editor"
@@ -263,7 +264,7 @@
                                     :theme="config.darkMode ? 'vs-dark' : null"
                                 ></vue-monaco-editor>
                             </p-tab-panel>
-                            <p-tab-panel value="table">
+                            <p-tab-panel value="table" class="floating-toolbar--container">
                                 <p-toolbar class="floating-toolbar tocky-toolbar-thin" style="position: sticky; top: 0; z-index: 100;">
                                     <template #start v-if="selectedTocRows.length">
                                         {{selectedTocRows.length}} rows selected
