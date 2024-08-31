@@ -1,13 +1,6 @@
-from dataclasses import dataclass
 import re
 
-@dataclass
-class TocEntry:
-    level: int
-    label: str
-    title: str
-    pagenum: str
-
+from tocky.extractor import TocEntry
 
 class OlTocParseError(Exception):
   pass
@@ -52,25 +45,20 @@ def parse_ol_toc(toc_string: str) -> list[TocEntry]:
     return toc_entries
 
 
-def validate_extracted_toc(toc_str: str, num_pages: int):
-  try:
-    parsed_toc = parse_ol_toc(toc_str)
-  except OlTocParseError:
-    return 'Unparseable TOC'
-
+def validate_extracted_toc(parsed_toc: list[TocEntry], num_pages: int):
   for entry in parsed_toc:
-    if len(entry.label) > 160 or len(entry.title) > 160:
+    if len(entry.label or '') > 160 or len(entry.title or '') > 160:
       return 'Label/Title Too Long'
 
   nums = [
     int(entry.pagenum)
     for entry in parsed_toc
-    if entry.pagenum.isnumeric()
+    if entry.pagenum and entry.pagenum.isnumeric()
   ]
   roman_numerals = [
     entry.pagenum
     for entry in parsed_toc
-    if re.search(r'^[xvi]+$', entry.pagenum, flags=re.IGNORECASE)
+    if entry.pagenum and re.search(r'^[xvi]+$', entry.pagenum, flags=re.IGNORECASE)
   ]
 
   if not (nums + roman_numerals):

@@ -1,18 +1,16 @@
 from dataclasses import dataclass
-import textwrap
+from typing import Literal
 
 from openai import OpenAI
 from tocky.detector.ai_vision_detector import concatenate_and_resize, image_to_base64
-from tocky.extractor import AbstractExtractor, TocResponse
-from tocky.utils import ShareableState
+from tocky.extractor import AbstractExtractor, TocEntry, TocResponse
+from tocky.extractor.formats import build_system_prompt, process_extracted_output
 from tocky.utils.ia import get_book_images
 
 SYSTEM_PROMPT = """
-You are a bot that helps to extract the full table of contents data in a structured format. The format you will need to output is as follows:
+You are a bot that helps to extract the full table of contents data in a structured format.
 
-```
-* {label (optional)} | {title} | {page number}
-```
+{format_instructions}
 
 Notes:
 - The label is used for unimportant data like numerals.
@@ -20,38 +18,16 @@ Notes:
 
 ### Examples:
 
-```
-* | Preface | ix
-* Part 1 | This World | 1
-    ** Chapter I | Of the Nature of Flatland | 3
-    ** Chapter II | Of the Climate and Houses in Flatland | 5
-* Part 2 | Other Worlds | 42
-```
+{PROMPT_SAMPLES[no_titles]}
 
-```
-* | Chapter 1 | 1
-* | Chapter 2 | 25
-* | Chapter 3 | 38
-* | Chapter 4 | 48
-```
-
-You can nest when necessary:
-
-```
-* A | Technology |
-    ** I | Computers | 1
-        *** | Hard-drives | 2
-        *** | Software | 8
-    ** II | Machinery | 11
-    ** III | Hardware | 37
-* B | Agriculture |
-```
+{PROMPT_SAMPLES[nested]}
 """
 
 @dataclass
 class AiVisionExtractorOptions:
     model: str = "gpt-4o-mini"
     target_height: int = 512
+    extraction_format: Literal['json', 'markdown'] = 'json'
 
 
 class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
@@ -61,16 +37,17 @@ class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
         super().__init__()
         self.P = AiVisionExtractorOptions()
 
-    def extract(self, ocaid: str, detector_result: list[int]) -> str:
+    def extract(self, ocaid: str, detector_result: list[int]) -> list[TocEntry]:
         toc_page_image = concatenate_and_resize(list(get_book_images(ocaid, detector_result, reduce=1)), target_height=512)
 
         client = OpenAI()
+        system_prompt = build_system_prompt(SYSTEM_PROMPT, self.P.extraction_format)
         completion = client.chat.completions.create(
             model=self.P.model,
             messages=[
                 {
                     "role": "system",
-                    "content": SYSTEM_PROMPT,
+                    "content": system_prompt,
                 },
                 {
                     "role": "user",
@@ -94,8 +71,12 @@ class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
         assert completion.choices[0].message.content
         assert completion.usage
 
+        toc = process_extracted_output(
+            completion.choices[0].message.content,
+            self.P.extraction_format,
+        )
         self.toc_response = TocResponse(
-            toc=completion.choices[0].message.content,
+            toc,
             prompt_tokens=completion.usage.prompt_tokens,
             completion_tokens=completion.usage.completion_tokens,
         )

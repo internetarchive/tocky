@@ -10,7 +10,7 @@ from tocky import DETECTERS_BY_NAME, EXTRACTORS_BY_NAME
 from tocky.detector import AbstractDetector
 from tocky.detector.ocr_detector import OcrDetector
 from tocky.env import get_env
-from tocky.extractor import AbstractExtractor
+from tocky.extractor import AbstractExtractor, TocEntry
 from tocky.extractor.ai_extractor import AiExtractor
 from tocky.utils.ia import bulk_ia_to_ol, get_ia_metadata
 from tocky.utils import ResultStat, run_with_result_stats
@@ -27,6 +27,24 @@ TockyItemState = Literal[
   "Errored",
 ]
 
+
+# Keep in sync with list.html
+ExtractionStatus = Literal[
+  "",
+  "TOC Extracted",
+  "No TOC detected",
+  "Errored",
+  "Already has good TOC",
+  "No TOC detected",
+  "TOC Validation: Unparseable TOC",
+  "TOC Validation: Label/Title Too Long",
+  "TOC Validation: No Numbers",
+  "TOC Validation: Not Enough Numbers",
+  "TOC Validation: Too Few Lines With Numbers",
+  "TOC Validation: Starts Too High",
+  "TOC Validation: End Too Low",
+]
+
 @dataclass
 class ItemProcessingState:
   ocaid: str
@@ -34,20 +52,19 @@ class ItemProcessingState:
   extractor: AbstractExtractor
 
   detector_result: ResultStat[list[int]] | None = None
-  extractor_result: ResultStat[str] | None = None
+  extractor_result: ResultStat[list[TocEntry]] | None = None
 
   state: TockyItemState = 'To Detect'
-  status: str = ''
+  status: ExtractionStatus = ''
   toc_raw_ocr: list[str] | None = None
   detected_toc: list[tuple[str, str]] = field(default_factory=list)
-  toc_ocr: str = ''
-  structured_toc: str = ''
+  structured_toc: list[TocEntry] | None = None
   error: Exception | None = None
   prompt_tokens: int = 0
   completion_tokens: int = 0
 
   def to_response_dict(self):
-    return {
+    result = {
         'success': all(
             result and result.success
             for result in [self.detector_result, self.extractor_result]
@@ -68,6 +85,15 @@ class ItemProcessingState:
         },
     }
 
+    # Convert TocEntry to dict extractor result
+    if self.extractor_result and self.extractor_result.result is not None:
+      result['extractor']['results']['result'] = [
+          entry.to_dict()
+          for entry in self.extractor_result.result
+      ]
+
+    return result
+
   def to_db_dict(self):
     return {
       'state': self.state,
@@ -82,7 +108,7 @@ class ItemProcessingState:
       'completion_tokens': self.completion_tokens,
       'error': str(self.error) if self.error else None,
       'toc_raw_ocr': self.toc_raw_ocr,
-      'structured_toc': self.structured_toc,
+      'structured_toc': [entry.to_dict() for entry in self.structured_toc] if self.structured_toc is not None else None,
       'detected_toc': self.detector_result.result if self.detector_result else None,
   }
 

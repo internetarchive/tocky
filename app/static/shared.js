@@ -80,7 +80,14 @@ TockyShared.EXTRACTORS = {
                     "easyocr",
                     "azure",
                 ]
-            }
+            },
+            extraction_format: {
+                value: "json",
+                options: [
+                    "json",
+                    "markdown",
+                ]
+            },
         }
     },
     ai_vision_extractor: {
@@ -94,7 +101,14 @@ TockyShared.EXTRACTORS = {
                     "gpt-4o-mini",
                     "gpt-3.5-turbo",
                 ]
-            }
+            },
+            extraction_format: {
+                value: "json",
+                options: [
+                    "json",
+                    "markdown",
+                ]
+            },
         }
     },
 };

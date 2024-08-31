@@ -167,6 +167,12 @@
                 <p-fieldset legend="AI Extractor Options" :toggleable="true" v-if="extractor == EXTRACTORS.ai_extractor">
                     <div class="flex-row">
                         <p-float-label>
+                            <p-select v-model="extractor.options.extraction_format.value" :options="extractor.options.extraction_format.options"></p-select>
+                            <label>Extraction Format</label>
+                        </p-float-label>
+                    </div>
+                    <div class="flex-row">
+                        <p-float-label>
                             <p-select v-model="extractor.options.model.value" :options="extractor.options.model.options"></p-select>
                             <label>Model</label>
                         </p-float-label>
@@ -176,8 +182,7 @@
                             <label>
                                 Max Sent Tokens <i class="ui icon question circle outline" v-tooltip="`This could be limited by your model. E.g. gpt 4o mini can handle 128k tokens.`"></i>
                             </label>
-                        </p-float-label>
-
+                        </p-float-label>                        
                     </div>
                     <div class="flex-row">
                         <label>
@@ -204,10 +209,18 @@
                 </p-fieldset>
 
                 <p-fieldset legend="AI Vision Extractor Options" :toggleable="true" v-if="extractor == EXTRACTORS.ai_vision_extractor">
-                    <p-float-label>
-                        <p-select v-model="extractor.options.model.value" :options="extractor.options.model.options"></p-select>
-                        <label>Model</label>
-                    </p-float-label>
+                    <div class="flex-row">
+                        <p-float-label>
+                            <p-select v-model="extractor.options.extraction_format.value" :options="extractor.options.extraction_format.options"></p-select>
+                            <label>Extraction Format</label>
+                        </p-float-label>
+                    </div>
+                    <div class="flex-row">
+                        <p-float-label>
+                            <p-select v-model="extractor.options.model.value" :options="extractor.options.model.options"></p-select>
+                            <label>Model</label>
+                        </p-float-label>
+                    </div>
                 </p-fieldset>
             </p-fieldset>
 

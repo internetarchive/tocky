@@ -1,0 +1,54 @@
+basic:
+  input: |
+    |                                 PAGE
+    |PREFACE                             1x
+    |PART 1: THIS VVORLD                  1
+    |  Chapter I.
+    |  Of the Nature of Flatland
+    |                                      3
+    |  Chapter IT.
+    |  Of the Cl'mate and Houses in
+    |      Hlatland  . . . dsa. .a;;; ... 5
+    |PART 2: OTHER WORLDS
+    |                                    42
+  output: [
+    { "level": 0, "title": "Preface", "pagenum": "ix" },
+    { "level": 0, "label": "Part 1", "title": "This World", "pagenum": "1" },
+    { "level": 1, "label": "Chapter I", "title": "Of the Nature of Flatland", "pagenum": "3" },
+    { "level": 1, "label": "Chapter II", "title": "Of the Climate and Houses in Flatland", "pagenum": "5" },
+    { "level": 0, "label": "Part 2", "title": "Other Worlds", "pagenum": "42" },
+  ]
+
+no_titles:
+  input: |
+    |        CONTENTS
+    |CHapter 1. ...... ... . . 1
+    |Ch^pter 2            .. @ 25
+    |Chaptr               .   38
+    |Chaptr  4                 48
+  output: [
+    { "level": 0, "title": "Chapter 1", "pagenum": "1" },
+    { "level": 0, "title": "Chapter 2", "pagenum": "25" },
+    { "level": 0, "title": "Chapter 3", "pagenum": "38" },
+    { "level": 0, "title": "Chapter 4", "pagenum": "48" },
+  ]
+
+nested:
+  label: "You can nest when necessary:"
+  input: |
+    |A. Technology
+    |    Computers     ...       1
+    |          Hard-drives        2
+    |          Software           8
+    |    II. Machinery           1[
+    |  III. Hardware            3/
+    |B. Agriculture
+  output: [
+    { "level": 0, "label": "A", "title": "Technology" },
+    { "level": 1, "label": "I", "title": "Computers", "pagenum": "1" },
+    { "level": 2, "title": "Hard-drives", "pagenum": "2" },
+    { "level": 2, "title": "Software", "pagenum": "8" },
+    { "level": 1, "label": "II", "title": "Machinery", "pagenum": "11" },
+    { "level": 1, "label": "III", "title": "Hardware", "pagenum": "37" },
+    { "level": 0, "label": "B", "title": "Agriculture" },
+  ]
