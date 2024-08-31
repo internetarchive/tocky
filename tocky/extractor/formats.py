@@ -40,7 +40,7 @@ The format you will need to output is JSON of this type:
 Array<{
   level: number,
   label: string | null,
-  title: string,
+  title: string | null,
   pagenum: string | null,
 
   // Optional fields not present on most books

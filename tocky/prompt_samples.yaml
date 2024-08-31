@@ -27,10 +27,10 @@ no_titles:
     |Chaptr               .   38
     |Chaptr  4                 48
   output: [
-    { "level": 0, "title": "Chapter 1", "pagenum": "1" },
-    { "level": 0, "title": "Chapter 2", "pagenum": "25" },
-    { "level": 0, "title": "Chapter 3", "pagenum": "38" },
-    { "level": 0, "title": "Chapter 4", "pagenum": "48" },
+    { "level": 0, "label": "Chapter 1", "pagenum": "1" },
+    { "level": 0, "label": "Chapter 2", "pagenum": "25" },
+    { "level": 0, "label": "Chapter 3", "pagenum": "38" },
+    { "level": 0, "label": "Chapter 4", "pagenum": "48" },
   ]
 
 nested:
