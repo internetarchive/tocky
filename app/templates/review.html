@@ -475,8 +475,8 @@
                     const corrected_toc = this.current_toc.record.corrected_toc || this.current_toc.record.structured_toc;
                     // convert from markdown if string
                     if (corrected_toc) {
-                        if (typeof this.corrected_toc === 'string') {
-                            this.monacoValue = this.corrected_toc;
+                        if (typeof corrected_toc === 'string') {
+                            this.monacoValue = corrected_toc;
                             this.corrected_toc = parseMarkdownToc(corrected_toc);
                         } else {
                             this.monacoValue = tocToMarkdown(corrected_toc);
