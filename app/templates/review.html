@@ -98,8 +98,8 @@
         }
         .toc-table.has-nesting tr {
             --toc-entry-level: 1;
-            font-size: max(.8em, calc(1em - (var(--toc-entry-level) * 1em / 10)));
-            font-weight: max(500, calc(600 - var(--toc-entry-level) * 100));
+            font-size: max(.9em, calc(1.1em - (var(--toc-entry-level) * 1em / 10)));
+            font-weight: max(500, calc(550 - var(--toc-entry-level) * 100));
         }
 
         .toc-table tr td:nth-child(1) {
@@ -107,19 +107,32 @@
             translate: calc(var(--toc-entry-level) * 20px) !important;
             vertical-align: top;
         }
+        .toc-table tr td:nth-child(3) {
+            text-align: right;
+        }
         .toc-table tr td:nth-child(2) {
             padding-right: calc(var(--toc-entry-level) * 20px) !important;
             translate: calc(var(--toc-entry-level) * 20px) !important;
-            pointer-events: none;
         }
-        .toc-table tr td:nth-child(2) > * {
-            pointer-events: all;
+        .toc-table tr td:nth-child(3) {
+            padding-left: calc(var(--toc-entry-level) * 20px) !important;
         }
 
         .toc-table .p-button-icon-only {
             --p-icon-size: .9em;
             --p-button-icon-only-width: 1.5em;
         }
+        .toc-table table {
+            border-collapse: collapse;
+        }
+
+        .toc-table.has-nesting .p-datatable-tbody > tr > td {
+            padding-top: 1px !important;
+            padding-bottom: 1px !important;
+            border-top-width: calc((2 - var(--toc-entry-level)) * 1px);
+            border-bottom-width: calc((2 - var(--toc-entry-level)) * 1px);
+        }
+
     </style>
 </head>
 
