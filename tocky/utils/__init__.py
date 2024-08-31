@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
+import functools
 import re
 from time import time
 from traceback import TracebackException
@@ -176,3 +177,23 @@ def avg_ocr_conf(el: etree._Element) -> float:
       conf_count += 1
   if conf_count:
     return conf_sum / conf_count
+
+
+@functools.cache
+def get_git_sha() -> str | None:
+  import subprocess
+
+  try:
+    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('utf-8')
+  except subprocess.CalledProcessError:
+    return None
+
+@functools.cache
+def get_tocky_version() -> str:
+  from importlib.metadata import version
+  tocky_version = version('tocky')
+
+  if git_sha := get_git_sha():
+    return f'{tocky_version}+{git_sha[:8]}'
+  else:
+    return tocky_version

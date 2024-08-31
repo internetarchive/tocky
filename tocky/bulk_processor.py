@@ -13,7 +13,7 @@ from tocky.env import get_env
 from tocky.extractor import AbstractExtractor, TocEntry
 from tocky.extractor.ai_extractor import AiExtractor
 from tocky.utils.ia import bulk_ia_to_ol, get_ia_metadata
-from tocky.utils import ResultStat, run_with_result_stats
+from tocky.utils import ResultStat, get_git_sha, get_tocky_version, run_with_result_stats
 from tocky.validator import validate_extracted_toc
 
 TockyItemState = Literal[
@@ -64,6 +64,7 @@ class ItemProcessingState:
 
   def to_response_dict(self):
     result = {
+        'tocky_version': get_tocky_version(),
         'success': all(
             result and result.success
             for result in [self.detector_result, self.extractor_result]
