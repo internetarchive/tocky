@@ -6,11 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>List | Tocky</title>
 
+    <script>
+        // Do this early to avoid flash of light theme
+        if (localStorage.getItem('tocky--dark-mode') === 'true') {
+            document.documentElement.classList.add('tocky-dark-mode');
+        }
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
     <style>
         [v-cloak] {
             display: none;
         }
-
+        html, body {
+            background-color: var(--p-content-background);
+        }
+        html.tocky-dark-mode {
+            color-scheme: dark;
+        }
         .flashing {
             animation: flashing 1.6s infinite;
         }
@@ -22,9 +36,6 @@
             95% { opacity: 0; }
         }
     </style>
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
-    <link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
 </head>
 
 <body>

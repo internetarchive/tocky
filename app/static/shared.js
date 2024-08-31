@@ -299,6 +299,12 @@ TockyShared.Header = {
             </template>
 
             <template #end>
+                <p-button
+                    size="small"
+                    :icon="darkMode ? 'pi pi-moon' : 'pi pi-sun'"
+                    text
+                    @click="darkMode = !darkMode"
+                ></p-button>
                 <p-button size="small" :outlined="authenticated" @click="authenticate">
                     <i class="pi pi-key"></i>
                     {{ authenticated ? 'Edit Key' : 'Set Key' }}
@@ -314,7 +320,17 @@ TockyShared.Header = {
                 { label: 'List', url: '/tocky/list', icon: 'pi pi-list' },
                 { label: 'Submit', url: '/tocky/submit', icon: 'pi pi-plus' },
             ],
+            darkMode: localStorage.getItem('tocky--dark-mode') === 'true',
         };
+    },
+    watch: {
+        darkMode: {
+            handler(value) {
+                localStorage.setItem('tocky--dark-mode', value);
+                document.documentElement.classList.toggle('tocky-dark-mode', value);
+            },
+            immediate: true,
+        },
     },
     methods: {
         authenticate() {
@@ -381,7 +397,7 @@ TockyShared.registerComponents = function (app) {
             preset: PrimeVue.Themes.Aura,
             options: {
                 prefix: 'p',
-                darkModeSelector: '.never',
+                darkModeSelector: '.tocky-dark-mode',
             }
         }
     });
