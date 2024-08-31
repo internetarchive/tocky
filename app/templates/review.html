@@ -13,6 +13,10 @@
             display: none;
         }
 
+        body {
+            background: var(--p-content-background);
+        }
+
         #app {
             font-family: Avenir, Helvetica, Arial, sans-serif;
             display: flex;
@@ -21,7 +25,7 @@
         }
 
         .page-ocr {
-            border: 1px solid black;
+            border: 1px solid currentColor;
             font-size: 10px;
             line-height: 1em;
         }
@@ -134,6 +138,34 @@
             border-bottom-width: calc((2 - var(--toc-entry-level)) * 1px);
         }
 
+        .p-toolbar.tocky-toolbar-thin {
+            padding: 5px 10px;
+        }
+
+        /** Scroll animation so that when you've scrolled, the toolbar gets a box-shadow */
+        .floating-toolbar--container {
+            scroll-timeline: --floating-toolbar-scroll-tl y;
+            /* Firefox supports the older "vertical" syntax */
+            scroll-timeline: --floating-toolbar-scroll-tl vertical;
+        }
+
+        .floating-toolbar--container .p-toolbar.floating-toolbar {
+            animation-name: shadowAnimation;
+            animation-duration: 1ms; /* Firefox requires this to apply the animation */
+            animation-timeline: --floating-toolbar-scroll-tl;
+        }
+
+        @keyframes shadowAnimation {
+            from {
+                box-shadow: none;
+                border-color: transparent;
+            }
+
+            2% {
+                box-shadow: var(--p-button-raised-shadow);
+                border-color: var(--p-toolbar-border-color);
+            }
+        }
     </style>
 </head>
 
@@ -192,7 +224,7 @@
                     </p-tab-panels>
                 </p-tabs>
                 <div class="right">
-                    <p-toolbar style="padding: 0 10px;">
+                    <p-toolbar class="tocky-toolbar-thin">
                         <template #start>
                             <p-button small text icon="pi pi-step-backward-alt" label="De-indent" @click="deIndentText"></p-button>
                             <p-button small text icon="pi pi-step-forward-alt" label="Indent" @click="indentText"></p-button>
@@ -210,7 +242,7 @@
                             <p-tab value="monaco">Text Editor</p-tab>
                             <p-tab value="table">Table Preview</p-tab>
                         </p-tab-list>
-                        <p-tab-panels>
+                        <p-tab-panels class="floating-toolbar--container">
                             <p-tab-panel value="monaco">
                                 <vue-monaco-editor
                                     class="tocky-monaco-editor"
@@ -221,6 +253,23 @@
                                 ></vue-monaco-editor>
                             </p-tab-panel>
                             <p-tab-panel value="table">
+                                <p-toolbar class="floating-toolbar tocky-toolbar-thin" style="position: sticky; top: 0; z-index: 100;">
+                                    <template #start v-if="selectedTocRows.length">
+                                        {{selectedTocRows.length}} rows selected
+                                        <p-button
+                                            @click="selectedTocRows = []"
+                                            text
+                                        >Clear</p-button>
+                                    </template>
+                                    <template #end>
+                                        <p-multi-select
+                                            v-model="selectedColumns"
+                                            :options="columns"
+                                            display="chip"
+                                            placeholder="Add Columns"
+                                        ></p-multi-select>
+                                    </template>
+                                </p-toolbar>
                                 <p-data-table
                                     class="toc-table"
                                     :class="{ 'has-nesting': hasNesting }"
@@ -232,26 +281,6 @@
                                     selection-mode="multiple"
                                     :row-style="row => ({ '--toc-entry-level': row.level })"
                                 >
-                                    <template #header>
-                                        <p-toolbar>
-                                            <template #start>
-                                                <p-button
-                                                    :disabled="!selectedTocRows.length"
-                                                    @click="selectedTocRows = []"
-                                                    text
-                                                    v-tooltip.bottom="!selectedTocRows.length ? 'No rows selected. Click on a row to select it.' : null"
-                                                >Clear Selection</p-button>
-                                            </template>
-                                            <template #end>
-                                                <p-multi-select
-                                                    v-model="selectedColumns"
-                                                    :options="columns"
-                                                    display="chip"
-                                                    placeholder="Add Columns"
-                                                ></p-multi-select>
-                                            </template>
-                                        </p-toolbar>
-                                    </template>
                                     <p-column field="label" header="Label">
                                         <template #editor="{ data, field }">
                                             <p-input-text v-model="data[field]"></p-input-text>
