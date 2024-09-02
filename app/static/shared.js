@@ -305,7 +305,7 @@ TockyShared.Header = {
             <template #end>
                 <p-button
                     size="small"
-                    :icon="darkMode ? 'pi pi-moon' : 'pi pi-sun'"
+                    :icon="config.darkMode ? 'pi pi-moon' : 'pi pi-sun'"
                     text
                     @click="config.darkMode = !config.darkMode"
                     title="Toggle Dark Mode"
