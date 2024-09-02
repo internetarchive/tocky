@@ -107,8 +107,10 @@
                 </template>
 
                 <template #body="{ data }">
-                    {{ data.record.human_validation }}
-                    <i v-if="data.record.comment" class="pi pi-comment" v-tooltip="data.record.comment"></i>
+                    <span v-tooltip="data.record.comment">
+                        {{ data.record.human_validation }}
+                        <i v-if="data.record.comment" class="pi pi-comment"></i>
+                    </span>
                 </template>
             </p-column>
             <p-column field="record" header="Record">
