@@ -514,6 +514,12 @@
                     }
                 },
                 loadFromDb(full_db_record) {
+                    // check if matches url. Add a new history state if not
+                    if (this.specific_id !== full_db_record.id) {
+                        history.pushState({}, '', `[[ config.env.TOCKY_APPLICATION_ROOT ]]/review/${full_db_record.id}`);
+                    }
+
+                    this.specific_id = full_db_record.id;
                     this.current_toc = full_db_record;
                     this.lastSubmitValue = JSON.stringify(this.current_toc);
                     const corrected_toc = this.current_toc.record.corrected_toc || this.current_toc.record.structured_toc;
@@ -580,11 +586,12 @@
                             'X-API-Key': TockyShared.getApiKey(true)
                         }
                     }).then((r) => r.json());
-                    this.loadFromDb(next_toc_record);
 
-                    if (!this.current_toc) {
+                    if (!next_toc_record) {
                         alert("No more TOCs to review right now!");
                     }
+
+                    this.loadFromDb(next_toc_record);
                 },
                 async reExtractToc() {
                     this.reExtractTocLoading = true;
