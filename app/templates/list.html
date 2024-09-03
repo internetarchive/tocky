@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
     <style>
         [v-cloak] {
-            display: none;
+            display: none !important;
         }
         html, body {
             background-color: var(--p-content-background);
@@ -134,9 +134,9 @@
         </p-dialog>
     </div>
 
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/primevue/umd/primevue.min.js"></script>
-    <script src="https://unpkg.com/@primevue/themes/umd/aura.min.js"></script>
+    <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/primevue@4.0.5/umd/primevue.min.js"></script>
+    <script src="https://unpkg.com/@primevue/themes@4.0.5/umd/aura.min.js"></script>
     <script src="[[ url_for('static', filename='shared.js') ]]"></script>
     <script>
         window.app = Vue.createApp({
