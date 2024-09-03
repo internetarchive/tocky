@@ -27,6 +27,10 @@ class TockyEnv:
         return os.environ['TOCKY_SERVER_KEY']
     
     @property
+    def TOCKY_USER_KEY(self) -> str:
+        return os.environ['TOCKY_USER_KEY']
+    
+    @property
     def AZURE_SUBSCRIPTION_KEY(self) -> str | None:
         return os.environ.get('AZURE_SUBSCRIPTION_KEY')
     

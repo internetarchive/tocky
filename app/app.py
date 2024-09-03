@@ -1,4 +1,5 @@
 from contextlib import closing
+import functools
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 import json
@@ -70,13 +71,26 @@ def render_static_template(template_name):
     else:
         return static_templates[template_name]
 
-@app.route('/pop', methods=['GET'])
-def pop():
+def authenticate():
     # Check header for api key
-    api_key = request.headers.get('X-API-Key')
-    if api_key != env.TOCKY_SERVER_KEY:
-        return jsonify({'success': False, 'message': 'Invalid API key'}), 401
+    api_key = request.headers.get('X-API-Key') or request.cookies.get('TOCKY_API_KEY')
+    if api_key in [env.TOCKY_SERVER_KEY, env.TOCKY_USER_KEY]:
+        return True
+    else:
+        return False
 
+# Create a authenticate decorator
+def requires_key(f):
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        if not authenticate():
+            return jsonify({'success': False, 'message': 'Invalid API key'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route('/pop', methods=['GET'])
+@requires_key
+def pop():
     assignee = request.args.get('assignee')
     with closing(get_conn()) as conn:
         with closing(conn.cursor()) as cur:
@@ -103,13 +117,9 @@ def pop():
                 return jsonify(None)
 
 @app.route('/update/<int:id>', methods=['POST'])
+@requires_key
 def update(id: int):
     """Reads the record from the content body and writes it back to sqlite"""
-    # Check header for api key
-    api_key = request.headers.get('X-API-Key')
-    if api_key != env.TOCKY_SERVER_KEY:
-        return jsonify({'success': False, 'message': 'Invalid API key'}), 401
-
     content = request.get_json()
     state = content.get('state', 'Done')
     
@@ -136,13 +146,9 @@ def update(id: int):
 
 
 @app.route('/push', methods=['PUT'])
+@requires_key
 def push():
     """Reads a record from the content body and adds a new row to sqlite"""
-    # Check header for api key
-    api_key = request.headers.get('X-API-Key')
-    if api_key != env.TOCKY_SERVER_KEY:
-        return jsonify({'success': False, 'message': 'Invalid API key'}), 401
-
     content = request.get_json()
     state = content.get('state', 'To Review')
 
@@ -235,13 +241,9 @@ def generate_stream(server_response):
         yield chunk
 
 @app.route('/ia_img', methods=['GET'])
+@requires_key
 def ia_img():
     """Serves a low res image from IA"""
-    # Check cookie for TOCKY_API_KEY
-    api_key = request.cookies.get('TOCKY_API_KEY')
-    if api_key != env.TOCKY_SERVER_KEY:
-        return jsonify({'success': False, 'message': 'Invalid API key'}), 401
-
     ia_id = request.args.get('id')
     leaf_num = request.args.get('leaf', type=int)
 
@@ -260,12 +262,8 @@ def ia_img():
     )
 
 @app.route('/ia_toc_img', methods=['GET'])
+@requires_key
 def ia_toc_img():
-    # Check cookie for TOCKY_API_KEY
-    api_key = request.cookies.get('TOCKY_API_KEY')
-    if api_key != env.TOCKY_SERVER_KEY:
-        return jsonify({'success': False, 'message': 'Invalid API key'}), 401
-
     toc_id = request.args.get('id', type=int)
     index = request.args.get('index', type=int)
 
@@ -309,12 +307,8 @@ def ia_toc_img():
             )
 
 @app.route('/submit', methods=['POST'])
+@requires_key
 def submit_post():
-    # Check header for api key
-    api_key = request.headers.get('X-API-Key')
-    if api_key != env.TOCKY_SERVER_KEY:
-        return jsonify({'success': False, 'message': 'Invalid API key'}), 401
-
     # Read the content from the request
     submit_options = request.get_json()
 
@@ -325,7 +319,7 @@ def submit_post():
         return jsonify({'success': False, 'message': str(e)}), 400
 
 if __name__ == '__main__':
-    if not env.TOCKY_SERVER_KEY:
+    if not env.TOCKY_SERVER_KEY or not env.TOCKY_USER_KEY:
         raise ValueError('TOCKY_SERVER_KEY environment variable must be set')
 
     app.run(host='0.0.0.0', port=5000)

@@ -290,6 +290,10 @@
                 // read from url params if empty
                 const urlParams = new URLSearchParams(window.location.search);
                 this.ia_id = this.ia_id || urlParams.get("ia_id") || "";
+
+                if (urlParams.get('submit') === 'true') {
+                    this.extractToc();
+                }
             },
 
             methods: {

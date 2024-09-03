@@ -380,15 +380,26 @@ TockyShared.readCookie = function (key) {
 };
 
 TockyShared.getApiKey = function (ask = true) {
+    // First check cookie
     const cookie = TockyShared.readCookie('TOCKY_API_KEY');
-    if (!cookie && ask) {
-        const providedKey = prompt("Tocky API key");
-        if (providedKey) {
-            TockyShared.setCookie('TOCKY_API_KEY', providedKey);
-            return providedKey;
-        }
+    if (cookie) return cookie;
+
+    // Then check url parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlKey = urlParams.get('api_key');
+    if (urlKey) {
+        TockyShared.setCookie('TOCKY_API_KEY', urlKey);
+        return urlKey;
     }
-    return cookie;
+
+    // Otherwise ask
+    const providedKey = ask && prompt("Tocky API key");
+    if (providedKey) {
+        TockyShared.setCookie('TOCKY_API_KEY', providedKey);
+        return providedKey;
+    }
+
+    return null;
 };
 
 TockyShared.registerComponents = function (app) {
