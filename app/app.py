@@ -92,15 +92,17 @@ def requires_key(f):
 @requires_key
 def pop():
     assignee = request.args.get('assignee')
+    last_id = request.args.get('last_id', type=int) or 0
+
     with closing(get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             # Execute the parameterized query
             result = cur.execute("""
                 SELECT * FROM toc_queue
-                WHERE state = 'To Review'
+                WHERE state = 'To Review' AND id > ?
                 ORDER BY created ASC
                 LIMIT 1
-            """)
+            """, (last_id,))
             row = result.fetchone()
             if row:
                 cur.execute("""

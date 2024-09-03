@@ -570,6 +570,10 @@
                     /* Read the session cookie to determine assignee */
                     const assignee = document.cookie.match(/session=([^%]+)/)?.[1];
                     const params = new URLSearchParams({ assignee });
+                    if (this.current_toc) {
+                        params.append('last_id', this.current_toc.id);
+                    }
+
                     const next_toc_record = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/pop?${params}`, {
                         headers: {
                             'Content-Type': 'application/json',
