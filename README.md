@@ -4,8 +4,25 @@ A tool to extract table of contents data from Internet Archive books.
 
 ## Phases
 
-- **Detector**: Responsible for finding the pages that contain the table of contents in the book.
-- **Extractor**: Given the pages containing the table of contents, this phase is responsible for converting those pages to a structured format.
+- **Detector**: Responsible for finding the pages that contain the table of
+  contents in the book.
+- **Extractor**: Given the pages containing the table of contents, this phase is
+  responsible for converting those pages to a structured format.
+
+## Installation
+
+```sh
+# You will need to use poetry in order to install the dependencies
+pip install poetry
+poetry install tocky
+```
+
+Dependency groups:
+
+- `poetry install tocky --with tesseract` to also install Tesseract dependencies
+- `poetry install tocky --with easyocr` to also install Azure dependencies
+- `poetry install tocky --with app` to also install the flask UI/web app
+
 
 ## Pipeline
 
@@ -28,6 +45,12 @@ Activate the virtual environment:
 
 ```bash
 source .venv/Scripts/activate
+```
+
+Running tests:
+
+```bash
+pytest tests
 ```
 
 Useful snippet for doing DB operations:
@@ -59,3 +82,17 @@ with closing(app.get_conn()) as conn:
         """)
         conn.commit()
 ```
+
+## Options
+
+### OCR Engine
+
+Tocky supports books with existing OCR data, with the option to redo the OCR
+using a custom engine. Each engine has its own pros and cons:
+
+| Engine    | CPU? | Self-hosted? | Lines? | Paragraphs? | Columns? | Handles leader dots? | Handles single pagenums? | Confidence scores? |
+| --------- | ---- | ------------ | ------ | ----------- | -------- | -------------------- | ------------------------ | ------------------ |
+| Tesseract | ✅   | ✅           | ✅     | ✅          | ✅       | ❌                   | Rarely                   | ✅                 |
+| EasyOCR   | ❌   | ✅           | ❌     | ❌          | ❌       | ✅                   | Sometimes                | ❔                 |
+| Azure     | ✅   | ❌           | ✅     | ❌          | ❔       | ❔                   | ❔                       | ✅                 |
+
