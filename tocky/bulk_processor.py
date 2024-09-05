@@ -117,6 +117,7 @@ def process_ol_book(
   ol_record: dict, 
   detector: AbstractDetector,
   extractor: AbstractExtractor,
+  push: bool = False,
 ) -> ItemProcessingState:
   if ol_toc := ol_record.get('table_of_contents'):
     toc_missing_pagenums = not any(chapter.get('pagenum') for chapter in ol_toc)
@@ -129,7 +130,7 @@ def process_ol_book(
         status='Already has good TOC'
       )
   
-  return process_ia_book(ol_record['ocaid'], detector, extractor)
+  return process_ia_book(ol_record['ocaid'], detector, extractor, push=push)
 
 
 def process_ia_book(
@@ -254,7 +255,13 @@ class IaSearchParams(TypedDict):
   sort: str
 
 
-def process_all(ia_params: IaSearchParams, rows=10, page=1, ia_overrides=None):
+def process_all(
+  ia_params: IaSearchParams,
+  rows=10,
+  page=1,
+  ia_overrides=None,
+  push=False,
+):
   ia_overrides = ia_overrides or {}
   ia_records = requests.get('https://archive.org/advancedsearch.php', params={
     **ia_params,
@@ -276,7 +283,7 @@ def process_all(ia_params: IaSearchParams, rows=10, page=1, ia_overrides=None):
   def run_pipeline(ol_record: dict):
     detector = OcrDetector()
     extractor = AiExtractor()
-    return process_ol_book(ol_record, detector, extractor)
+    return process_ol_book(ol_record, detector, extractor, push=push)
 
   with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
     for result in executor.map(run_pipeline, ol_records_by_key.values()):
