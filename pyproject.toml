@@ -16,6 +16,7 @@ Rtree = "1.1.0"
 tiktoken = "^0.7.0"
 pycountry = "^23.12.11"
 python-dotenv = "^1.0.1"
+pyyaml = "^6.0.2"
 
 # Extra dependency groups
 # For tesseract
