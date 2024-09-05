@@ -12,17 +12,14 @@ A tool to extract table of contents data from Internet Archive books.
 ## Installation
 
 ```sh
-# You will need to use poetry in order to install the dependencies
-pip install poetry
-poetry install tocky
+pip install tocky
 ```
 
-Dependency groups:
+Optional extras:
 
-- `poetry install tocky --with tesseract` to also install Tesseract dependencies
-- `poetry install tocky --with easyocr` to also install Azure dependencies
-- `poetry install tocky --with app` to also install the flask UI/web app
-
+- `pip install tocky[easyocr]` to also install EasyOCR dependencies
+- `pip install tocky[tesseract]` to also install Tesseract dependencies
+- `pip install tocky[app]` to also install the web app dependencies
 
 ## Pipeline
 
@@ -81,6 +78,20 @@ with closing(app.get_conn()) as conn:
             WHERE id = '847'
         """)
         conn.commit()
+```
+
+### Releases
+
+To create a new release, update the version in `pyproject.toml` and run:
+
+```sh
+poetry version patch
+poetry build
+poetry publish
+git add pyproject.toml
+git commit -m "vX.Y.Z"
+git tag vX.Y.Z
+git push origin master --tags
 ```
 
 ## Options
