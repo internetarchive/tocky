@@ -31,6 +31,11 @@
             align-items: baseline;
             gap: 10px;
         }
+        .flex-col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
 
         /** Override some PrimeVue defaults */
         .p-floatlabel {
@@ -54,6 +59,16 @@
             max-height: 300px;
             overflow-y: auto;
         }
+
+        [data-pd-tooltip="true"] {
+            pointer-events: all;
+        }
+
+        span[data-pd-tooltip] {
+            cursor: help;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+        }
     </style>
 </head>
 
@@ -61,20 +76,162 @@
     <div id="app" v-cloak>
         <tocky-header></tocky-header>
         <form class="ui container">
-            <p-fieldset legend="Input Book" :toggleable="true">
-                <p-float-label>
-                    <p-input-text
-                        v-model="ia_id"
-                        placeholder="e.g. goody"
-                        style="width: 100%"
-                    ></p-input-text>
-                    <label>Internet Archive ID</label>
-                </p-float-label>
-                <p-button small text
-                    @click="tryRandomBook"
-                    :loading="randomIaIds.loading"
-                    label="Try a random book"
-                ></p-button>
+            <p-fieldset legend="Input Book(s)" :toggleable="true">
+                <p-tabs value="single">
+                    <p-tab-list>
+                        <p-tab value="single">Single Book</p-tab>
+                        <p-tab value="batch">Batch</p-tab>
+                    </p-tab-list>
+                    <p-tab-panels>
+                        <p-tab-panel value="single">
+                            <p-float-label>
+                                <p-input-text
+                                    v-model="ia_id"
+                                    placeholder="e.g. goody"
+                                    style="width: 100%"
+                                ></p-input-text>
+                                <label>Internet Archive ID</label>
+                            </p-float-label>
+                            <p-button small text
+                                @click="tryRandomBook"
+                                :loading="randomIaIds.loading"
+                                label="Try a random book"
+                            ></p-button>            
+                        </p-tab-panel>
+                        <p-tab-panel value="batch">
+                            <p-message severity="info">
+                                <p>Batch processing is still in active development and not available for use yet. Come back later!</p>
+                            </p-message>
+                            <div class="flex-col p-disabled">
+                                <div>
+                                    <p-float-label>
+                                        <p-input-text
+                                            v-model="ia_query"
+                                            placeholder="e.g. creator:(stephen leacock)"
+                                            style="width: 100%"
+                                            @keydown.enter.prevent="validateIaQuery"
+                                        ></p-input-text>
+                                        <label>Internet Archive Query</label>
+                                    </p-float-label>
+                                    <div class="flex-row">
+                                        <p-button
+                                            small
+                                            label="Validate"
+                                            :text="!ia_query || !iaQueryValidateCanReRun"
+                                            :loading="iaQueryValidateState.state === 'loading'"
+                                            @click="validateIaQuery"
+                                        ></p-button>
+                                        <div style="flex: 1"></div>
+                                        <p-button
+                                            small
+                                            text
+                                            as="a"
+                                            label="View in Archive.org"
+                                            target="_blank"
+                                            :href="buildIaSearchUrl(ia_query)"
+                                            icon="pi pi-external-link"
+                                            icon-pos="right"
+                                        ></p-button>
+                                    </div>
+                                </div>
+                                <p-message v-if="iaQueryValidateState.error" severity="error">
+                                    <details v-if="iaQueryValidateState.error.response">
+                                        <summary><i class="pi pi-exclamation-triangle"></i> {{ iaQueryValidateState.error.message }}</summary>
+                                        <pre>{{ iaQueryValidateState.error.response }}</pre>
+                                    </details>
+                                    <span v-else><i class="pi pi-exclamation-triangle"></i> {{ iaQueryValidateState.error.message }}</span>
+                                </p-message>
+                                <p-message v-else-if="iaQueryValidateState.result > 0" severity="success">
+                                    <i class="pi pi-check"></i>
+                                    {{ iaQueryValidateState.result }} candidate books found. (<span v-tooltip="`Internally we use a more complex query which could find more books. To fix.`">At least</span>)
+                                </p-message>
+                                <p-message v-else-if="iaQueryValidateState.result === 0" severity="warn">
+                                    <i class="pi pi-times"></i>
+                                    No candidate books found.
+                                </p-message>
+                                <p-float-label>
+                                    <p-input-text
+                                        v-model="toc_filter"
+                                        style="width: 100%"
+                                        disabled
+                                    ></p-input-text>
+                                    <label>
+                                        Table of Contents Filter
+                                        <i
+                                            class="ui icon question circle outline"
+                                            v-tooltip="`Filter to apply to the IA query to find books with a table of contents. This is combined with the query above.`"
+                                        ></i>
+                                    </label>
+                                </p-float-label>
+                                <label>
+                                    <p-checkbox
+                                        v-model="batchOpenlibraryOnly"
+                                        :binary="true"
+                                    ></p-checkbox>
+                                    Only include books with Open Library ID
+                                </label>
+                                <label>
+                                    <p-checkbox
+                                        v-model="batchAllowMicrofilm"
+                                        :binary="true"
+                                    ></p-checkbox>
+                                    Allow microfilm
+                                </label>
+                                <p-divider></p-divider>
+                                <div class="flex-row">
+                                    <p-float-label>
+                                        <p-select
+                                            v-model="batchPullStrategy"
+                                            :options="batchPullStrategyOptions"
+                                            overlay-class="block-options"
+                                            option-label="name"
+                                            option-value="value"
+                                            style="min-width: 200px;"
+                                        >
+                                            <template #option="{ option }">
+                                                <div style="font-weight: bold">{{ option.name }}</div>
+                                                <div>{{ option.help }}</div>
+                                            </template>
+                                        </p-select>
+                                        <label>
+                                            Chunk Pull Strategy
+                                            <i
+                                                class="ui icon question circle outline"
+                                                v-tooltip="`How to pull the next chunk of books to process.`"
+                                            ></i>
+                                        </label>
+                                    </p-float-label>
+                                    <p-float-label>
+                                        <p-input-number
+                                            v-model="batchChunkSize"
+                                            mode="decimal"
+                                            :min="1"
+                                        ></p-input-number>
+                                        <label>
+                                            Chunk Size
+                                            <i
+                                                class="ui icon question circle outline"
+                                                v-tooltip="`Number of books to add to the queue at a time.`"
+                                            ></i>
+                                        </label>
+                                    </p-float-label>
+                                    <p-float-label style="min-width: 150px;">
+                                        <p-toggle-switch
+                                            class="p-inputwrapper-filled"
+                                            v-model="batchDelayedApiCalls"
+                                        ></p-toggle-switch>
+                                        <label
+                                            v-tooltip="`Delayed API calls are ~50% cheaper, and are useful for batch processing. Results will be ready in under 24 hours.`"
+                                        >
+                                            Use Delayed API Calls
+                                            <i class="ui icon question circle outline"></i>
+                                        </label>
+                                    </p-float-label>
+                                </div>
+                            </div>
+                        </p-tab-panel>
+                    </p-tab-panels>
+                </p-tabs>
             </p-fieldset>
 
             <p-fieldset legend="Detector Options" :toggleable="true" collapsed>
@@ -267,10 +424,42 @@
     <script src="https://unpkg.com/@primevue/themes@4.0.5/umd/aura.min.js"></script>
     <script src="[[ url_for('static', filename='shared.js') ]]"></script>
     <script>
+        const IA_TOC_FILTER = 'mediatype:texts AND (language:eng OR language:English) AND ocr_detected_lang:en AND -collection:opensource AND  -repub_state:(10 OR 13)  AND imagecount:[100 TO 99999] AND NOT scanner:google AND NOT curatestate:dark';
         window.app = Vue.createApp({
             data() {
                 return {
                     ia_id: "",
+
+                    ia_query: "",
+                    batchDelayedApiCalls: true,
+                    batchOpenlibraryOnly: true,
+                    batchAllowMicrofilm: false,
+                    batchPullStrategy: "manual",
+                    batchPullStrategyOptions: [
+                        {
+                            value: "manual",
+                            name: "Manual",
+                            help: "The next chunk must be triggered manually by the user.",
+                        },
+                        {
+                            value: "review",
+                            name: "On Review Completed",
+                            help: "The next chunk is triggered automatically once all the books in the current chunk are reviewed.",
+                        },
+                        {
+                            value: "extraction",
+                            name: "On Extraction Completed",
+                            help: "The next chunk is triggered automatically once all the books in the current chunk are extracted.",
+                        },
+                    ],
+                    batchChunkSize: 20,
+                    iaQueryValidateState: {
+                        state: 'neutral',
+                        lastRunHash: this.buildIaValidateUrl(),
+                        result: null,
+                        error: null,
+                    },
+
                     state: "To Submit",
                     error: null,
                     response: null,
@@ -286,6 +475,24 @@
                 };
             },
 
+            computed: {
+                toc_filter() {
+                    return [
+                        this.batchOpenlibraryOnly ? 'openlibrary_edition:*' : null,
+                        this.batchAllowMicrofilm ? null : '-collection:microfilm',
+                        IA_TOC_FILTER,
+                    ].filter(Boolean).join(" AND ");
+                },
+
+                iaValidateUrl() {
+                    return this.buildIaValidateUrl();
+                },
+
+                iaQueryValidateCanReRun() {
+                    return this.iaValidateUrl !== this.iaQueryValidateState.lastRunHash;
+                }
+            },
+
             mounted() {
                 // read from url params if empty
                 const urlParams = new URLSearchParams(window.location.search);
@@ -297,6 +504,57 @@
             },
 
             methods: {
+                buildIaValidateUrl() {
+                    const params = new URLSearchParams({
+                        q: [
+                            this.ia_query,
+                            this.toc_filter,
+                        ].filter(Boolean).join(" AND "),
+                        rows: 0,
+                        output: "json",
+                    });
+
+                    return `https://archive.org/advancedsearch.php?${params}`;
+                },
+                async validateIaQuery() {
+                    class IaSearchError extends Error {
+                        constructor(response) {
+                            super(`IA Search Error: ${response.error}`);
+                            this.response = response;
+                        }
+                    }
+
+                    this.iaQueryValidateState.state = 'loading';
+                    this.iaQueryValidateState.error = null;
+                    this.iaQueryValidateState.result = null;
+
+                    this.iaQueryValidateState.lastRunHash = this.iaValidateUrl;
+
+                    try {
+                        const response = await fetch(this.iaValidateUrl);
+                        const data = await response.json();
+                        if (data.error) {
+                            throw new IaSearchError(data);
+                        }
+                        const numFound = data.response.numFound;
+                        this.iaQueryValidateState.result = numFound;
+                    } catch (error) {
+                        console.error('Error validating IA query:', error);
+                        this.iaQueryValidateState.error = error;
+                    } finally {
+                        this.iaQueryValidateState.state = 'neutral';
+                    }
+                },
+                buildIaSearchUrl(query='') {
+                    const params = new URLSearchParams({
+                        q: [
+                            query,
+                            this.toc_filter,
+                        ].filter(Boolean).join(" AND "),
+                    });
+
+                    return `https://archive.org/search.php?${params}`;
+                },
                 async extractToc() {
                     this.state = "Submitting";
                     this.response = null;
@@ -333,7 +591,11 @@
                         try {
                             this.randomIaIds.loading = true;
                             const params = new URLSearchParams({
-                                q: "mediatype:texts AND openlibrary_edition:* AND -ocr_converted:* AND language:eng AND ocr_detected_lang:en AND -collection:opensource AND -collection:microfilm AND  -repub_state:(10 OR 13)  AND imagecount:[100 TO 99999] AND NOT scanner:google AND NOT curatestate:dark",
+                                q: [
+                                        IA_TOC_FILTER,
+                                        'openlibrary_edition:*',
+                                        '-collection:microfilm',
+                                    ].join(" AND "),
                                 fl: "identifier",
                                 sort: "random",
                                 rows: 50,
