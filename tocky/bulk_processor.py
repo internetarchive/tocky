@@ -288,7 +288,8 @@ def process_all(
   with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
     for result in executor.map(run_pipeline, ol_records_by_key.values()):
       print(f'[{result.status}] {result.ocaid}')
-      push_to_toc_queue(result.to_db_dict())
+      if push:
+        push_to_toc_queue(result.to_db_dict())
       if result.error:
         print(traceback.print_exception(result.error))
       all_results.append(result)
