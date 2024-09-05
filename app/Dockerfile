@@ -22,8 +22,7 @@ ENV FLASK_APP=app.py \
 WORKDIR /tocky
 
 COPY pyproject.toml poetry.lock ./
-# Add `--with "tesseract"` to install the tesseract OCR engine based on arg
-RUN poetry install --with $(echo "app $OCR_ENGINES" | sed 's/ /,/g') --compile
+RUN poetry install --extras "app $OCR_ENGINES" --compile
 COPY ./ /tocky
 
 ENV PYTHONPATH=/tocky

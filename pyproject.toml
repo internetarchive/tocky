@@ -17,6 +17,25 @@ tiktoken = "^0.7.0"
 pycountry = "^23.12.11"
 python-dotenv = "^1.0.1"
 
+# Extra dependency groups
+# For tesseract
+numpy = { version = "^1.25.2", optional = true }
+opencv-contrib-python = { version = "4.8.*", optional = true }
+pandas = { version = "^1.5.3", optional = true }
+pytesseract = { version = "0.3.10", optional = true }
+
+# For easyocr
+easyocr = { version = "1.7.1", optional = true }
+
+# For the flask app
+Flask = { version = "^3.0.0", optional = true }
+Flask-Cors = { version = "^4.0.0", optional = true }
+
+[tool.poetry.extras]
+tesseract = ["numpy", "opencv-contrib-python", "pandas", "pytesseract"]
+easyocr = ["easyocr"]
+app = ["Flask", "Flask-Cors"]
+
 [tool.poetry.dev-dependencies]
 ipykernel = "^6.27.1"
 lxml-stubs = "^0.5.1"
@@ -24,28 +43,6 @@ types-Pillow = "^9.4.0"
 pyright = "^1.1.347"
 pytest = "^7.4.4"
 pytest-cov = "^4.1.0"
-
-[tool.poetry.group.tesseract]
-optional = true
-
-[tool.poetry.group.tesseract.dependencies]
-numpy = "^1.25.2"
-opencv-contrib-python = "4.8.*"
-pandas = "^1.5.3"
-pytesseract = "0.3.10"
-
-[tool.poetry.group.easyocr]
-optional = true
-
-[tool.poetry.group.easyocr.dependencies]
-easyocr = "1.7.1"
-
-[tool.poetry.group.app]
-optional = true
-
-[tool.poetry.group.app.dependencies]
-Flask = "^3.0.0"
-Flask-Cors = "^4.0.0"
 
 [build-system]
 requires = ["poetry-core"]
