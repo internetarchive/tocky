@@ -199,6 +199,14 @@ TockyShared.PageSelector = {
                     :class="{ 'selected': page.selected }"
                     @click="toggleLeafNumber(page.number)"
                 >
+                <p-button
+                    as="a"
+                    :href="\`https://archive.org/details/\${iaId}/page/leaf\${page.number}\`"
+                    target="_blank"
+                    icon="pi pi-external-link"
+                    size="small"
+                    severity="secondary"
+                ></p-button>
                 <p-tag :severity="page.selected ? 'success': 'secondary'">
                     {{ page.number }}
                 </p-tag>
@@ -208,6 +216,7 @@ TockyShared.PageSelector = {
     props: {
         getImageUrl: Function,
         modelValue: Array,
+        iaId: String,
     },
     emits: ['update:modelValue'],
     methods: {
@@ -238,6 +247,18 @@ TockyShared.PageSelector = {
             .tocky-page-selector {
                 min-height: 300px !important;
                 width: 100%;
+            }
+
+            .tocky-page-selector .p-button {
+                position: absolute;
+                right: 0;
+                top: 0;
+                margin: 5px 10px;
+                opacity: 0.25;
+                transition: opacity 0.2s;
+            }
+            .tocky-page-selector__page:hover .p-button {
+                opacity: 0.75;
             }
 
             .tocky-page-selector img {
