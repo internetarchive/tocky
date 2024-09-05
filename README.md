@@ -44,3 +44,18 @@ with closing(app.get_conn()) as conn:
         """)
         conn.commit()
 ```
+
+Removing a book from the queue:
+
+```py
+import app
+from contextlib import closing
+
+with closing(app.get_conn()) as conn:
+    with closing(conn.cursor()) as cur:
+        cur.execute("""
+            DELETE FROM toc_queue
+            WHERE id = '847'
+        """)
+        conn.commit()
+```
