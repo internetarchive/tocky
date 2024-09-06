@@ -257,7 +257,7 @@ TockyShared.PageSelector = {
                 opacity: 0.25;
                 transition: opacity 0.2s;
             }
-            .tocky-page-selector__page:hover .p-button {
+            .tocky-page-selector .p-button:hover {
                 opacity: 0.75;
             }
 
