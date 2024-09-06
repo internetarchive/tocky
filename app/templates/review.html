@@ -201,24 +201,30 @@
                             >{{page}}</pre>
                         </p-tab-panel>
 
-                        <p-tab-panel class="toc-pages-panel" v-if="current_toc.record.detected_toc.length" value="toc_pages" style="overflow-y: auto; display: flex; gap: 8px; flex-direction: column; align-items: center;">
-                            <img
-                                v-for="(page, index) in current_toc.record.detected_toc"
-                                :src="`[[ config.env.TOCKY_APPLICATION_ROOT ]]/ia_toc_img?id=${current_toc.id}&index=${index}`"
-                                loading="lazy"
-                            />
-                        </p-tab-panel>
-                        <p-tab-panel class="toc-pages-panel" v-else value="toc_pages">
+                        <p-tab-panel class="toc-pages-panel" value="toc_pages" style="overflow-y: auto;">
                             <tocky-page-selector
                                 v-model="corrected_toc_pages"
-                                :get-image-url="getImageUrl"
+                                :get-image-url="editing_toc_pages ? getImageUrl : getBigImageUrl"
                                 :ia-id="current_toc.record.ocaid"
+                                :context="editing_toc_pages"
+                                :readonly="!editing_toc_pages"
+                                :layout="editing_toc_pages ? 'grid' : 'vertical'"
                             ></tocky-page-selector>
                             <p-toolbar style="position: sticky; bottom: 0;">
+                                <template #center>
+                                    {{corrected_toc_pages.length}} pages
+                                    <p-button
+                                        v-if="current_toc.record.detected_toc.length"
+                                        @click="editing_toc_pages = !editing_toc_pages"
+                                        text
+                                        :disabled="hasModifiedTocPages"
+                                    >{{editing_toc_pages ? 'Cancel' : 'Edit'}}</p-button>
+                                </template>
                                 <template #end>
                                     <p-button
                                         label="Re-extract"
                                         :disabled="!hasModifiedTocPages || reExtractTocLoading"
+                                        :text="!hasModifiedTocPages"
                                         v-tooltip.top="hasModifiedTocPages ? 'Re-extract the TOC with the selected pages' : 'Select the TOC pages to re-extract'"
                                         @click="reExtractToc"
                                         :loading="reExtractTocLoading"
@@ -421,6 +427,7 @@
                     corrected_toc: null,
                     // The corrected leaf nums of the toc pages
                     corrected_toc_pages: [],
+                    editing_toc_pages: false,
                     validationOptions: [
                         'Perfect',
                         'Near Perfect',
@@ -538,6 +545,7 @@
                         this.corrected_toc = null;
                     }
                     this.corrected_toc_pages = deepcopy(this.current_toc.record.corrected_toc_pages || this.current_toc.record.detected_toc);
+                    this.editing_toc_pages = this.current_toc.record.detected_toc.length === 0;
                 },
                 range(start, end) {
                     return Array.from(range(start, end));
@@ -546,6 +554,9 @@
                     return `[[ config.env.TOCKY_APPLICATION_ROOT ]]/${
                         TockyShared.getImageUrl(this.current_toc.record.ocaid, leafNumber)
                     }`;
+                },
+                getBigImageUrl(leafNumber, index) {
+                    return `[[ config.env.TOCKY_APPLICATION_ROOT ]]/ia_toc_img?id=${this.current_toc.id}&index=${index}`;
                 },
                 getCanvasWidth(page) {
                     return Math.max(...page.split("\n").map((l) => l.length));
@@ -600,6 +611,8 @@
                         // If no toc was detected, then the validation is safe wrong
                         if (this.current_toc.record.detected_toc.length === 0) {
                             this.current_toc.record.human_validation = "Safe Wrong";
+                        } else {
+                            this.current_toc.record.human_validation = "Incomplete";
                         }
                     }
                     await this.submitCorrections();

@@ -187,15 +187,15 @@ TockyShared.StateTag = {
 // v-models
 TockyShared.PageSelector = {
     template: `
-        <div class="tocky-page-selector">
+        <div class="tocky-page-selector" :class="[layout, {'readonly': readonly}]">
             <div
                 class="tocky-page-selector__page"
-                v-for="page in getLeafNumbersWithContext()"
+                v-for="(page, index) in getLeafNumbersWithContext()"
                 :key="page.number"
             >
                 <img
                     loading="lazy"
-                    :src="getImageUrl(page.number)"
+                    :src="getImageUrl(page.number, index)"
                     :class="{ 'selected': page.selected }"
                     @click="toggleLeafNumber(page.number)"
                 >
@@ -217,10 +217,25 @@ TockyShared.PageSelector = {
         getImageUrl: Function,
         modelValue: Array,
         iaId: String,
+        /** @type {'grid' | 'vertical'} */
+        layout: {
+            type: String,
+            default: 'grid',
+        },
+        context: {
+            type: Boolean,
+            default: true,
+        },
+        readonly: {
+            type: Boolean,
+            default: false,
+        },
     },
     emits: ['update:modelValue'],
     methods: {
         toggleLeafNumber(leafNumber) {
+            if (this.readonly) return;
+
             const index = this.modelValue.indexOf(leafNumber);
             if (index === -1) {
                 this.modelValue.push(leafNumber);
@@ -233,6 +248,15 @@ TockyShared.PageSelector = {
             return Array.from(this._genLeafNumbersWithContext());
         },
         *_genLeafNumbersWithContext() {
+            if (!this.context) {
+                for (const number of this.modelValue) {
+                    yield {
+                        number,
+                        selected: true,
+                    };
+                }
+                return;
+            }
             const max = Math.max(...this.modelValue);
             for (let i = 0; i <= Math.max(30, max + 2); i++) {
                 yield {
@@ -279,15 +303,26 @@ TockyShared.PageSelector = {
                 border: 4px solid green;
             }
 
+            .tocky-page-selector.vertical {
+                display: flex;
+                gap: 8px;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .tocky-page-selector.grid .tocky-page-selector__page {
+                display: inline-block;
+                width: 160px;
+                height: 160px;
+            }
+
+            .tocky-page-selector:not(.readonly) .tocky-page-selector__page {
+                cursor: pointer;
+            }
 
             .tocky-page-selector__page {
                 position: relative;
                 padding: 0 5px;
-
-                display: inline-block;
-                width: 160px;
-                height: 160px;
-                cursor: pointer;
             }
             .tocky-page-selector__page .p-tag {
                 position: absolute;
