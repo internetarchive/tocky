@@ -280,14 +280,6 @@
                                             text
                                         >Clear</p-button>
                                     </template>
-                                    <template #end>
-                                        <p-multi-select
-                                            v-model="selectedColumns"
-                                            :options="columns"
-                                            display="chip"
-                                            placeholder="Add Columns"
-                                        ></p-multi-select>
-                                    </template>
                                 </p-toolbar>
                                 <p-data-table
                                     class="toc-table"
@@ -339,13 +331,6 @@
                                                 small
                                             ></p-button>
                                         </template>
-                                    </p-column>
-                                    <p-column
-                                        v-for="(col, index) of selectedColumns"
-                                        :field="col"
-                                        :header="col"
-                                        :key="col + '_' + index"
-                                    >
                                     </p-column>
                                 </p-data-table>
                             </p-tab-panel>
@@ -465,8 +450,6 @@
                     },
 
                     // Table editor
-                    selectedColumns: [],
-                    columns: ['authors', 'subtitle', 'description', 'level'],
                     selectedTocRows: [],
                 };
             },
