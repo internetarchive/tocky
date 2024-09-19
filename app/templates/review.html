@@ -278,6 +278,7 @@
                         <p-tab-list>
                             <p-tab value="monaco">Text Editor</p-tab>
                             <p-tab value="table">Table Preview</p-tab>
+                            <p-tab value="diff">Diff</p-tab>
                         </p-tab-list>
                         <p-tab-panels>
                             <p-tab-panel value="monaco">
@@ -353,6 +354,15 @@
                                     </p-column>
                                 </p-data-table>
                             </p-tab-panel>
+                            <p-tab-panel value="diff">
+                                <!-- use monaco to display a diff of the two JSON records -->
+                                <vue-monaco-diff-editor
+                                    :original="prettyJsonToc(current_toc.record.extractor.results.result)"
+                                    :modified="prettyJsonToc(corrected_toc)"
+                                    language="json"
+                                    :options="{ readOnly: true }"
+                                    :theme="config.darkMode ? 'vs-dark' : null"
+                                ></vue-monaco-diff-editor>
                         </p-tab-panels>
                     </p-tabs>
                     <div class="toolbar">
@@ -421,11 +431,12 @@
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
 
     <script type="module">
-        const { VueMonacoEditor } = monaco_vue;
+        const { VueMonacoEditor, VueMonacoDiffEditor } = monaco_vue;
 
         window.app = Vue.createApp({
             components: {
                 VueMonacoEditor,
+                VueMonacoDiffEditor,
             },
             data() {
                 const m = location.pathname.match(/\/review\/(\d+)/);
@@ -518,6 +529,22 @@
             },
 
             methods: {
+                prettyJsonToc(toc) {
+                    const normalizedToc = _.chain(toc)
+                        .map(entry => {
+                            return _.chain(entry)
+                                // Remove fields who's value is empty string
+                                .omitBy((v) => v === '')
+                                // split into pairs
+                                .toPairs()
+                                // put in predictable order: ['label', 'title', 'subtitle', 'authors', 'pagenum', 'description']
+                                .sortBy(([k]) => ['label', 'title', 'subtitle', 'authors', 'pagenum', 'description'].indexOf(k))
+                                .fromPairs()
+                                .value();
+                        })
+                        .value();
+                    return JSON.stringify(normalizedToc, null, 2);
+                },
                 updateTocFromMonaco() {
                     try {
                         this.corrected_toc = parseMarkdownToc(this.monacoValue);
