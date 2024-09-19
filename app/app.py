@@ -1,4 +1,3 @@
-from contextlib import closing
 import functools
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
@@ -10,11 +9,21 @@ from tocky.utils.ia import get_page_image
 
 env = get_env()
 
-def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(env.TOCKY_QUEUE_DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+class DbContext:
+    def __init__(self):
+        self.conn = sqlite3.connect(env.TOCKY_QUEUE_DB_PATH)
+        self.conn.row_factory = sqlite3.Row
 
+    def __enter__(self):
+        self.cursor = self.conn.cursor()
+        self.cursor.execute("PRAGMA temp_store = MEMORY;")
+        self.cursor.execute("PRAGMA cache_size = 10000;")
+        self.cursor.execute("PRAGMA journal_mode = WAL;")
+        return self.conn, self.cursor
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cursor.close()
+        self.conn.close()
 
 def init_db():
     init_sql = '''
@@ -29,13 +38,12 @@ def init_db():
         CREATE INDEX idx_q_created ON toc_queue (created);
         CREATE INDEX idx_q_state ON toc_queue (state);
     '''
-    with closing(get_conn()) as conn:
-        with closing(conn.cursor()) as cur:
-            # Run init sql if table does not exist
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='toc_queue'")
-            result = cur.fetchone()
-            if not result:
-                cur.executescript(init_sql)
+    with DbContext() as (conn, cur):
+        # Run init sql if table does not exist
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='toc_queue'")
+        result = cur.fetchone()
+        if not result:
+            cur.executescript(init_sql)
 
 
 init_db()
@@ -94,29 +102,28 @@ def pop():
     assignee = request.args.get('assignee')
     last_id = request.args.get('last_id', type=int) or 0
 
-    with closing(get_conn()) as conn:
-        with closing(conn.cursor()) as cur:
-            # Execute the parameterized query
-            result = cur.execute("""
-                SELECT * FROM toc_queue
-                WHERE state = 'To Review' AND id > ?
-                ORDER BY created ASC
-                LIMIT 1
-            """, (last_id,))
-            row = result.fetchone()
-            if row:
-                cur.execute("""
-                    UPDATE toc_queue
-                    SET state = 'Reviewing',
-                        assignee = ?
-                    WHERE id = ?
-                """, (assignee, row['id']))
-                conn.commit()
-                row_dict = dict(zip(row.keys(), row))
-                row_dict['record'] = json.loads(row_dict['record'])
-                return jsonify(row_dict)
-            else:
-                return jsonify(None)
+    with DbContext() as (conn, cur):
+        # Execute the parameterized query
+        result = cur.execute("""
+            SELECT * FROM toc_queue
+            WHERE state = 'To Review' AND id > ?
+            ORDER BY created ASC
+            LIMIT 1
+        """, (last_id,))
+        row = result.fetchone()
+        if row:
+            cur.execute("""
+                UPDATE toc_queue
+                SET state = 'Reviewing',
+                    assignee = ?
+                WHERE id = ?
+            """, (assignee, row['id']))
+            conn.commit()
+            row_dict = dict(zip(row.keys(), row))
+            row_dict['record'] = json.loads(row_dict['record'])
+            return jsonify(row_dict)
+        else:
+            return jsonify(None)
 
 @app.route('/update/<int:id>', methods=['POST'])
 @requires_key
@@ -135,16 +142,15 @@ def update(id: int):
         set_params.append(assignee)
 
 
-    with closing(get_conn()) as conn:
-        with closing(conn.cursor()) as cur:
-            # Execute the parameterized query
-            cur.execute(f"""
-                UPDATE toc_queue
-                SET {", ".join(set_requests)}
-                WHERE id = ?
-            """, (*set_params, id))
-            conn.commit()
-            return jsonify({'success': True})
+    with DbContext() as (conn, cur):
+        # Execute the parameterized query
+        cur.execute(f"""
+            UPDATE toc_queue
+            SET {", ".join(set_requests)}
+            WHERE id = ?
+        """, (*set_params, id))
+        conn.commit()
+        return jsonify({'success': True})
 
 
 @app.route('/push', methods=['PUT'])
@@ -154,15 +160,14 @@ def push():
     content = request.get_json()
     state = content.get('state', 'To Review')
 
-    with closing(get_conn()) as conn:
-        with closing(conn.cursor()) as cur:
-            # Execute the parameterized query
-            result = cur.execute("""
-                INSERT INTO toc_queue (state, record)
-                VALUES (?, ?)
-            """, (state, json.dumps(content),))
-            conn.commit()
-            return jsonify({'success': True, 'id': result.lastrowid})
+    with DbContext() as (conn, cur):
+        # Execute the parameterized query
+        result = cur.execute("""
+            INSERT INTO toc_queue (state, record)
+            VALUES (?, ?)
+        """, (state, json.dumps(content),))
+        conn.commit()
+        return jsonify({'success': True, 'id': result.lastrowid})
 
 
 @app.route('/list', methods=['GET'])
@@ -194,37 +199,35 @@ def api_list():
             params.extend(sub_fields)
             params.extend(filter_list)
 
-    with closing(get_conn()) as conn:
-        with closing(conn.cursor()) as cur:
-            # Execute the parameterized query
-            result = cur.execute(f"""
-                SELECT * FROM toc_queue
-                {"WHERE " + " AND ".join(where_clauses) if where_clauses else ""}
-                ORDER BY created DESC
-                LIMIT ? OFFSET ?
-            """, (*params, limit, offset))
-            return jsonify([
-                {
-                    **dict(row),
-                    'record': json.loads(row['record']),
-                }
-                for row in result.fetchall()
-            ])
+    with DbContext() as (conn, cur):
+        # Execute the parameterized query
+        result = cur.execute(f"""
+            SELECT * FROM toc_queue
+            {"WHERE " + " AND ".join(where_clauses) if where_clauses else ""}
+            ORDER BY created DESC
+            LIMIT ? OFFSET ?
+        """, (*params, limit, offset))
+        return jsonify([
+            {
+                **dict(row),
+                'record': json.loads(row['record']),
+            }
+            for row in result.fetchall()
+        ])
 
 @app.route('/stats', methods=['GET'])
 def stats():
-    with closing(get_conn()) as conn:
-        with closing(conn.cursor()) as cur:
-            result = cur.execute("""
-                SELECT state, count(*) as count FROM toc_queue
-                GROUP BY state
-            """)
-            return jsonify([
-                {
-                    **dict(row),
-                }
-                for row in result.fetchall()
-            ])
+    with DbContext() as (conn, cur):
+        result = cur.execute("""
+            SELECT state, count(*) as count FROM toc_queue
+            GROUP BY state
+        """)
+        return jsonify([
+            {
+                **dict(row),
+            }
+            for row in result.fetchall()
+        ])
 
 @app.route('/review', methods=['GET'])
 def review():
@@ -275,38 +278,37 @@ def ia_toc_img():
     if index is None:
         return jsonify({'success': False, 'message': 'Index is required'}), 400
 
-    with closing(get_conn()) as conn:
-        with closing(conn.cursor()) as cur:
-            cur.execute("SELECT record FROM toc_queue WHERE id = ?", (toc_id,))
-            row = cur.fetchone()
-            if not row:
-                return jsonify({'success': False, 'message': 'TOC ID not found'}), 404
+    with DbContext() as (conn, cur):
+        cur.execute("SELECT record FROM toc_queue WHERE id = ?", (toc_id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'success': False, 'message': 'TOC ID not found'}), 404
 
-            record = json.loads(row['record'])
+        record = json.loads(row['record'])
 
-            ia_id = record['ocaid']
-            detected_toc = record['detected_toc']
+        ia_id = record['ocaid']
+        detected_toc = record['detected_toc']
 
-            if not detected_toc:
-                return jsonify({'success': False, 'message': 'TOC not detected'}), 404
+        if not detected_toc:
+            return jsonify({'success': False, 'message': 'TOC not detected'}), 404
 
-            # Truncate to max 10 entries
-            detected_toc = detected_toc[0:10]
+        # Truncate to max 10 entries
+        detected_toc = detected_toc[0:10]
 
-            if not(-2 <= index <= len(detected_toc) + 2):
-                return jsonify({'success': False, 'message': 'Index out of range'}), 400
-            
-            if index < 0:
-                leaf_num = detected_toc[0] + index
-            elif index < len(detected_toc):
-                leaf_num = detected_toc[index]
-            else:
-                leaf_num = detected_toc[-1] + (index - len(detected_toc))
+        if not(-2 <= index <= len(detected_toc) + 2):
+            return jsonify({'success': False, 'message': 'Index out of range'}), 400
+        
+        if index < 0:
+            leaf_num = detected_toc[0] + index
+        elif index < len(detected_toc):
+            leaf_num = detected_toc[index]
+        else:
+            leaf_num = detected_toc[-1] + (index - len(detected_toc))
 
-            return Response(
-                stream_with_context(generate_stream(get_page_image(ia_id, leaf_num, ext='jpg', reduce=2, quality=70, stream=True))),
-                content_type='image/jpeg',
-            )
+        return Response(
+            stream_with_context(generate_stream(get_page_image(ia_id, leaf_num, ext='jpg', reduce=2, quality=70, stream=True))),
+            content_type='image/jpeg',
+        )
 
 @app.route('/submit', methods=['POST'])
 @requires_key
