@@ -305,13 +305,13 @@
                                         <template #body="{ data: row }">
                                             <div>
                                                 {{ row.title }}
-                                                <div v-if="row.subtitle" style="color: var(--p-text-muted-color); font-style: oblique;">
+                                                <div v-if="row.subtitle" style="color: var(--p-text-muted-color); font-style: oblique;" tooltip="Subtitle">
                                                     {{ row.subtitle }}
                                                 </div>
-                                                <div v-if="row.authors" style="font-size: 0.8em; color: var(--p-text-muted-color);">
+                                                <div v-if="row.authors" style="font-size: 0.8em; color: var(--p-text-muted-color);" tooltip="Authors">
                                                     by {{ row.authors.join(' | ') }}
                                                 </div>
-                                                <div v-if="row.description" style="color: var(--p-text-muted-color); margin-top: 5px;">
+                                                <div v-if="row.description" style="color: var(--p-text-muted-color); margin-top: 5px;" tooltip="Description">
                                                     {{ row.description }}
                                                 </div>
                                             </div>
