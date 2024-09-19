@@ -313,8 +313,14 @@
                                         <template #body="{ data: row }">
                                             <div>
                                                 {{ row.title }}
+                                                <div v-if="row.subtitle" style="color: var(--p-text-muted-color); font-style: oblique;">
+                                                    {{ row.subtitle }}
+                                                </div>
                                                 <div v-if="row.authors" style="font-size: 0.8em; color: var(--p-text-muted-color);">
-                                                    {{ row.authors.join(' | ') }}
+                                                    by {{ row.authors.join(' | ') }}
+                                                </div>
+                                                <div v-if="row.description" style="color: var(--p-text-muted-color); margin-top: 5px;">
+                                                    {{ row.description }}
                                                 </div>
                                             </div>
                                         </template>
