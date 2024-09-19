@@ -117,6 +117,25 @@
             font-weight: max(500, calc(550 - var(--toc-entry-level) * 100));
         }
 
+        .toc-table__subtitle {
+            font-style: oblique;
+            color: var(--p-text-muted-color);
+            font-weight: normal;
+        }
+
+        .toc-table__authors {
+            font-size: 0.8em;
+            color: var(--p-text-muted-color);
+            font-weight: normal;
+        }
+
+        .toc-table__description {
+            color: var(--p-text-muted-color);
+            margin-top: 5px;
+            font-weight: normal;
+        }
+
+
         .toc-table tr td:nth-child(1) {
             text-align: right;
             translate: calc(var(--toc-entry-level) * 20px) !important;
@@ -305,13 +324,13 @@
                                         <template #body="{ data: row }">
                                             <div>
                                                 {{ row.title }}
-                                                <div v-if="row.subtitle" style="color: var(--p-text-muted-color); font-style: oblique;" tooltip="Subtitle">
+                                                <div v-if="row.subtitle" tooltip="Subtitle" class="toc-table__subtitle">
                                                     {{ row.subtitle }}
                                                 </div>
-                                                <div v-if="row.authors" style="font-size: 0.8em; color: var(--p-text-muted-color);" tooltip="Authors">
+                                                <div v-if="row.authors" tooltip="Authors" class="toc-table__authors">
                                                     by {{ row.authors.join(' | ') }}
                                                 </div>
-                                                <div v-if="row.description" style="color: var(--p-text-muted-color); margin-top: 5px;" tooltip="Description">
+                                                <div v-if="row.description" tooltip="Description" class="toc-table__description">
                                                     {{ row.description }}
                                                 </div>
                                             </div>
