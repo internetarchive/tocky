@@ -230,8 +230,16 @@
                                 :style="{ width: `${getCanvasWidth(page)}ch` }"
                             >{{page}}</pre>
                         </p-tab-panel>
-
-                        <p-tab-panel class="toc-pages-panel" value="toc_pages" style="overflow-y: auto;">
+                        
+                        <p-tab-panel
+                            value="toc_pages"
+                            v-if="!config.authenticated"
+                        >
+                            <p-message style="margin: 10px">
+                                Set your authentication key to view the book pages.
+                            </p-message>
+                        </p-tab-panel>
+                        <p-tab-panel v-else class="toc-pages-panel" value="toc_pages" style="overflow-y: auto;">
                             <tocky-page-selector
                                 v-model="corrected_toc_pages"
                                 :get-image-url="editing_toc_pages ? getImageUrl : getBigImageUrl"

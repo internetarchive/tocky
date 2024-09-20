@@ -2,9 +2,10 @@ const TockyShared = {};
 
 TockyShared.CONF = window.TOCKY_CONF;
 
-TockyShared.config = {
+TockyShared.config = Vue.reactive({
     darkMode: localStorage.getItem('tocky--dark-mode') === 'true',
-};
+    authenticated: false,
+});
 
 TockyShared.DETECTORS = {
     ocr_detector: {
@@ -389,16 +390,15 @@ TockyShared.Header = {
                     @click="config.darkMode = !config.darkMode"
                     title="Toggle Dark Mode"
                 ></p-button>
-                <p-button size="small" :outlined="authenticated" @click="authenticate">
+                <p-button size="small" :outlined="config.authenticated" @click="authenticate">
                     <i class="pi pi-key"></i>
-                    {{ authenticated ? 'Edit Key' : 'Set Key' }}
+                    {{ config.authenticated ? 'Edit Key' : 'Set Key' }}
                 </p-button>
             </template>
         </p-menubar>
     `,
     data() {
         return {
-            authenticated: !!TockyShared.getApiKey(false),
             nav_options: [
                 { label: 'List', url: `${TockyShared.CONF.APPLICATION_ROOT}/list`, icon: 'pi pi-list' },
                 { label: 'Submit', url: `${TockyShared.CONF.APPLICATION_ROOT}/submit`, icon: 'pi pi-plus' },
@@ -417,7 +417,7 @@ TockyShared.Header = {
     },
     methods: {
         authenticate() {
-            if (this.authenticated) {
+            if (this.config.authenticated) {
                 const newKey = prompt("Tocky API key", TockyShared.getApiKey(false));
                 if (newKey !== null) {
                     TockyShared.setCookie('TOCKY_API_KEY', newKey);
@@ -425,7 +425,6 @@ TockyShared.Header = {
             } else {
                 TockyShared.getApiKey(true);
             }
-            this.authenticated = !!TockyShared.getApiKey(false);
         },
     },
 };
@@ -460,12 +459,16 @@ TockyShared.readCookie = function (key) {
 TockyShared.getApiKey = function (ask = true) {
     // First check cookie
     const cookie = TockyShared.readCookie('TOCKY_API_KEY');
-    if (cookie) return cookie;
+    if (cookie) {
+        TockyShared.config.authenticated = true;
+        return cookie;
+    }
 
     // Then check url parameter
     const urlParams = new URLSearchParams(window.location.search);
     const urlKey = urlParams.get('api_key');
     if (urlKey) {
+        TockyShared.config.authenticated = true;
         TockyShared.setCookie('TOCKY_API_KEY', urlKey);
         return urlKey;
     }
@@ -473,12 +476,17 @@ TockyShared.getApiKey = function (ask = true) {
     // Otherwise ask
     const providedKey = ask && prompt("Tocky API key");
     if (providedKey) {
+        TockyShared.config.authenticated = true;
         TockyShared.setCookie('TOCKY_API_KEY', providedKey);
         return providedKey;
     }
 
+    TockyShared.config.authenticated = false;
     return null;
 };
+
+// call to update config value
+TockyShared.getApiKey(false);
 
 TockyShared.registerComponents = function (app) {
     function upperCamelCaseToKebabCase(str) {
