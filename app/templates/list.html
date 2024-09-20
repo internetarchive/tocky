@@ -44,6 +44,10 @@
         td:nth-child(5):hover .tocky-copy-button {
             opacity: 1;
         }
+
+        .p-multiselect-list-container {
+            scrollbar-width: thin;
+        }
     </style>
 </head>
 
@@ -65,7 +69,7 @@
             <p-column field="id" header="ID"></p-column>
             <p-column field="assignee" header="Assignee"></p-column>
             <p-column field="created" header="Created"></p-column>
-            <p-column field="state" header="State">
+            <p-column field="state" header="State" :show-filter-match-modes="false">
                 <template #body="{ data }">
                     <tocky-state-tag
                         :state="data.state"
@@ -91,7 +95,7 @@
                     <tocky-ia-link :ocaid="data.record.ocaid"></tocky-ia-link>
                 </template>
             </p-column>
-            <p-column field="record.status" header="Status">
+            <p-column field="record.status" header="Status" :show-filter-match-modes="false">
                 <template #filter="{ filterModel, filterCallback }">
                     <p-multi-select
                         v-model="filterModel.value"
@@ -103,7 +107,7 @@
                     ></p-multi-select>
                 </template>
             </p-column>
-            <p-column field="record.human_validation" header="Human Validation">
+            <p-column field="record.human_validation" header="Human Validation" :show-filter-match-modes="false">
                 <template #filter="{ filterModel, filterCallback }">
                     <p-multi-select
                         v-model="filterModel.value"
@@ -174,16 +178,13 @@
 
                     filters: {
                         'state': {
-                            value: [],
-                            matchMode: 'in'
+                            value: []
                         },
                         'record.status': {
-                            value: [],
-                            matchMode: 'in'
+                            value: []
                         },
                         'record.human_validation': {
-                            value: [],
-                            matchMode: 'in'
+                            value: []
                         },
                     },
 
