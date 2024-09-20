@@ -367,7 +367,7 @@
                             <p-tab-panel value="diff">
                                 <!-- use monaco to display a diff of the two JSON records -->
                                 <vue-monaco-diff-editor
-                                    :original="prettyJsonToc(current_toc.record.extractor.results.result)"
+                                    :original="prettyJsonToc(current_toc.record.extractor.results?.result ?? [])"
                                     :modified="prettyJsonToc(corrected_toc)"
                                     language="json"
                                     :options="{ readOnly: true }"
