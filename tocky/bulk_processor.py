@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 import dataclasses
-from typing import Literal, TypedDict
+from typing import Literal, TypeVar, TypedDict
 import json
 import traceback
 import requests
@@ -192,6 +192,24 @@ def process_ia_book(
 class TockyOptionsError(ValueError):
     pass
 
+TPhaseClass = TypeVar('TPhaseClass')
+
+def build_phase_from_options(phase_map: dict[str, type[TPhaseClass]], phase_name: str, options: dict) -> TPhaseClass:
+    PHASE_CLS = phase_map.get(phase_name)
+    if not PHASE_CLS:
+        raise TockyOptionsError(f'Unrecognized phase type: {phase_name}')
+
+    phase = PHASE_CLS()
+    try:
+        # TODO: Fix type error
+        phase.P = dataclasses.replace(phase.P, **options)
+    except TypeError as e:
+        # TODO: This will not error if things are set to the wrong type
+      raise TockyOptionsError(f'Invalid phase options: {e}')
+  
+    return phase
+
+
 def process_from_options(options: dict, push=False):
     if not options['input_book']['ia_id']:
         raise TockyOptionsError('IA ID is required')
@@ -199,28 +217,8 @@ def process_from_options(options: dict, push=False):
     ia_id = options['input_book']['ia_id']
 
     # Set up detector
-    DETECTOR_CLS = DETECTERS_BY_NAME.get(options['detector']['type'])
-    if not DETECTOR_CLS:
-        raise TockyOptionsError(f'Invalid detector type: {options["detector"]["type"]}')
-
-    detector = DETECTOR_CLS()
-    try:
-        detector.P = dataclasses.replace(detector.P, **options['detector']['options'])
-    except TypeError as e:
-        # TODO: This will not error if things are set to the wrong type
-      raise TockyOptionsError(f'Invalid detector options: {e}')
-
-    # Run extractor
-    EXTRACTOR_CLS = EXTRACTORS_BY_NAME.get(options['extractor']['type'])
-    if not EXTRACTOR_CLS:
-        raise TockyOptionsError(f'Invalid extractor type: {options["extractor"]["type"]}')
-
-    extractor = EXTRACTOR_CLS()
-    try:
-        extractor.P = dataclasses.replace(extractor.P, **options['extractor']['options'])
-    except TypeError as e:
-        # TODO: This will not error if things are set to the wrong type
-        raise TockyOptionsError(f'Invalid extractor options: {e}')
+    detector = build_phase_from_options(DETECTERS_BY_NAME, options['detector']['type'], options['detector']['options'])
+    extractor = build_phase_from_options(EXTRACTORS_BY_NAME, options['extractor']['type'], options['extractor']['options'])
     # Share cache
     extractor.S = detector.S
 

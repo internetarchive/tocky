@@ -1,11 +1,14 @@
 import functools
+from typing import cast
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 import json
 import sqlite3
-from tocky.bulk_processor import TockyOptionsError, process_from_options, process_ia_book
+from tocky import EXTRACTORS_BY_NAME
+from tocky.bulk_processor import TockyOptionsError, build_phase_from_options, process_from_options
 from tocky.env import get_env
-from tocky.utils.ia import get_page_image
+from tocky.extractor.ai_extractor import AiExtractor
+from tocky.utils.ia import get_ia_metadata_field, get_page_image
 
 env = get_env()
 
@@ -220,6 +223,35 @@ def api_list():
             }
             for row in result.fetchall()
         ])
+
+@app.route('/api/extractor/build_prompt', methods=['GET'])
+def api_extractor_prompt():
+    id = request.args.get('id', type=int)
+    if not id:
+        return jsonify({'success': False, 'message': 'ID is required'}), 400
+
+    with DbContext() as (conn, cur):
+        cur.execute("SELECT record FROM toc_queue WHERE id = ?", (id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'success': False, 'message': 'ID not found'}), 404
+
+        record = json.loads(row['record'])
+    
+    extractor_type = record['extractor']['type']
+    if extractor_type != 'ai_extractor':
+        return jsonify({'success': False, 'message': 'Extractor type is not AI Extractor'}), 400
+    extractor = build_phase_from_options(EXTRACTORS_BY_NAME, extractor_type, record['extractor']['options'])
+    extractor = cast(AiExtractor, extractor)
+
+    return jsonify({
+        'success': True,
+        'messages': extractor.build_prompt(
+            record['toc_raw_ocr'],
+            book_title=get_ia_metadata_field(record['input_book']['ia_id'], '/metadata/title'),
+            prev_toc=None,
+        ),
+    })
 
 @app.route('/stats', methods=['GET'])
 def stats():

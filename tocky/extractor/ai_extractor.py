@@ -3,6 +3,7 @@ from lxml import etree
 import re
 from dataclasses import dataclass
 import openai
+from openai.types.chat import ChatCompletionMessageParam
 import tiktoken
 
 from tocky.extractor import AbstractExtractor, TocEntry, TocResponse
@@ -148,6 +149,34 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
     book_title: str,
     prev_toc: list[TocEntry] | None = None,
   ) -> TocResponse:
+    completion = openai.chat.completions.create(
+      model=self.P.model,
+      messages=self.build_prompt(ocr_text, book_title, prev_toc),
+      # max_tokens=1024,
+      n=1,
+      stop=None,
+      temperature=0.5,
+    )
+
+    assert completion.choices[0].message.content
+    assert completion.usage
+
+    toc = process_extracted_output(
+      completion.choices[0].message.content,
+      self.P.extraction_format,
+    )
+    return TocResponse(
+        toc,
+        completion.usage.prompt_tokens,
+        completion.usage.completion_tokens,
+    )
+  
+  def build_prompt(
+    self,
+    ocr_text: str,
+    book_title: str,
+    prev_toc: list[TocEntry] | None = None,
+  ) -> list[ChatCompletionMessageParam]:
     if prev_toc:
       prev_toc_slice = prev_toc[-10:]
       if self.P.extraction_format == 'json':
@@ -167,30 +196,9 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
         book_title=book_title,
         ocr_text=ocr_text,
       )
-    print('openai request', message[0:500] + '...')
 
     system_prompt = build_system_prompt(SYSTEM_PROMPT, self.P.extraction_format)
-    completion = openai.chat.completions.create(
-      model=self.P.model,
-      messages=[
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": message},
-      ],
-      # max_tokens=1024,
-      n=1,
-      stop=None,
-      temperature=0.5,
-    )
-
-    assert completion.choices[0].message.content
-    assert completion.usage
-
-    toc = process_extracted_output(
-      completion.choices[0].message.content,
-      self.P.extraction_format,
-    )
-    return TocResponse(
-        toc,
-        completion.usage.prompt_tokens,
-        completion.usage.completion_tokens,
-    )
+    return [
+      {"role": "system", "content": system_prompt},
+      {"role": "user", "content": message},
+    ]

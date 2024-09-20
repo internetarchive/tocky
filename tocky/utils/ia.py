@@ -5,7 +5,7 @@ import itertools
 import json
 import re
 import sys
-from typing import Literal, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast
 from internetarchive import get_session
 from PIL import Image
 from lxml import etree
@@ -43,9 +43,11 @@ class IaFullMetadata(TypedDict):
   metadata: IaMetadata
   files: list[IaFileMetadata]
 
+def get_ia_metadata_field(ocaid: str, path: str) -> Any:
+  return ia_session.get(f"https://archive.org/metadata/{ocaid}/{path.lstrip('/')}").json()['result']
 
 @functools.cache
-def get_ia_metadata(ocaid: str) -> IaFullMetadata:
+def get_ia_metadata(ocaid: str, path: str | None = None) -> IaFullMetadata:
   return ia_session.get(f"https://archive.org/metadata/{ocaid}").json()
 
 def get_page_image(
