@@ -125,9 +125,11 @@
             </p-column>
         </p-data-table>
 
-        <p-message v-if="records.length == limit" severity="warn">
-            Only the first {{limit}} rows are displayed.
-        </p-message>
+        <p-paginator
+            :rows="limit"
+            :total-records="max_id"
+            @page="handlePageChange"
+        ></p-paginator>
 
         <p-dialog v-model:visible="dialogVisible" header="Full Record" :modal="true" :style="{ width: '50vw' }">
             <pre>{{ fullRecord }}</pre>
@@ -147,13 +149,15 @@
                         { label: 'Submit', url: '/submit', icon: 'pi pi-plus' },
                     ],
 
+                    max_id: 1000,
+
                     records: [],
                     watchedRecords: {},
                     watchedRecordsTimeout: null,
                     maxWatch: 3 * 60_000,
                     watchStart: 0,
 
-                    limit: 25,
+                    limit: 20,
                     offset: 0,
                     dialogVisible: false,
                     fullRecord: '',
@@ -268,12 +272,20 @@
                         return;
                     }
                     this.filters = event.filters;
+                    this.offset = 0;
                     console.log('FILTER', event);
                     this.fetchData(event.filters);
-                }
+                },
+                handlePageChange(event) {
+                    this.offset = event.first;
+                    this.fetchData();
+                },
             },
-            mounted() {
-                this.fetchData();
+            async mounted() {
+                await this.fetchData();
+                // This is a hack to get the max id for the paginator without having
+                // to do a separate request
+                this.max_id = this.records.length ? this.records[0].id : 1000;
             }
         });
 
