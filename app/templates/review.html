@@ -778,6 +778,10 @@
                     this.loadFromDb(next_toc_record);
                 },
                 async reExtractToc() {
+                    if (!TockyShared.getApiKey(true)) {
+                        return;
+                    }
+
                     this.reExtractTocLoading = true;
                     if (!this.current_toc.record.human_validation) {
                         // If no toc was detected, then the validation is safe wrong

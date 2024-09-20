@@ -575,7 +575,12 @@
 
                     return `https://archive.org/search.php?${params}`;
                 },
-                async extractToc() {
+                async extractToc(event) {
+                    if (!TockyShared.getApiKey(true)) {
+                        event.preventDefault();
+                        return;
+                    }
+
                     this.state = "Submitting";
                     this.response = null;
                     this.error = null;

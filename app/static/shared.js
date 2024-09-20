@@ -116,7 +116,7 @@ TockyShared.DEFAULT_DETECTOR = TockyShared.DETECTORS.ocr_detector;
 TockyShared.DEFAULT_EXTRACTOR = TockyShared.EXTRACTORS.ai_extractor;
 
 TockyShared.apiSubmit = async function (base_url, data) {
-    if (!TockyShared.getApiKey()) {
+    if (!TockyShared.getApiKey(false)) {
         alert("Please provide a Tocky API key");
         return;
     }
