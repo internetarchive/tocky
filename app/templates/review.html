@@ -196,6 +196,16 @@
                 border-color: var(--p-toolbar-border-color);
             }
         }
+
+        .ai-messages h4 {
+            position: sticky;
+            top: 0px;
+            background: var(--p-dialog-background);
+            padding: 5px 10px 10px 5px;
+            margin: 0;
+            border: 1px solid var(--p-dialog-border-color);
+            border-width: 1px 0;
+        }
     </style>
 </head>
 
@@ -428,8 +438,16 @@
             </template>
         </p-toolbar>
 
-        <p-dialog v-model:visible="dialogVisible" header="AI Prompts" :modal="true" :style="{ width: '50vw' }">
-            <p-message severity="warn" style="margin: 10px 0">
+        <p-dialog class="ai-messages" v-model:visible="dialogVisible" header="AI Prompts" :modal="true" :style="{ width: '50vw' }">
+            <p>
+                The AI prompts are the prompts that were used to generate the TOC from the raw OCR. These
+                prompts only include the first page of OCR right now (TODO).
+            </p>
+            <p-message
+                severity="warn"
+                style="margin: 10px 0"
+                v-if="this.current_toc.record.tocky_version !== '[[ config.TOCKY_VERSION ]]'"
+            >
                 <p>Note: This record was processed with an older version of tocky, so the prompt here may not be the prompt that generated this TOC.</p>
             </p-message>
             <div v-if="ai_prompts.state === 'loading'" style="margin: 0 auto; text-align: center;">
@@ -438,7 +456,10 @@
             </div>
             <div v-else-if="ai_prompts.state === 'loaded'">
                 <template v-for="msg in ai_prompts.messages">
-                    <h4>{{msg.role}}</h4>
+                    <h4>
+                        role: {{msg.role}}
+                        <tocky-copy-button :text="msg.content"></tocky-copy-button>
+                    </h4>
                     <pre>{{msg.content}}</pre>
                 </template>
             </div>

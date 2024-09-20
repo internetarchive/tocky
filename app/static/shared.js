@@ -184,6 +184,33 @@ TockyShared.StateTag = {
     },
 };
 
+TockyShared.CopyButton = {
+    template: `
+        <p-button
+            text
+            :icon="\`pi \${copied ? 'pi-check' : 'pi-copy'}\`"
+            @click="copyToClipboard(text)"
+            v-tooltip.top="\`Copy to clipboard\`"
+            :label="copied ? 'Copied!' : ''"
+        ></p-button>
+    `,
+    props: {
+        text: String,
+    },
+    data() {
+        return {
+            copied: false,
+        };
+    },
+    methods: {
+        copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            this.copied = true;
+            setTimeout(() => this.copied = false, 2000);
+        },
+    },
+};
+
 // v-models
 TockyShared.PageSelector = {
     template: `
@@ -485,6 +512,7 @@ TockyShared.registerComponents = function (app) {
 
     // Register shared components
     window.app.component('tocky-header', TockyShared.Header);
+    window.app.component('tocky-copy-button', TockyShared.CopyButton);
     window.app.component('tocky-state-tag', TockyShared.StateTag);
     window.app.component('tocky-ia-link', TockyShared.IaLink);
     window.app.component('tocky-page-selector', TockyShared.PageSelector);

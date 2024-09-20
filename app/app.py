@@ -8,6 +8,7 @@ from tocky import EXTRACTORS_BY_NAME
 from tocky.bulk_processor import TockyOptionsError, build_phase_from_options, process_from_options
 from tocky.env import get_env
 from tocky.extractor.ai_extractor import AiExtractor
+from tocky.utils import get_tocky_version
 from tocky.utils.ia import get_ia_metadata_field, get_page_image
 
 env = get_env()
@@ -57,6 +58,7 @@ app.config['env'] = env
 app.config['SERVER_NAME'] = env.TOCKY_SERVER_NAME
 app.config['APPLICATION_ROOT'] = env.TOCKY_APPLICATION_ROOT
 app.config['PREFERRED_URL_SCHEME'] = env.TOCKY_PREFERRED_URL_SCHEME
+app.config['TOCKY_VERSION'] = get_tocky_version()
 CORS(app)
 
 # Configure Jinja to use different delimiters to avoid conflicts with Vue
