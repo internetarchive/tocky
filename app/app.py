@@ -59,6 +59,9 @@ app.config['SERVER_NAME'] = env.TOCKY_SERVER_NAME
 app.config['APPLICATION_ROOT'] = env.TOCKY_APPLICATION_ROOT
 app.config['PREFERRED_URL_SCHEME'] = env.TOCKY_PREFERRED_URL_SCHEME
 app.config['TOCKY_VERSION'] = get_tocky_version()
+app.config['TOCKY_PUBLIC_CONFIG_JSON'] = json.dumps({
+    'APPLICATION_ROOT': app.config['APPLICATION_ROOT'],
+})
 CORS(app)
 
 # Configure Jinja to use different delimiters to avoid conflicts with Vue

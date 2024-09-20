@@ -1,5 +1,7 @@
 const TockyShared = {};
 
+TockyShared.CONF = window.TOCKY_CONF;
+
 TockyShared.config = {
     darkMode: localStorage.getItem('tocky--dark-mode') === 'true',
 };
@@ -406,9 +408,8 @@ TockyShared.Header = {
         return {
             authenticated: !!TockyShared.getApiKey(false),
             nav_options: [
-                // TODO: Should not hard-code the /tocky prefix
-                { label: 'List', url: '/tocky/list', icon: 'pi pi-list' },
-                { label: 'Submit', url: '/tocky/submit', icon: 'pi pi-plus' },
+                { label: 'List', url: `${TockyShared.CONF.APPLICATION_ROOT}/list`, icon: 'pi pi-list' },
+                { label: 'Submit', url: `${TockyShared.CONF.APPLICATION_ROOT}/submit`, icon: 'pi pi-plus' },
             ],
             config: TockyShared.config,
         };
