@@ -187,6 +187,7 @@ TockyShared.StateTag = {
 TockyShared.CopyButton = {
     template: `
         <p-button
+            class="tocky-copy-button"
             text
             :icon="\`pi \${copied ? 'pi-check' : 'pi-copy'}\`"
             @click="copyToClipboard(text)"
@@ -364,13 +365,14 @@ TockyShared.PageSelector = {
 TockyShared.IaLink = {
     template: `
         <p-button-group>
-            <p-button small link as="a" :href="\`https://openlibrary.org/ia/\${ocaid}\`" target="_blank" title="Find on OpenLibrary">
+            <p-button small text as="a" :href="\`https://openlibrary.org/ia/\${ocaid}\`" target="_blank" title="Find on OpenLibrary">
                 <img src="https://openlibrary.org/favicon.ico" alt="" style="width: 16px; height: 16px;">
             </p-button>
-            <p-button small link as="a" :href="\`https://archive.org/details/\${ocaid}\`" target="_blank" title="View on Archive.org">
+            <p-button small text as="a" :href="\`https://archive.org/details/\${ocaid}\`" target="_blank" title="View on Archive.org">
                 <img src="https://archive.org/favicon.ico" alt="" style="width: 16px; height: 16px;">
                 {{ocaid}}
             </p-button>
+            <tocky-copy-button :text="ocaid"></tocky-copy-button>
         </p-button-group>
     `,
     props: {
