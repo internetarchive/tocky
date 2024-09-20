@@ -394,12 +394,15 @@
                                 :text="!changesToSubmit"
                                 :icon="(!changesToSubmit && current_toc.record.state === 'Done') ? 'pi pi-check' : null"
                             ></p-button>
+                            <p-divider layout="vertical"></p-divider>
                             <p-button
-                                label="Save to Open Library"
+                                :label="save_to_ol_button.label"
                                 @click="saveToOL"
                                 :disabled="!corrected_toc"
-                                :loading="saveToOLLoading"
+                                :loading="save_to_ol_button.state === 'loading'"
                                 :text="!changedSinceOlSave"
+                                :icon="save_to_ol_button.icon"
+                                v-tooltip.top="save_to_ol_button.error"
                             ></p-button>
                         </template>
                     </p-toolbar>
@@ -539,6 +542,39 @@
                         },
                     },
 
+                    save_to_ol_button: {
+                        /** @type {'init' | 'loading' | 'success' | 'error'} */
+                        state: 'init',
+                        /** @type {'init' | 'importing' | 'saving'} */
+                        phase: 'init',
+                        last_saved: null,
+                        error: null,
+                        get icon() {
+                            switch(this.state) {
+                                case 'success':
+                                    return 'pi pi-check';
+                                case 'error':
+                                    return 'pi pi-exclamation-circle';
+                                case 'loading':
+                                    return 'pi pi-spin pi-spinner';
+                                case 'init':
+                                default:
+                                    return null;
+                            }
+                        },
+                        get label() {
+                            switch(this.phase) {
+                                case 'importing':
+                                    return 'Importing...';
+                                case 'saving':
+                                    return 'Saving...';
+                                case 'init':
+                                default:
+                                    return 'Save to Open Library';
+                            }
+                        }
+                    },
+
                     specific_id: m ? parseFloat(m[1]) : null,
                     current_toc: null,
                     corrected_toc: null,
@@ -557,9 +593,6 @@
 
                     lastSubmitValue: null,
                     submitCorrectionsLoading: false,
-                    
-                    lastSavedToOL: null,
-                    saveToOLLoading: false,
 
                     reExtractTocLoading: false,
 
@@ -605,7 +638,7 @@
                     JSON.stringify(this.corrected_toc_pages) !== JSON.stringify(this.current_toc.record.corrected_toc_pages || this.current_toc.record.detected_toc);
                 },
                 changedSinceOlSave() {
-                    return this.lastSavedToOL !== JSON.stringify(this.corrected_toc);
+                    return this.save_to_ol_button.last_saved !== JSON.stringify(this.corrected_toc);
                 },
                 hasModifiedTocPages() {
                     return JSON.stringify(this.corrected_toc_pages) !== JSON.stringify(this.current_toc.record.detected_toc);
@@ -766,6 +799,10 @@
                     }, 1000);
                 },
                 async submitCorrections() {
+                    if (!TockyShared.getApiKey(true)) {
+                        return;
+                    }
+
                     this.submitCorrectionsLoading = true;
 
                     const body = Object.assign({}, this.current_toc.record);
@@ -787,7 +824,7 @@
                                 method: "POST",
                                 headers: {
                                     "Content-Type": "application/json",
-                                    "X-API-Key": TockyShared.getApiKey(true),
+                                    "X-API-Key": TockyShared.getApiKey(false),
                                 },
                                 body: JSON.stringify(Object.assign({}, body, { state: 'Done' })),
                             },
@@ -801,29 +838,34 @@
                     }
                 },
                 async saveToOL({ importIfNotExists = true } = {}) {
-                    this.saveToOLLoading = true;
+                    this.save_to_ol_button.state = 'loading';
+                    this.save_to_ol_button.phase = 'saving';
+
                     // Always fetch latest from prod endpoint!
                     const rec = await fetch(
                         `https://openlibrary.org/ia/${this.current_toc.record.ocaid}.json`,
                     ).then((r) => r.json());
+
                     if (rec.key.startsWith("/books/ia:")) {
                         if (importIfNotExists) {
                             // Book hasn't been imported yet, so import it. Note this API
                             // is likely also restricted in some way.
-                            const params = new URLSearchParams({
-                                identifier: this.current_toc.record.ocaid,
-                                require_marc: false,
-                            });
-                            await fetch(`https://openlibrary.org/api/import/ia?${params}`, {
-                                method: 'POST',
-                                credentials: 'include',
-                            }).then(r=>r.json());
+                            this.save_to_ol_button.phase = 'importing';
+                            try {
+                                await this.importingToOl(this.current_toc.record.ocaid);
+                            } catch (e) {
+                                console.error(e);
+                                this.save_to_ol_button.state = 'error';
+                                this.save_to_ol_button.error = e.message;
+                                return;
+                            }
                             return this.saveToOL({ importIfNotExists: false });
                         } else {
                             alert("Book appears to not be in Open Library yet.");
                             return;
                         }
                     }
+
                     rec.table_of_contents = deepcopy(this.corrected_toc);
                     for (const chapter of rec.table_of_contents) {
                         if (chapter.authors) {
@@ -834,16 +876,38 @@
                         }
                     }
                     rec._comment = 'Add TOC from Tocky';
-                    this.lastSavedToOL = JSON.stringify(this.corrected_toc);
+                    this.save_to_ol_button.last_saved = JSON.stringify(this.corrected_toc);
                     try {
-                        await fetch(`${rec.key}.json`, {
+                        const resp = await fetch(`https://openlibrary.org${rec.key}.json`, {
                             method: "PUT",
                             credentials: "include",
                             body: JSON.stringify(rec),
                         });
+                        if (!resp.ok) {
+                            throw new Error(`Failed to save to OL: ${resp.status} ${resp.statusText}`);
+                        }
+                        this.save_to_ol_button.state = 'success';
+                    } catch (e) {
+                        console.error(e);
+                        this.save_to_ol_button.state = 'error';
+                        this.save_to_ol_button.error = e.message;
                     } finally {
-                        this.saveToOLLoading = false;
+                        this.save_to_ol_button.phase = 'init';
                     }
+                },
+                async importingToOl(ocaid) {
+                    const params = new URLSearchParams({
+                        identifier: ocaid,
+                        require_marc: false,
+                    });
+                    const resp = await fetch(`https://openlibrary.org/api/import/ia?${params}`, {
+                        method: 'POST',
+                        credentials: 'include',
+                    });
+                    if (!resp.ok) {
+                        throw new Error(`Failed to import to OL: ${resp.status} ${resp.statusText}`);
+                    }
+                    return await resp.json();
                 },
                 getSelectedChapters() {
                     if (this.activeEditor == 'monaco') {
