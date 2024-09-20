@@ -408,6 +408,15 @@
                 <div>IA ID: <tocky-ia-link :ocaid="current_toc.record.ocaid"></tocky-ia-link></div>
                 <p-divider layout="vertical"></p-divider>
                 <div>Status: {{current_toc.record.status}}</div>
+                <p-divider layout="vertical"></p-divider>
+                <p-button
+                    type="button"
+                    text
+                    aria-haspopup="true"
+                    aria-controls="advanced_menu"
+                    @click="ev => $refs.advanced_menu.toggle(ev)"
+                >Advanced...</p-button>
+                <p-menu ref="advanced_menu" id="advanced_menu" :model="advanced_menu_options" :popup="true"></p-menu>
             </template>
 
             <template #end>
@@ -417,7 +426,31 @@
                     v-tooltip.top="`Get the next TOC to review`"
                 ></p-button>
             </template>
-        </p-menubar>
+        </p-toolbar>
+
+        <p-dialog v-model:visible="dialogVisible" header="AI Prompts" :modal="true" :style="{ width: '50vw' }">
+            <p-message severity="warn" style="margin: 10px 0">
+                <p>Note: This record was processed with an older version of tocky, so the prompt here may not be the prompt that generated this TOC.</p>
+            </p-message>
+            <div v-if="ai_prompts.state === 'loading'" style="margin: 0 auto; text-align: center;">
+                <p-progress-spinner></p-progress-spinner>
+                <p>Fetching AI prompts...</p>
+            </div>
+            <div v-else-if="ai_prompts.state === 'loaded'">
+                <template v-for="msg in ai_prompts.messages">
+                    <h4>{{msg.role}}</h4>
+                    <pre>{{msg.content}}</pre>
+                </template>
+            </div>
+            <div v-else-if="ai_prompts.state === 'error'">
+                <p-message severity="error">
+                    <details>
+                        <summary>Error fetching AI prompts</summary>
+                        <p>{{ai_prompts.error}}</p>
+                    </details>
+                </p-message>
+            </div>
+        </p-dialog>
     </div>
 
     <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.js"></script>
@@ -442,6 +475,51 @@
                 const m = location.pathname.match(/\/review\/(\d+)/);
                 return {
                     config: TockyShared.config,
+
+                    dialogVisible: false,
+                    advanced_menu_options: [
+                        {
+                            label: 'Advanced Options',
+                            items: [
+                                {
+                                    label: 'View AI Prompts',
+                                    icon: 'pi pi-align-left',
+                                    command: () => {
+                                        this.ai_prompts.fetch(this.current_toc.id);
+                                        this.dialogVisible = true
+                                    },
+                                },
+                            ]
+                        }
+                    ],
+                    ai_prompts: {
+                        /** @type {'init' | 'loading' | 'loaded' | 'error'} */
+                        state: 'init',
+                        messages: [],
+                        error: null,
+                        async fetch(id) {
+                            if (this.state !== 'init') {
+                                return;
+                            }
+                            this.state = 'loading';
+                            try {
+                                const resp = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/api/extractor/build_prompt?id=${id}`, {
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    }
+                                }).then((r) => r.json());
+                                if (!resp.success) {
+                                    throw new Error(resp.message);
+                                }
+                                this.messages = resp.messages;
+                                this.state = 'loaded';
+                            } catch (e) {
+                                console.error(e);
+                                this.error = e.message;
+                                this.state = 'error';
+                            }
+                        },
+                    },
 
                     specific_id: m ? parseFloat(m[1]) : null,
                     current_toc: null,

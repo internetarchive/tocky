@@ -247,7 +247,7 @@ def api_extractor_prompt():
     return jsonify({
         'success': True,
         'messages': extractor.build_prompt(
-            record['toc_raw_ocr'],
+            record['toc_raw_ocr'][0],
             book_title=get_ia_metadata_field(record['input_book']['ia_id'], '/metadata/title'),
             prev_toc=None,
         ),
