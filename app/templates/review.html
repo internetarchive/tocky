@@ -890,7 +890,9 @@
                     rec._comment = 'Add TOC from Tocky';
                     this.save_to_ol_button.last_saved = JSON.stringify(this.corrected_toc);
                     try {
-                        const resp = await fetch(`https://openlibrary.org${rec.key}.json`, {
+                        // Note this shouldn't and doesn't need to be prod OL, or CORS
+                        // won't work correctly
+                        const resp = await fetch(`${rec.key}.json`, {
                             method: "PUT",
                             credentials: "include",
                             body: JSON.stringify(rec),
