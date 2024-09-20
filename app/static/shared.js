@@ -361,7 +361,6 @@ TockyShared.MiddleTruncate = {
     mounted(el, binding) {
         const text = el.innerText;
         const max = parseInt(binding.value) || 100;
-        console.log("MTRUNC", el, binding, text, max);
         if (text.length <= max) {
             return;
         }
