@@ -265,10 +265,19 @@
     
                         <p-float-label>
                             <p-select
+                                overlay-class="block-options"
                                 v-model="detector.options.ocr_engine.value"
                                 :options="detector.options.ocr_engine.options"
+                                option-disabled="disabled"
+                                option-label="name"
+                                option-value="name"
                                 :disabled="!detector.options.allow_reocr.value"
-                            ></p-select>
+                            >
+                                <template #option="{ option }">
+                                    <div style="font-weight: bold">{{ option.name }}</div>
+                                    <div v-if="option.reason">{{ option.reason }}</div>
+                                </template>
+                            </p-select>
                             <label>OCR Engine</label>
                         </p-float-label>
     
@@ -276,7 +285,7 @@
                             <p>EasyOCR requires a GPU to run. If you don't have a GPU, please use Tesseract.</p>
                         </p-message>
                         <p-message severity="warn" v-else-if="detector.options.ocr_engine.value === 'tesseract'">
-                            <p>Tesseract can perform poorly when detecting page numbers on a table of contents page, but runs on CPU.</p>
+                            <p>Tesseract can perform poorly when detecting page numbers on a table of contents page.</p>
                         </p-message>
                     </div>
                 </p-fieldset>
@@ -362,10 +371,19 @@
 
                         <p-float-label>
                             <p-select
+                                overlay-class="block-options"
                                 v-model="extractor.options.ocr_engine.value"
                                 :options="extractor.options.ocr_engine.options"
                                 :disabled="!extractor.options.redo_ocr.value"
-                            ></p-select>
+                                option-disabled="disabled"
+                                option-label="name"
+                                option-value="name"
+                            >
+                                <template #option="{ option }">
+                                    <div style="font-weight: bold">{{ option.name }}</div>
+                                    <div v-if="option.reason">{{ option.reason }}</div>
+                                </template>
+                            </p-select>
                             <label>OCR Engine</label>
                         </p-float-label>
     
@@ -373,7 +391,7 @@
                             <p>EasyOCR requires a GPU to run. If you don't have a GPU, please use Tesseract.</p>
                         </p-message>
                         <p-message severity="warn" v-else-if="extractor.options.ocr_engine.value === 'tesseract'">
-                            <p>Tesseract can perform poorly when detecting page numbers on a table of contents page, but runs on CPU.</p>
+                            <p>Tesseract can perform poorly when detecting page numbers on a table of contents page.</p>
                         </p-message>
                     </div>
                 </p-fieldset>

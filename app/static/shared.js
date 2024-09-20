@@ -17,11 +17,7 @@ TockyShared.DETECTORS = {
             },
             ocr_engine: {
                 value: "azure",
-                options: [
-                    "tesseract",
-                    "easyocr",
-                    "azure",
-                ]
+                options: TockyShared.CONF.OCR_ENGINES,
             }
         }
     },
@@ -81,11 +77,7 @@ TockyShared.EXTRACTORS = {
             },
             ocr_engine: {
                 value: "azure",
-                options: [
-                    "tesseract",
-                    "easyocr",
-                    "azure",
-                ]
+                options: TockyShared.CONF.OCR_ENGINES,
             },
             extraction_format: {
                 value: "json",

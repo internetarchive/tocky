@@ -8,6 +8,7 @@ from tocky import EXTRACTORS_BY_NAME
 from tocky.bulk_processor import TockyOptionsError, build_phase_from_options, process_from_options
 from tocky.env import get_env
 from tocky.extractor.ai_extractor import AiExtractor
+from tocky.ocr import get_supported_engines
 from tocky.utils import get_tocky_version
 from tocky.utils.ia import get_ia_metadata_field, get_page_image
 
@@ -61,6 +62,7 @@ app.config['PREFERRED_URL_SCHEME'] = env.TOCKY_PREFERRED_URL_SCHEME
 app.config['TOCKY_VERSION'] = get_tocky_version()
 app.config['TOCKY_PUBLIC_CONFIG_JSON'] = json.dumps({
     'APPLICATION_ROOT': app.config['APPLICATION_ROOT'],
+    'OCR_ENGINES': get_supported_engines(),
 })
 CORS(app)
 
