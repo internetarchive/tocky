@@ -357,6 +357,19 @@ TockyShared.PageSelector = {
     }
 };
 
+TockyShared.MiddleTruncate = {
+    mounted(el, binding) {
+        const text = el.innerText;
+        const max = parseInt(binding.value) || 100;
+        console.log("MTRUNC", el, binding, text, max);
+        if (text.length <= max) {
+            return;
+        }
+        el.title = text;
+        el.innerText = text.slice(0, Math.floor(max / 2)) + '…' + text.slice(-Math.floor(max / 2));
+    }
+};
+
 TockyShared.IaLink = {
     template: `
         <p-button-group>
@@ -365,7 +378,7 @@ TockyShared.IaLink = {
             </p-button>
             <p-button small text as="a" :href="\`https://archive.org/details/\${ocaid}\`" target="_blank" title="View on Archive.org">
                 <img src="https://archive.org/favicon.ico" alt="" style="width: 16px; height: 16px;">
-                {{ocaid}}
+                <span v-tocky-middle-truncate="40">{{ocaid}}</span>
             </p-button>
             <tocky-copy-button :text="ocaid"></tocky-copy-button>
         </p-button-group>
@@ -514,11 +527,14 @@ TockyShared.registerComponents = function (app) {
     app.directive('tooltip', PrimeVue.Tooltip);
 
     // Register shared components
-    window.app.component('tocky-header', TockyShared.Header);
-    window.app.component('tocky-copy-button', TockyShared.CopyButton);
-    window.app.component('tocky-state-tag', TockyShared.StateTag);
-    window.app.component('tocky-ia-link', TockyShared.IaLink);
-    window.app.component('tocky-page-selector', TockyShared.PageSelector);
+    app.component('tocky-header', TockyShared.Header);
+    app.component('tocky-copy-button', TockyShared.CopyButton);
+    app.component('tocky-state-tag', TockyShared.StateTag);
+    app.component('tocky-ia-link', TockyShared.IaLink);
+    app.component('tocky-page-selector', TockyShared.PageSelector);
+
+    // Register global directives
+    app.directive('tocky-middle-truncate', TockyShared.MiddleTruncate);
 };
 
 function registerStyleTag(component, css) {
