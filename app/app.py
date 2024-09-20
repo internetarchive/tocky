@@ -180,6 +180,12 @@ def list():
 def api_list():
     limit = request.args.get('limit', 10, type=int)
     offset = request.args.get('offset', 0, type=int)
+    sort = request.args.get('sort', '-created')
+    direction = 'DESC' if sort[0] == '-' else 'ASC'
+    sort_field = sort.lstrip('-')
+
+    if sort_field not in ['id', 'created', 'state']:
+        return jsonify({'success': False, 'message': 'Invalid sort field'}), 400
 
     where_clauses = []
     params = []
@@ -204,7 +210,7 @@ def api_list():
         result = cur.execute(f"""
             SELECT * FROM toc_queue
             {"WHERE " + " AND ".join(where_clauses) if where_clauses else ""}
-            ORDER BY created DESC
+            ORDER BY {sort_field} {direction}
             LIMIT ? OFFSET ?
         """, (*params, limit, offset))
         return jsonify([
