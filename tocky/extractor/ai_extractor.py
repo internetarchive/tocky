@@ -128,14 +128,8 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
     structured_toc: list[TocEntry] = []
     prompt_tokens = 0
     completion_tokens = 0
-    chunks = ['']
-    for page_ocr in pages_ocr:
-      extended_chunk = chunks[-1] + '\n' + page_ocr
-      if len(tiktoken.encoding_for_model(self.P.model).encode(extended_chunk)) > self.P.max_sent_tokens:
-        chunks.append(page_ocr)
-      else:
-        chunks[-1] += '\n' + page_ocr
-    for chunk in chunks:
+
+    for chunk in self.chunk_ocr_text(pages_ocr):
       toc_response = self.extract_structured_toc_chunk(chunk, book_title, prev_toc=structured_toc)
       structured_toc += toc_response.toc
       prompt_tokens += toc_response.prompt_tokens
@@ -170,7 +164,18 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
         completion.usage.prompt_tokens,
         completion.usage.completion_tokens,
     )
-  
+
+  def chunk_ocr_text(self, pages_ocr: list[str],) -> list[str]:
+    chunks = ['']
+    for page_ocr in pages_ocr:
+      extended_chunk = chunks[-1] + '\n' + page_ocr
+      if len(tiktoken.encoding_for_model(self.P.model).encode(extended_chunk)) > self.P.max_sent_tokens:
+        chunks.append(page_ocr)
+      else:
+        chunks[-1] += '\n' + page_ocr
+    
+    return chunks
+
   def build_prompt(
     self,
     ocr_text: str,

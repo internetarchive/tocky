@@ -440,8 +440,9 @@
 
         <p-dialog class="ai-messages" v-model:visible="dialogVisible" header="AI Prompts" :modal="true" :style="{ width: '50vw' }">
             <p>
-                The AI prompts are the prompts that were used to generate the TOC from the raw OCR. These
-                prompts only include the first page of OCR right now (TODO).
+                Useful for debugging. You can copy/paste these into
+                eg <a href="https://platform.openai.com/playground/chat?models=gpt-4o-mini">OpenAI's Playground</a> to tweak
+                and improve the prompts for any observed failure cases.
             </p>
             <p-message
                 severity="warn"
@@ -500,18 +501,13 @@
                     dialogVisible: false,
                     advanced_menu_options: [
                         {
-                            label: 'Advanced Options',
-                            items: [
-                                {
-                                    label: 'View AI Prompts',
-                                    icon: 'pi pi-align-left',
-                                    command: () => {
-                                        this.ai_prompts.fetch(this.current_toc.id);
-                                        this.dialogVisible = true
-                                    },
-                                },
-                            ]
-                        }
+                            label: 'View AI Prompts',
+                            icon: 'pi pi-align-left',
+                            command: () => {
+                                this.ai_prompts.fetch(this.current_toc.id);
+                                this.dialogVisible = true
+                            },
+                        },
                     ],
                     ai_prompts: {
                         /** @type {'init' | 'loading' | 'loaded' | 'error'} */
