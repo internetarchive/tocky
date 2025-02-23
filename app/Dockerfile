@@ -13,7 +13,7 @@ RUN apt-get update \
     fi \
     && apt-get clean
 
-RUN pip install poetry
+RUN pip install poetry==1.7.1
 
 ENV FLASK_APP=app.py \
     FLASK_RUN_HOST=0.0.0.0 \
