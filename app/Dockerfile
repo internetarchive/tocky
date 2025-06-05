@@ -30,4 +30,4 @@ WORKDIR /tocky/app
 
 EXPOSE 5000
 
-CMD ["flask", "run"]
+CMD ["poetry", "run", "uvicorn", "app.app:app", "--reload", "--port", "5000"]

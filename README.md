@@ -44,6 +44,12 @@ Activate the virtual environment:
 source .venv/Scripts/activate
 ```
 
+Running the app outside of docker:
+
+```bash
+poetry run uvicorn app.app:app --reload --port 5000
+```
+
 Running tests:
 
 ```bash

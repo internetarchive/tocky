@@ -11,7 +11,7 @@
         if (localStorage.getItem('tocky--dark-mode') === 'true') {
             document.documentElement.classList.add('tocky-dark-mode');
         }
-        window.TOCKY_CONF = [[ config.TOCKY_PUBLIC_CONFIG_JSON|safe ]];
+        window.TOCKY_CONF = [[ TOCKY_PUBLIC_CONFIG_JSON|safe ]];
     </script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
@@ -442,7 +442,7 @@
     <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.js"></script>
     <script src="https://unpkg.com/primevue@4.0.5/umd/primevue.min.js"></script>
     <script src="https://unpkg.com/@primevue/themes@4.0.5/umd/aura.min.js"></script>
-    <script src="[[ url_for('static', filename='shared.js') ]]"></script>
+    <script src="[[ url_for('static', path='shared.js') ]]"></script>
     <script>
         const IA_TOC_FILTER = 'mediatype:texts AND (language:eng OR language:English) AND ocr_detected_lang:en AND -collection:opensource AND  -repub_state:(10 OR 13)  AND imagecount:[100 TO 99999] AND NOT scanner:google AND NOT curatestate:dark';
         window.app = Vue.createApp({
@@ -585,10 +585,10 @@
                     this.response = null;
                     this.error = null;
                     // Navigate to the list page after submission
-                    setTimeout(() => window.location.href = "[[ config.env.TOCKY_APPLICATION_ROOT ]]/list", 1000);
+                    setTimeout(() => window.location.href = "[[ TOCKY_APPLICATION_ROOT ]]/list", 1000);
                     try {
                         // Settings saved to the DETECTORS/EXTRACTORS in TockyShared (awkward: To fix)
-                        this.response = await TockyShared.apiSubmit('[[ config.env.TOCKY_APPLICATION_ROOT ]]', {
+                        this.response = await TockyShared.apiSubmit('[[ TOCKY_APPLICATION_ROOT ]]', {
                             input_book: {
                                 ia_id: this.ia_id,
                             },
@@ -607,7 +607,7 @@
                     this.state = "Submitted";
                 },
                 getImageUrl(leafNumber) {
-                    return `[[ config.env.TOCKY_APPLICATION_ROOT ]]/${
+                    return `[[ TOCKY_APPLICATION_ROOT ]]/${
                         TockyShared.getImageUrl(this.ia_id, leafNumber)
                     }`;
                 },

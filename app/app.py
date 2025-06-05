@@ -1,9 +1,12 @@
-import functools
-from typing import cast
-from flask import Flask, render_template, request, jsonify, Response, stream_with_context
-from flask_cors import CORS
+from fastapi import FastAPI, Request, Depends, HTTPException, status, Query, Body
+from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from typing import Optional, cast
 import json
 import sqlite3
+from pathlib import Path
 from tocky import EXTRACTORS_BY_NAME
 from tocky.bulk_processor import TockyOptionsError, build_phase_from_options, process_from_options
 from tocky.env import get_env
@@ -11,6 +14,7 @@ from tocky.extractor.ai_extractor import AiExtractor
 from tocky.ocr import get_supported_engines
 from tocky.utils import get_tocky_version
 from tocky.utils.ia import get_ia_metadata_field, get_page_image
+from jinja2 import Environment, FileSystemLoader
 
 env = get_env()
 
@@ -54,66 +58,53 @@ def init_db():
 init_db()
 
 
-app = Flask(__name__)
-app.config['env'] = env
-app.config['SERVER_NAME'] = env.TOCKY_SERVER_NAME
-app.config['APPLICATION_ROOT'] = env.TOCKY_APPLICATION_ROOT
-app.config['PREFERRED_URL_SCHEME'] = env.TOCKY_PREFERRED_URL_SCHEME
-app.config['TOCKY_VERSION'] = get_tocky_version()
-app.config['TOCKY_PUBLIC_CONFIG_JSON'] = json.dumps({
-    'APPLICATION_ROOT': app.config['APPLICATION_ROOT'],
+app = FastAPI()
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Jinja2 templates
+BASE_DIR = Path(__file__).parent
+TEMPLATES_DIR = BASE_DIR / 'templates'
+STATIC_DIR = BASE_DIR / 'static'
+
+jinja_env = Environment(
+    loader=FileSystemLoader(str(TEMPLATES_DIR)),
+    variable_start_string='[[',
+    variable_end_string=']]',
+    block_start_string='[%',
+    block_end_string='%]',
+    comment_start_string='[#',
+    comment_end_string='#]',
+)
+jinja_env.globals['TOCKY_APPLICATION_ROOT'] = env.TOCKY_APPLICATION_ROOT
+jinja_env.globals['TOCKY_VERSION'] = get_tocky_version()
+jinja_env.globals['TOCKY_PUBLIC_CONFIG_JSON'] = json.dumps({
+    'APPLICATION_ROOT': env.TOCKY_APPLICATION_ROOT,
     'OCR_ENGINES': get_supported_engines(),
 })
-CORS(app)
+templates = Jinja2Templates(env=jinja_env)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-# Configure Jinja to use different delimiters to avoid conflicts with Vue
-app.jinja_env.variable_start_string = '[['
-app.jinja_env.variable_end_string = ']]'
-app.jinja_env.block_start_string = '[%'
-app.jinja_env.block_end_string = '%]'
-app.jinja_env.comment_start_string = '[#'
-app.jinja_env.comment_end_string = '#]'
-
-# Pre-render the templates; they're effectively static, save for some `config` variables
-with app.app_context():
-    static_templates = {
-        'review.html': render_template('review.html'),
-        'submit.html': render_template('submit.html'),
-        'list.html': render_template('list.html'),
-    }
-
-def render_static_template(template_name):
-    # Check if running in reload mode
-    if app.debug:
-        return render_template(template_name)
-    else:
-        return static_templates[template_name]
-
-def authenticate():
-    # Check header for api key
+def authenticate(request: Request):
     api_key = request.headers.get('X-API-Key') or request.cookies.get('TOCKY_API_KEY')
     if api_key in [env.TOCKY_SERVER_KEY, env.TOCKY_USER_KEY]:
         return True
     else:
-        return False
+        raise HTTPException(status_code=401, detail='Invalid API key')
 
-# Create a authenticate decorator
-def requires_key(f):
-    @functools.wraps(f)
-    def decorated(*args, **kwargs):
-        if not authenticate():
-            return jsonify({'success': False, 'message': 'Invalid API key'}), 401
-        return f(*args, **kwargs)
-    return decorated
+def requires_key(_ = Depends(authenticate)):
+    pass
 
-@app.route('/pop', methods=['GET'])
-@requires_key
-def pop():
-    assignee = request.args.get('assignee')
-    last_id = request.args.get('last_id', type=int) or 0
-
+@app.get('/pop')
+def pop(assignee: Optional[str] = Query(None), last_id: int = Query(0), _=Depends(requires_key)):
     with DbContext() as (conn, cur):
-        # Execute the parameterized query
         result = cur.execute("""
             SELECT * FROM toc_queue
             WHERE state = 'To Review' AND id > ?
@@ -131,81 +122,61 @@ def pop():
             conn.commit()
             row_dict = dict(zip(row.keys(), row))
             row_dict['record'] = json.loads(row_dict['record'])
-            return jsonify(row_dict)
+            return row_dict
         else:
-            return jsonify(None)
+            return None
 
-@app.route('/update/<int:id>', methods=['POST'])
-@requires_key
-def update(id: int):
+@app.post('/update/{id}')
+def update(id: int, content: dict = Body(...), assignee: Optional[str] = Query(None), _=Depends(requires_key)):
     """Reads the record from the content body and writes it back to sqlite"""
-    content = request.get_json()
     state = content.get('state', 'Done')
-    
     set_requests = [
         'state = ?',
         'record = ?',
     ]
     set_params = [state, json.dumps(content)]
-    if assignee := request.args.get('assignee'):
+    if assignee:
         set_requests.append('assignee = ?')
         set_params.append(assignee)
-
-
     with DbContext() as (conn, cur):
-        # Execute the parameterized query
         cur.execute(f"""
             UPDATE toc_queue
             SET {", ".join(set_requests)}
             WHERE id = ?
         """, (*set_params, id))
         conn.commit()
-        return jsonify({'success': True})
+        return {"success": True}
 
-
-@app.route('/push', methods=['PUT'])
-@requires_key
-def push():
+@app.put('/push')
+def push(content: dict = Body(...), _=Depends(requires_key)):
     """Reads a record from the content body and adds a new row to sqlite"""
-    content = request.get_json()
     state = content.get('state', 'To Review')
-
     with DbContext() as (conn, cur):
-        # Execute the parameterized query
         result = cur.execute("""
             INSERT INTO toc_queue (state, record)
             VALUES (?, ?)
         """, (state, json.dumps(content),))
         conn.commit()
-        return jsonify({'success': True, 'id': result.lastrowid})
+        return {"success": True, "id": result.lastrowid}
 
+@app.get('/list', response_class=HTMLResponse)
+def list_view(request: Request):
+    return templates.TemplateResponse('list.html', {"request": request})
 
-@app.route('/list', methods=['GET'])
-def list():
-    """Reads the limit and offset from the query string and returns a list of records"""
-    return render_static_template('list.html')
-
-
-@app.route('/api/list', methods=['GET'])
-def api_list():
-    limit = request.args.get('limit', 10, type=int)
-    offset = request.args.get('offset', 0, type=int)
-    sort = request.args.get('sort', '-created')
+@app.get('/api/list')
+def api_list(request: Request, limit: int = Query(10), offset: int = Query(0), sort: str = Query('-created')):
     direction = 'DESC' if sort[0] == '-' else 'ASC'
     sort_field = sort.lstrip('-')
-
     if sort_field not in ['id', 'created', 'state']:
-        return jsonify({'success': False, 'message': 'Invalid sort field'}), 400
-
+        return JSONResponse({'success': False, 'message': 'Invalid sort field'}, status_code=400)
     where_clauses = []
     params = []
-
     for list_field in ['id', 'state', 'assignee', 'record.status', 'record.human_validation']:
-        if arg_val := request.args.get(list_field):
+        arg_val = request.query_params.get(list_field)
+        if arg_val:
             filter_list = arg_val.split('|')
             if list_field == 'id':
                 filter_list = [int(x) for x in filter_list]
-
             field_parts = list_field.split('.')
             sub_fields = field_parts[1:]
             db_field = field_parts[0]
@@ -214,161 +185,114 @@ def api_list():
             where_clauses.append(f'{db_field} IN ({",".join(["?"] * len(filter_list))})')
             params.extend(sub_fields)
             params.extend(filter_list)
-
     with DbContext() as (conn, cur):
-        # Execute the parameterized query
         result = cur.execute(f"""
             SELECT * FROM toc_queue
             {"WHERE " + " AND ".join(where_clauses) if where_clauses else ""}
             ORDER BY {sort_field} {direction}
             LIMIT ? OFFSET ?
         """, (*params, limit, offset))
-        return jsonify([
+        return [
             {
                 **dict(row),
                 'record': json.loads(row['record']),
             }
             for row in result.fetchall()
-        ])
+        ]
 
-@app.route('/api/extractor/build_prompt', methods=['GET'])
-def api_extractor_prompt():
-    id = request.args.get('id', type=int)
-    if not id:
-        return jsonify({'success': False, 'message': 'ID is required'}), 400
-
+@app.get('/api/extractor/build_prompt')
+def api_extractor_prompt(id: int = Query(...)):
     with DbContext() as (conn, cur):
         cur.execute("SELECT record FROM toc_queue WHERE id = ?", (id,))
         row = cur.fetchone()
         if not row:
-            return jsonify({'success': False, 'message': 'ID not found'}), 404
-
+            return JSONResponse({'success': False, 'message': 'ID not found'}, status_code=404)
         record = json.loads(row['record'])
-    
     extractor_type = record['extractor']['type']
     if extractor_type != 'ai_extractor':
-        return jsonify({'success': False, 'message': 'Extractor type is not AI Extractor'}), 400
+        return JSONResponse({'success': False, 'message': 'Extractor type is not AI Extractor'}, status_code=400)
     extractor = build_phase_from_options(EXTRACTORS_BY_NAME, extractor_type, record['extractor']['options'])
     extractor = cast(AiExtractor, extractor)
-
-    return jsonify({
+    return {
         'success': True,
         'messages': extractor.build_prompt(
             extractor.chunk_ocr_text(record['toc_raw_ocr'])[0],
             book_title=get_ia_metadata_field(record['input_book']['ia_id'], '/metadata/title'),
             prev_toc=None,
         ),
-    })
+    }
 
-@app.route('/stats', methods=['GET'])
+@app.get('/stats')
 def stats():
     with DbContext() as (conn, cur):
         result = cur.execute("""
             SELECT state, count(*) as count FROM toc_queue
             GROUP BY state
         """)
-        return jsonify([
+        return [
             {
                 **dict(row),
             }
             for row in result.fetchall()
-        ])
+        ]
 
-@app.route('/review', methods=['GET'])
-def review():
-    return render_static_template('review.html')
+@app.get('/review', response_class=HTMLResponse)
+def review(request: Request):
+    return templates.TemplateResponse('review.html', {"request": request})
 
-@app.route('/review/<int:id>', methods=['GET'])
-def review_single(id: int):
-    return render_static_template('review.html')
+@app.get('/review/{id}', response_class=HTMLResponse)
+def review_single(id: int, request: Request):
+    return templates.TemplateResponse('review.html', {"request": request, "id": id})
 
-@app.route('/submit', methods=['GET'])
-def submit():
-    return render_static_template('submit.html')
+@app.get('/submit', response_class=HTMLResponse)
+def submit(request: Request):
+    return templates.TemplateResponse('submit.html', {"request": request})
 
 def generate_stream(server_response):
     for chunk in server_response.iter_content(chunk_size=4096):
         yield chunk
 
-@app.route('/ia_img', methods=['GET'])
-@requires_key
-def ia_img():
-    """Serves a low res image from IA"""
-    ia_id = request.args.get('id')
-    leaf_num = request.args.get('leaf', type=int)
+@app.get('/ia_img')
+def ia_img(id: str = Query(...), leaf: int = Query(...), _=Depends(requires_key)):
+    if leaf > 30 or leaf < 0:
+        raise HTTPException(status_code=400, detail='Leaf number must be between 0 and 30')
+    def stream():
+        yield from generate_stream(get_page_image(id, leaf, ext='jpg', reduce=3, quality=20, stream=True))
+    return StreamingResponse(stream(), media_type='image/jpeg')
 
-    if not ia_id:
-        return jsonify({'success': False, 'message': 'IA ID is required'}), 400
-
-    if leaf_num is None:
-        return jsonify({'success': False, 'message': 'Leaf number is required'}), 400
-
-    if leaf_num > 30 or leaf_num < 0:
-        return jsonify({'success': False, 'message': 'Leaf number must be between 0 and 30'}), 400
-
-    return Response(
-        stream_with_context(generate_stream(get_page_image(ia_id, leaf_num, ext='jpg', reduce=3, quality=20, stream=True))),
-        content_type='image/jpeg',
-    )
-
-@app.route('/ia_toc_img', methods=['GET'])
-@requires_key
-def ia_toc_img():
-    toc_id = request.args.get('id', type=int)
-    index = request.args.get('index', type=int)
-
-    if not toc_id or toc_id < 0:
-        return jsonify({'success': False, 'message': 'TOC ID is required'}), 400
-    
+@app.get('/ia_toc_img')
+def ia_toc_img(id: int = Query(...), index: int = Query(...), _=Depends(requires_key)):
+    if not id or id < 0:
+        return JSONResponse({'success': False, 'message': 'TOC ID is required'}, status_code=400)
     if index is None:
-        return jsonify({'success': False, 'message': 'Index is required'}), 400
-
+        return JSONResponse({'success': False, 'message': 'Index is required'}, status_code=400)
     with DbContext() as (conn, cur):
-        cur.execute("SELECT record FROM toc_queue WHERE id = ?", (toc_id,))
+        cur.execute("SELECT record FROM toc_queue WHERE id = ?", (id,))
         row = cur.fetchone()
         if not row:
-            return jsonify({'success': False, 'message': 'TOC ID not found'}), 404
-
+            return JSONResponse({'success': False, 'message': 'TOC ID not found'}, status_code=404)
         record = json.loads(row['record'])
-
         ia_id = record['ocaid']
         detected_toc = record['detected_toc']
-
         if not detected_toc:
-            return jsonify({'success': False, 'message': 'TOC not detected'}), 404
-
-        # Truncate to max 10 entries
+            return JSONResponse({'success': False, 'message': 'TOC not detected'}, status_code=404)
         detected_toc = detected_toc[0:10]
-
         if not(-2 <= index <= len(detected_toc) + 2):
-            return jsonify({'success': False, 'message': 'Index out of range'}), 400
-        
+            return JSONResponse({'success': False, 'message': 'Index out of range'}, status_code=400)
         if index < 0:
             leaf_num = detected_toc[0] + index
         elif index < len(detected_toc):
             leaf_num = detected_toc[index]
         else:
             leaf_num = detected_toc[-1] + (index - len(detected_toc))
+        def stream():
+            yield from generate_stream(get_page_image(ia_id, leaf_num, ext='jpg', reduce=2, quality=70, stream=True))
+        return StreamingResponse(stream(), media_type='image/jpeg')
 
-        return Response(
-            stream_with_context(generate_stream(get_page_image(ia_id, leaf_num, ext='jpg', reduce=2, quality=70, stream=True))),
-            content_type='image/jpeg',
-        )
-
-@app.route('/submit', methods=['POST'])
-@requires_key
-def submit_post():
-    # Read the content from the request
-    submit_options = request.get_json()
-
+@app.post('/submit')
+def submit_post(submit_options: dict = Body(...), _=Depends(requires_key)):
     try:
         state = process_from_options(submit_options, push=True)
-        return jsonify(state.to_response_dict())
+        return state.to_response_dict()
     except TockyOptionsError as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
-
-if __name__ == '__main__':
-    if not env.TOCKY_SERVER_KEY or not env.TOCKY_USER_KEY:
-        raise ValueError('TOCKY_SERVER_KEY environment variable must be set')
-
-    app.run(host='0.0.0.0', port=5000)
+        return JSONResponse({'success': False, 'message': str(e)}, status_code=400)

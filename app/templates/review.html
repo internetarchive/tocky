@@ -11,7 +11,7 @@
         if (localStorage.getItem('tocky--dark-mode') === 'true') {
             document.documentElement.classList.add('tocky-dark-mode');
         }
-        window.TOCKY_CONF = [[ config.TOCKY_PUBLIC_CONFIG_JSON|safe ]];
+        window.TOCKY_CONF = [[ TOCKY_PUBLIC_CONFIG_JSON|safe ]];
     </script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
@@ -459,7 +459,7 @@
             <p-message
                 severity="warn"
                 style="margin: 10px 0"
-                v-if="this.current_toc.record.tocky_version !== '[[ config.TOCKY_VERSION ]]'"
+                v-if="this.current_toc.record.tocky_version !== '[[ TOCKY_VERSION ]]'"
             >
                 <p>Note: This record was processed with an older version of tocky, so the prompt here may not be the prompt that generated this TOC.</p>
             </p-message>
@@ -490,7 +490,7 @@
     <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.js"></script>
     <script src="https://unpkg.com/primevue@4.0.5/umd/primevue.min.js"></script>
     <script src="https://unpkg.com/@primevue/themes@4.0.5/umd/aura.min.js"></script>
-    <script src="[[ url_for('static', filename='shared.js') ]]"></script>
+    <script src="[[ url_for('static', path='shared.js') ]]"></script>
 
     <script src="https://unpkg.com/vue-demi@0.14.6/lib/index.iife.js"></script>
     <script src="https://unpkg.com/@monaco-editor/loader@1.4.0/lib/umd/monaco-loader.js"></script>
@@ -532,7 +532,7 @@
                             }
                             this.state = 'loading';
                             try {
-                                const resp = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/api/extractor/build_prompt?id=${id}`, {
+                                const resp = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/extractor/build_prompt?id=${id}`, {
                                     headers: {
                                         'Content-Type': 'application/json',
                                     }
@@ -656,7 +656,7 @@
             async mounted() {
                 if (this.specific_id) {
                     const params = new URLSearchParams({ id: this.specific_id });
-                    const resp = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/api/list?${params}`, {
+                    const resp = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/list?${params}`, {
                         headers: {
                             'Content-Type': 'application/json',
                         }
@@ -696,7 +696,7 @@
                 loadFromDb(full_db_record) {
                     // check if matches url. Add a new history state if not
                     if (this.specific_id !== full_db_record.id) {
-                        history.pushState({}, '', `[[ config.env.TOCKY_APPLICATION_ROOT ]]/review/${full_db_record.id}`);
+                        history.pushState({}, '', `[[ TOCKY_APPLICATION_ROOT ]]/review/${full_db_record.id}`);
                     }
 
                     this.specific_id = full_db_record.id;
@@ -723,12 +723,12 @@
                     return Array.from(range(start, end));
                 },
                 getImageUrl(leafNumber) {
-                    return `[[ config.env.TOCKY_APPLICATION_ROOT ]]/${
+                    return `[[ TOCKY_APPLICATION_ROOT ]]/${
                         TockyShared.getImageUrl(this.current_toc.record.ocaid, leafNumber)
                     }`;
                 },
                 getBigImageUrl(leafNumber, index) {
-                    return `[[ config.env.TOCKY_APPLICATION_ROOT ]]/ia_toc_img?id=${this.current_toc.id}&index=${index}`;
+                    return `[[ TOCKY_APPLICATION_ROOT ]]/ia_toc_img?id=${this.current_toc.id}&index=${index}`;
                 },
                 getCanvasWidth(page) {
                     return Math.max(...page.split("\n").map((l) => l.length));
@@ -764,7 +764,7 @@
                         params.append('last_id', this.current_toc.id);
                     }
 
-                    const next_toc_record = await fetch(`[[ config.env.TOCKY_APPLICATION_ROOT ]]/pop?${params}`, {
+                    const next_toc_record = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/pop?${params}`, {
                         headers: {
                             'Content-Type': 'application/json',
                             'X-API-Key': TockyShared.getApiKey(true)
@@ -793,7 +793,7 @@
                     }
                     await this.submitCorrections();
 
-                    TockyShared.apiSubmit('[[ config.env.TOCKY_APPLICATION_ROOT ]]', {
+                    TockyShared.apiSubmit('[[ TOCKY_APPLICATION_ROOT ]]', {
                         input_book: {
                             ia_id: this.current_toc.record.ocaid,
                         },
@@ -807,7 +807,7 @@
 
                     // and go the list page after a few seconds
                     setTimeout(() => {
-                        location.href = `[[ config.env.TOCKY_APPLICATION_ROOT ]]/list`;
+                        location.href = `[[ TOCKY_APPLICATION_ROOT ]]/list`;
                     }, 1000);
                 },
                 async submitCorrections() {
@@ -831,7 +831,7 @@
                     }
                     try {
                         await fetch(
-                            `[[ config.env.TOCKY_APPLICATION_ROOT ]]/update/${this.current_toc.id}?${params}`,
+                            `[[ TOCKY_APPLICATION_ROOT ]]/update/${this.current_toc.id}?${params}`,
                             {
                                 method: "POST",
                                 headers: {
