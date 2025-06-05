@@ -115,6 +115,10 @@ class Rect:
   bottom: int
   top: int
 
+  @property
+  def area(self) -> int:
+    return self.width * self.height
+
   @staticmethod
   def from_xywh(rect: tuple) -> 'Rect':
     x, y, w, h = rect
@@ -144,6 +148,11 @@ class Rect:
     )
 
   @staticmethod
+  def from_lbrt(rect: tuple) -> 'Rect':
+    l, b, r, t = rect
+    return Rect.from_ltrb((l, t, r, b))
+
+  @staticmethod
   def from_cw_points(points: list[list[int]]) -> 'Rect':
     # Points can be rotated
     l = min(p[0] for p in points)
@@ -154,6 +163,14 @@ class Rect:
 
   def to_ltrb(self) -> tuple:
     return (self.left, self.top, self.right, self.bottom)
+
+  def contains(self, other: 'Rect') -> bool:
+    return (
+        self.left <= other.left and
+        self.right >= other.right and
+        self.top <= other.top and
+        self.bottom >= other.bottom
+    )
 
 def pretty_print_xml(root: etree._Element | str) -> str:
   if isinstance(root, str):
