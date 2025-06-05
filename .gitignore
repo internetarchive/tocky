@@ -1,6 +1,5 @@
 # Private
-.env
-/env*.py
+*.local
 ia_config.ini
 
 # Editors
