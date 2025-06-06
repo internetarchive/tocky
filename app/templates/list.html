@@ -139,6 +139,7 @@
         </p-data-table>
 
         <p-paginator
+            :first="offset"
             :rows="limit"
             :total-records="max_id"
             @page="handlePageChange"
@@ -154,14 +155,11 @@
     <script src="https://unpkg.com/@primevue/themes@4.0.5/umd/aura.min.js"></script>
     <script src="[[ url_for('static', path='shared.js') ]]"></script>
     <script>
+        const hashParams = new URLSearchParams(window.location.hash.slice(1));
         window.app = Vue.createApp({
             data() {
+                const limit = hashParams.get('limit') ? parseFloat(hashParams.get('limit')) : 20;
                 return {
-                    nav_options: [
-                        { label: 'List', url: '/list', icon: 'pi pi-list' },
-                        { label: 'Submit', url: '/submit', icon: 'pi pi-plus' },
-                    ],
-
                     max_id: 1000,
 
                     records: [],
@@ -170,21 +168,25 @@
                     maxWatch: 3 * 60_000,
                     watchStart: 0,
 
-                    limit: 20,
-                    offset: 0,
                     dialogVisible: false,
                     fullRecord: '',
                     loading: false,
 
+                    limit: limit,
+                    offset: hashParams.get('offset') ? parseFloat(hashParams.get('offset')) :
+                        hashParams.get('page') ? (parseFloat(hashParams.get('page')) - 1) * limit : 0,
                     filters: {
                         'state': {
-                            value: []
+                            value: (hashParams.get('state') || '').split('|'),
                         },
                         'record.status': {
-                            value: []
+                            value: (hashParams.get('record.status') || '').split('|'),
                         },
                         'record.human_validation': {
-                            value: []
+                            value: (hashParams.get('record.human_validation') || '').split('|'),
+                        },
+                        'batch_id': {
+                            value: (hashParams.get('batch_id') || '').split('|'),
                         },
                     },
 
@@ -289,6 +291,31 @@
                 handlePageChange(event) {
                     this.offset = event.first;
                     this.fetchData();
+                },
+            },
+            watch: {
+                limit(newLimit) {
+                    hashParams.set('limit', newLimit);
+                    window.location.hash = hashParams.toString();
+                },
+                offset(newOffset) {
+                    const page = Math.floor(newOffset / this.limit);
+                    hashParams.set('page', page + 1);
+                    window.location.hash = hashParams.toString();
+                },
+                filters: {
+                    handler(newFilters) {
+                        for (const [key, value] of Object.entries(newFilters)) {
+                            const values = (value.value || []).filter(v => !!v);
+                            if (values.length) {
+                                hashParams.set(key, values.join('|'));
+                            } else {
+                                hashParams.delete(key);
+                            }
+                        }
+                        window.location.hash = hashParams.toString();
+                    },
+                    deep: true,
                 },
             },
             async mounted() {
