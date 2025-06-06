@@ -17,6 +17,7 @@ tiktoken = "^0.7.0"
 pycountry = "^23.12.11"
 python-dotenv = "^1.0.1"
 pyyaml = "^6.0.2"
+filelock = "^3.18.0"
 
 # Extra dependency groups
 # For tesseract
@@ -31,11 +32,12 @@ easyocr = { version = "1.7.1", optional = true }
 # For the web app
 fastapi = { version = "^0.115.12", optional = true }
 uvicorn = { version = "^0.34.3", optional = true }
+jinja2 = { version = "^3.1.6", optional = true }
 
 [tool.poetry.extras]
 tesseract = ["numpy", "opencv-contrib-python", "pandas", "pytesseract"]
 easyocr = ["easyocr"]
-app = ["fastapi", "uvicorn"]
+app = ["fastapi", "uvicorn", "jinja2"]
 
 [tool.poetry.dev-dependencies]
 ipykernel = "^6.27.1"

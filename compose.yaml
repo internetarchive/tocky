@@ -5,8 +5,7 @@ services:
       dockerfile: ./app/Dockerfile
     env_file:
       - .env
-      - ${APP_ENV:-.env}
-      - ${APP_ENV:-.env.local}
+      - .env.local
     environment:
       - TOCKY_QUEUE_DB_PATH=/data/database.db
       - IA_CONFIG_FILE=/run/secrets/ia_config

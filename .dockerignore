@@ -1,4 +1,5 @@
 ia_config.ini
-./env*.py
 .env
+*.local
 .venv
+.git

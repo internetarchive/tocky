@@ -1,4 +1,4 @@
-FROM python:3.10
+FROM python:3.11
 
 # Choose the OCR engines to install. Note installing these increases the image size
 # drastically. The available options are "tesseract" and "easyocr", or both! E.g.
@@ -15,9 +15,7 @@ RUN apt-get update \
 
 RUN pip install poetry==1.7.1
 
-ENV FLASK_APP=app.py \
-    FLASK_RUN_HOST=0.0.0.0 \
-    POETRY_VIRTUALENVS_CREATE=false
+ENV POETRY_VIRTUALENVS_CREATE=false
 
 WORKDIR /tocky
 
@@ -26,8 +24,8 @@ RUN poetry install --extras "app $OCR_ENGINES" --compile
 COPY ./ /tocky
 
 ENV PYTHONPATH=/tocky
-WORKDIR /tocky/app
+WORKDIR /tocky
 
 EXPOSE 5000
 
-CMD ["poetry", "run", "uvicorn", "app.app:app", "--reload", "--port", "5000"]
+CMD ["poetry", "run", "uvicorn", "app.app:app", "--host", "0.0.0.0", "--port", "5000"]
