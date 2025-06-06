@@ -1,7 +1,7 @@
 import sqlite3
+from pathlib import Path
 
 from tocky.env import get_env
-
 
 env = get_env()
 
@@ -22,23 +22,15 @@ class DbContext:
         self.cursor.close()
         self.conn.close()
 
-def init_db():
-    init_sql = '''
-        CREATE TABLE toc_queue (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            state VARCHAR(255) NOT NULL,
-            assignee VARCHAR(255),
-            record JSON NOT NULL
-        );
 
-        CREATE INDEX idx_q_created ON toc_queue (created);
-        CREATE INDEX idx_q_state ON toc_queue (state);
-    '''
+def init_db():
     with DbContext() as (conn, cur):
         # Run init sql if table does not exist
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='toc_queue'")
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='toc_queue'"
+        )
         result = cur.fetchone()
         if not result:
-            cur.executescript(init_sql)
+            schema_sql = (Path(__file__).parent / "schema.sql").read_text()
+            cur.executescript(schema_sql)
 
