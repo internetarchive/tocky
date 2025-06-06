@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Depends, HTTPException, status, Query, Body
+from fastapi import FastAPI, Request, Depends, HTTPException, Query, Body
 from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
@@ -6,8 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi import APIRouter
 from typing import Optional, cast
 import json
-import sqlite3
 from pathlib import Path
+from app.db.utils import DbContext, init_db
 from tocky import EXTRACTORS_BY_NAME
 from tocky.bulk_processor import TockyOptionsError, build_phase_from_options, process_from_options
 from tocky.env import get_env
@@ -18,43 +18,6 @@ from tocky.utils.ia import get_ia_metadata_field, get_page_image
 from jinja2 import Environment, FileSystemLoader, pass_context
 
 env = get_env()
-
-class DbContext:
-    def __init__(self):
-        self.conn = sqlite3.connect(env.TOCKY_QUEUE_DB_PATH)
-        self.conn.row_factory = sqlite3.Row
-
-    def __enter__(self):
-        self.cursor = self.conn.cursor()
-        self.cursor.execute("PRAGMA temp_store = MEMORY;")
-        self.cursor.execute("PRAGMA cache_size = 10000;")
-        self.cursor.execute("PRAGMA journal_mode = WAL;")
-        return self.conn, self.cursor
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.cursor.close()
-        self.conn.close()
-
-def init_db():
-    init_sql = '''
-        CREATE TABLE toc_queue (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            state VARCHAR(255) NOT NULL,
-            assignee VARCHAR(255),
-            record JSON NOT NULL
-        );
-
-        CREATE INDEX idx_q_created ON toc_queue (created);
-        CREATE INDEX idx_q_state ON toc_queue (state);
-    '''
-    with DbContext() as (conn, cur):
-        # Run init sql if table does not exist
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='toc_queue'")
-        result = cur.fetchone()
-        if not result:
-            cur.executescript(init_sql)
-
 
 init_db()
 
