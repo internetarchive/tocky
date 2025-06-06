@@ -202,7 +202,7 @@ def get_git_sha() -> str | None:
 
   try:
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('utf-8')
-  except subprocess.CalledProcessError:
+  except (subprocess.CalledProcessError, FileNotFoundError):
     return None
 
 @functools.cache

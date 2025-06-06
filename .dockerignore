@@ -3,3 +3,4 @@ ia_config.ini
 *.local
 .venv
 .git
+Makefile

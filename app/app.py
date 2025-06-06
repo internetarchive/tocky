@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi import APIRouter
 from typing import Optional, cast
 import json
 import sqlite3
@@ -14,7 +15,7 @@ from tocky.extractor.ai_extractor import AiExtractor
 from tocky.ocr import get_supported_engines
 from tocky.utils import get_tocky_version
 from tocky.utils.ia import get_ia_metadata_field, get_page_image
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, pass_context
 
 env = get_env()
 
@@ -90,7 +91,6 @@ jinja_env.globals['TOCKY_PUBLIC_CONFIG_JSON'] = json.dumps({
     'OCR_ENGINES': get_supported_engines(),
 })
 templates = Jinja2Templates(env=jinja_env)
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 def authenticate(request: Request):
     api_key = request.headers.get('X-API-Key') or request.cookies.get('TOCKY_API_KEY')
@@ -102,7 +102,22 @@ def authenticate(request: Request):
 def requires_key(_ = Depends(authenticate)):
     pass
 
-@app.get('/pop')
+# Create a router with prefix from TOCKY_APPLICATION_ROOT
+tocky_router = APIRouter(prefix=env.TOCKY_APPLICATION_ROOT)
+
+@pass_context
+def url_for(context: dict, name: str, /, **path_params):
+    # Overwrite stock FastAPI url_for to use the Tocky public URL scheme
+    # Otherwise this is annoying and requires redirects/oof.
+    result = context['request'].url_for(name, **path_params)
+    # Replace the scheme to match the environment's public URL
+    return result.replace(scheme=env.TOCKY_PUBLIC_URL_SCHEME)
+
+jinja_env.globals['url_for'] = url_for
+
+app.mount(env.TOCKY_APPLICATION_ROOT + "/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+@tocky_router.get('/pop')
 def pop(assignee: Optional[str] = Query(None), last_id: int = Query(0), _=Depends(requires_key)):
     with DbContext() as (conn, cur):
         result = cur.execute("""
@@ -126,7 +141,7 @@ def pop(assignee: Optional[str] = Query(None), last_id: int = Query(0), _=Depend
         else:
             return None
 
-@app.post('/update/{id}')
+@tocky_router.post('/update/{id}')
 def update(id: int, content: dict = Body(...), assignee: Optional[str] = Query(None), _=Depends(requires_key)):
     """Reads the record from the content body and writes it back to sqlite"""
     state = content.get('state', 'Done')
@@ -147,7 +162,7 @@ def update(id: int, content: dict = Body(...), assignee: Optional[str] = Query(N
         conn.commit()
         return {"success": True}
 
-@app.put('/push')
+@tocky_router.put('/push')
 def push(content: dict = Body(...), _=Depends(requires_key)):
     """Reads a record from the content body and adds a new row to sqlite"""
     state = content.get('state', 'To Review')
@@ -159,11 +174,11 @@ def push(content: dict = Body(...), _=Depends(requires_key)):
         conn.commit()
         return {"success": True, "id": result.lastrowid}
 
-@app.get('/list', response_class=HTMLResponse)
+@tocky_router.get('/list', response_class=HTMLResponse)
 def list_view(request: Request):
     return templates.TemplateResponse('list.html', {"request": request})
 
-@app.get('/api/list')
+@tocky_router.get('/api/list')
 def api_list(request: Request, limit: int = Query(10), offset: int = Query(0), sort: str = Query('-created')):
     direction = 'DESC' if sort[0] == '-' else 'ASC'
     sort_field = sort.lstrip('-')
@@ -200,7 +215,7 @@ def api_list(request: Request, limit: int = Query(10), offset: int = Query(0), s
             for row in result.fetchall()
         ]
 
-@app.get('/api/extractor/build_prompt')
+@tocky_router.get('/api/extractor/build_prompt')
 def api_extractor_prompt(id: int = Query(...)):
     with DbContext() as (conn, cur):
         cur.execute("SELECT record FROM toc_queue WHERE id = ?", (id,))
@@ -222,7 +237,7 @@ def api_extractor_prompt(id: int = Query(...)):
         ),
     }
 
-@app.get('/stats')
+@tocky_router.get('/stats')
 def stats():
     with DbContext() as (conn, cur):
         result = cur.execute("""
@@ -236,15 +251,15 @@ def stats():
             for row in result.fetchall()
         ]
 
-@app.get('/review', response_class=HTMLResponse)
+@tocky_router.get('/review', response_class=HTMLResponse)
 def review(request: Request):
     return templates.TemplateResponse('review.html', {"request": request})
 
-@app.get('/review/{id}', response_class=HTMLResponse)
+@tocky_router.get('/review/{id}', response_class=HTMLResponse)
 def review_single(id: int, request: Request):
     return templates.TemplateResponse('review.html', {"request": request, "id": id})
 
-@app.get('/submit', response_class=HTMLResponse)
+@tocky_router.get('/submit', response_class=HTMLResponse)
 def submit(request: Request):
     return templates.TemplateResponse('submit.html', {"request": request})
 
@@ -252,7 +267,7 @@ def generate_stream(server_response):
     for chunk in server_response.iter_content(chunk_size=4096):
         yield chunk
 
-@app.get('/ia_img')
+@tocky_router.get('/ia_img')
 def ia_img(id: str = Query(...), leaf: int = Query(...), _=Depends(requires_key)):
     if leaf > 30 or leaf < 0:
         raise HTTPException(status_code=400, detail='Leaf number must be between 0 and 30')
@@ -260,7 +275,7 @@ def ia_img(id: str = Query(...), leaf: int = Query(...), _=Depends(requires_key)
         yield from generate_stream(get_page_image(id, leaf, ext='jpg', reduce=3, quality=20, stream=True))
     return StreamingResponse(stream(), media_type='image/jpeg')
 
-@app.get('/ia_toc_img')
+@tocky_router.get('/ia_toc_img')
 def ia_toc_img(id: int = Query(...), index: int = Query(...), _=Depends(requires_key)):
     if not id or id < 0:
         return JSONResponse({'success': False, 'message': 'TOC ID is required'}, status_code=400)
@@ -289,10 +304,12 @@ def ia_toc_img(id: int = Query(...), index: int = Query(...), _=Depends(requires
             yield from generate_stream(get_page_image(ia_id, leaf_num, ext='jpg', reduce=2, quality=70, stream=True))
         return StreamingResponse(stream(), media_type='image/jpeg')
 
-@app.post('/submit')
+@tocky_router.post('/submit')
 def submit_post(submit_options: dict = Body(...), _=Depends(requires_key)):
     try:
         state = process_from_options(submit_options, push=True)
         return state.to_response_dict()
     except TockyOptionsError as e:
         return JSONResponse({'success': False, 'message': str(e)}, status_code=400)
+
+app.include_router(tocky_router)

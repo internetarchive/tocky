@@ -4,6 +4,7 @@ from functools import cached_property
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 
 
 @functools.cache
@@ -14,16 +15,23 @@ def get_env() -> "TockyEnv":
 @dataclass
 class TockyEnv:
     @cached_property
-    def TOCKY_SERVER_NAME(self) -> str:
-        return getenv_required('TOCKY_SERVER_NAME').rstrip('/')
+    def TOCKY_PUBLIC_URL(self) -> str:
+        """Public URL of the Tocky server."""
+        return getenv_required('TOCKY_PUBLIC_URL').rstrip('/')
+
+    @cached_property
+    def TOCKY_PUBLIC_URL_SCHEME(self) -> str:
+        """Scheme of the Tocky public URL."""
+        return urlparse(self.TOCKY_PUBLIC_URL).scheme
+
+    @cached_property
+    def TOCKY_INTERNAL_URL(self) -> str:
+        """Internal URL of the Tocky server."""
+        return getenv_required('TOCKY_INTERNAL_URL').rstrip('/')
 
     @cached_property
     def TOCKY_APPLICATION_ROOT(self) -> str:
-        return getenv_required('TOCKY_APPLICATION_ROOT').rstrip('/')
-
-    @cached_property
-    def TOCKY_PREFERRED_URL_SCHEME(self) -> str:
-        return getenv_required('TOCKY_PREFERRED_URL_SCHEME')
+        return urlparse(self.TOCKY_PUBLIC_URL).path
 
     @cached_property
     def TOCKY_QUEUE_DB_PATH(self) -> Path:
@@ -44,9 +52,6 @@ class TockyEnv:
     @property
     def AZURE_ENDPOINT(self) -> str | None:
         return os.environ.get('AZURE_ENDPOINT')
-
-    def get_app_prefix(self) -> str:
-        return f'{self.TOCKY_PREFERRED_URL_SCHEME}://{self.TOCKY_SERVER_NAME}{self.TOCKY_APPLICATION_ROOT}'
 
     @staticmethod
     def from_env() -> "TockyEnv":

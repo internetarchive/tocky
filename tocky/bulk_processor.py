@@ -229,7 +229,7 @@ def process_from_options(options: dict, push=False):
 
 def push_to_toc_queue(record: dict) -> int:
   resp = requests.put(
-      f'{get_env().get_app_prefix()}/push',
+      f'{get_env().TOCKY_INTERNAL_URL}/push',
       headers={
           'X-API-KEY': get_env().TOCKY_SERVER_KEY,
           'Content-Type': 'application/json',
@@ -240,7 +240,7 @@ def push_to_toc_queue(record: dict) -> int:
 
 def update_toc_queue(row_id: int, record: dict):
   return requests.post(
-      f'{get_env().get_app_prefix()}/update/{row_id}',
+      f'{get_env().TOCKY_INTERNAL_URL}/update/{row_id}',
       headers={
           'X-API-KEY': get_env().TOCKY_SERVER_KEY,
           'Content-Type': 'application/json',
