@@ -142,7 +142,7 @@ TockyShared.apiSubmit = async function (base_url, data) {
             'X-API-Key': TockyShared.getApiKey(),
         },
         body: JSON.stringify({
-            input_book: data.input_book,
+            ...data,
             detector: {
                 type: detector.value,
                 options: Object.fromEntries(
@@ -156,7 +156,7 @@ TockyShared.apiSubmit = async function (base_url, data) {
                     Object.entries(extractor.options)
                         .map(([key, value]) => [key, (data.extractor?.options && key in data.extractor.options) ? data.extractor.options[key] : value.value])
                 )
-            }
+            },
         })
     });
     if (!res.ok) {

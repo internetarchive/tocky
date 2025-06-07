@@ -260,6 +260,20 @@ def ia_toc_img(id: int = Query(...), index: int = Query(...), _=Depends(requires
 
 @tocky_router.post('/submit')
 def submit_post(submit_options: dict = Body(...), _=Depends(requires_key)):
+    if submit_options.get('batch'):
+        with DbContext() as (conn, cur):
+            cur.execute("""
+                INSERT INTO batches (creator, name, record)
+                VALUES (?, ?, ?)
+            """, (
+                submit_options.get('creator'),
+                submit_options['batch'].get('name'),
+                json.dumps(submit_options)
+            ))
+            conn.commit()
+            batch_id = cur.lastrowid
+            return {"success": True, "batch_id": batch_id}
+
     try:
         state = process_from_options(submit_options, push=True)
         return state.to_response_dict()

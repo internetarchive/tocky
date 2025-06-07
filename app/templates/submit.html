@@ -62,7 +62,7 @@
         }
 
         [data-pd-tooltip="true"] {
-            pointer-events: all;
+            pointer-events: all !important;
         }
 
         span[data-pd-tooltip] {
@@ -78,7 +78,7 @@
         <tocky-header></tocky-header>
         <form class="ui container">
             <p-fieldset legend="Input Book(s)" :toggleable="true">
-                <p-tabs value="single">
+                <p-tabs :value="inputType" @update:value="inputType = $event">
                     <p-tab-list>
                         <p-tab value="single">Single Book</p-tab>
                         <p-tab value="batch">Batch</p-tab>
@@ -100,14 +100,18 @@
                             ></p-button>            
                         </p-tab-panel>
                         <p-tab-panel value="batch">
-                            <p-message severity="info">
-                                <p>Batch processing is still in active development and not available for use yet. Check back later!</p>
-                            </p-message>
-                            <div class="flex-col p-disabled">
+                            <div class="flex-col">
                                 <div>
                                     <p-float-label>
                                         <p-input-text
-                                            v-model="ia_query"
+                                            v-model="batchOptions.name"
+                                            style="width: 100%"
+                                        ></p-input-text>
+                                        <label>Batch Name (optional)</label>
+                                    </p-float-label>
+                                    <p-float-label>
+                                        <p-input-text
+                                            v-model="batchOptions.query"
                                             placeholder="e.g. creator:(stephen leacock)"
                                             style="width: 100%"
                                             @keydown.enter.prevent="validateIaQuery"
@@ -118,18 +122,17 @@
                                         <p-button
                                             small
                                             label="Validate"
-                                            :text="!ia_query || !iaQueryValidateCanReRun"
+                                            :text="!batchOptions.query || !iaQueryValidateCanReRun"
                                             :loading="iaQueryValidateState.state === 'loading'"
                                             @click="validateIaQuery"
                                         ></p-button>
-                                        <div style="flex: 1"></div>
                                         <p-button
                                             small
                                             text
                                             as="a"
                                             label="View in Archive.org"
                                             target="_blank"
-                                            :href="buildIaSearchUrl(ia_query)"
+                                            :href="buildIaSearchUrl(batchOptions.query)"
                                             icon="pi pi-external-link"
                                             icon-pos="right"
                                         ></p-button>
@@ -166,23 +169,26 @@
                                 </p-float-label>
                                 <label>
                                     <p-checkbox
-                                        v-model="batchOpenlibraryOnly"
+                                        v-model="batchOptions.openlibraryOnly"
                                         :binary="true"
                                     ></p-checkbox>
                                     Only include books with Open Library ID
                                 </label>
                                 <label>
                                     <p-checkbox
-                                        v-model="batchAllowMicrofilm"
+                                        v-model="batchOptions.allowMicrofilm"
                                         :binary="true"
                                     ></p-checkbox>
                                     Allow microfilm
                                 </label>
                                 <p-divider></p-divider>
-                                <div class="flex-row">
+                                <p-message severity="info">
+                                    <p>Advanced batch processing options are still in development and not available for use yet. Check back later!</p>
+                                </p-message>
+                                <div class="flex-row p-disabled">
                                     <p-float-label>
                                         <p-select
-                                            v-model="batchPullStrategy"
+                                            v-model="batchOptions.pullStrategy"
                                             :options="batchPullStrategyOptions"
                                             overlay-class="block-options"
                                             option-label="name"
@@ -204,7 +210,7 @@
                                     </p-float-label>
                                     <p-float-label>
                                         <p-input-number
-                                            v-model="batchChunkSize"
+                                            v-model="batchOptions.chunkSize"
                                             mode="decimal"
                                             :min="1"
                                         ></p-input-number>
@@ -219,7 +225,7 @@
                                     <p-float-label style="min-width: 150px;">
                                         <p-toggle-switch
                                             class="p-inputwrapper-filled"
-                                            v-model="batchDelayedApiCalls"
+                                            v-model="batchOptions.useDelayedApiCalls"
                                         ></p-toggle-switch>
                                         <label
                                             v-tooltip="`Delayed API calls are ~50% cheaper, and are useful for batch processing. Results will be ready in under 24 hours.`"
@@ -432,7 +438,7 @@
                     :loading="state === 'Submitting'"
                     :disabled="state === 'Submitting'"
                     :icon="state === 'Submitting' ? 'pi pi-spin pi-spinner' : null"
-                    label="Extract TOC"
+                    :label="inputType === 'batch' ? 'Submit Batch' : 'Submit Job'"
                     pt:root:type="submit"
                 ></p-button>
             </footer>
@@ -444,17 +450,27 @@
     <script src="https://unpkg.com/@primevue/themes@4.0.5/umd/aura.min.js"></script>
     <script src="[[ url_for('static', path='shared.js') ]]"></script>
     <script>
-        const IA_TOC_FILTER = 'mediatype:texts AND (language:eng OR language:English) AND ocr_detected_lang:en AND -collection:opensource AND  -repub_state:(10 OR 13)  AND imagecount:[100 TO 99999] AND NOT scanner:google AND NOT curatestate:dark';
+        const IA_TOC_FILTER = 'mediatype:texts AND (language:eng OR language:English OR ocr_detected_lang:en) AND -collection:opensource AND  -repub_state:(10 OR 13)  AND imagecount:[100 TO 99999] AND NOT scanner:google AND NOT curatestate:dark';
         window.app = Vue.createApp({
             data() {
                 return {
                     ia_id: "",
 
-                    ia_query: "",
-                    batchDelayedApiCalls: true,
-                    batchOpenlibraryOnly: true,
-                    batchAllowMicrofilm: false,
-                    batchPullStrategy: "manual",
+                    /** @type {"single"|"batch"} */
+                    inputType: "single",
+
+                    batchOptions: {
+                        name: "",
+                        query: "",
+                        
+                        // TMP not supported yet
+                        useDelayedApiCalls: true,
+                        chunkSize: 20,
+                        pullStrategy: "manual",
+                        openlibraryOnly: true,
+                        allowMicrofilm: false,
+                    },
+
                     batchPullStrategyOptions: [
                         {
                             value: "manual",
@@ -472,10 +488,10 @@
                             help: "The next chunk is triggered automatically once all the books in the current chunk are extracted.",
                         },
                     ],
-                    batchChunkSize: 20,
+
                     iaQueryValidateState: {
                         state: 'neutral',
-                        lastRunHash: this.buildIaValidateUrl(),
+                        lastRunHash: null,
                         result: null,
                         error: null,
                     },
@@ -498,8 +514,8 @@
             computed: {
                 toc_filter() {
                     return [
-                        this.batchOpenlibraryOnly ? 'openlibrary_edition:*' : null,
-                        this.batchAllowMicrofilm ? null : '-collection:microfilm',
+                        this.batchOptions.openlibraryOnly ? 'openlibrary_edition:*' : null,
+                        this.batchOptions.allowMicrofilm ? null : '-collection:microfilm',
                         IA_TOC_FILTER,
                     ].filter(Boolean).join(" AND ");
                 },
@@ -514,6 +530,7 @@
             },
 
             mounted() {
+                this.iaQueryValidateState.lastRunHash = this.buildIaValidateUrl();
                 // read from url params if empty
                 const urlParams = new URLSearchParams(window.location.search);
                 this.ia_id = this.ia_id || urlParams.get("ia_id") || "";
@@ -527,7 +544,7 @@
                 buildIaValidateUrl() {
                     const params = new URLSearchParams({
                         q: [
-                            this.ia_query,
+                            this.batchOptions.query,
                             this.toc_filter,
                         ].filter(Boolean).join(" AND "),
                         rows: 0,
@@ -584,14 +601,35 @@
                     this.state = "Submitting";
                     this.response = null;
                     this.error = null;
-                    // Navigate to the list page after submission
-                    setTimeout(() => window.location.href = "[[ TOCKY_APPLICATION_ROOT ]]/list", 1000);
-                    try {
-                        // Settings saved to the DETECTORS/EXTRACTORS in TockyShared (awkward: To fix)
-                        this.response = await TockyShared.apiSubmit('[[ TOCKY_APPLICATION_ROOT ]]', {
+                    let body = {};
+                    if (this.inputType === "batch") {
+                        body = {
+                            batch: {
+                                name: this.batchOptions.name,
+                                query: this.batchOptions.query,
+                                use_delayed_api_calls: this.batchOptions.useDelayedApiCalls,
+                                toc_filter: this.toc_filter,
+                                chunk_size: this.batchOptions.chunkSize,
+                                pull_strategy: this.batchOptions.pullStrategy,
+                                openlibrary_only: this.batchOptions.openlibraryOnly,
+                                allow_microfilm: this.batchOptions.allowMicrofilm,
+                            },
+                        };
+                    } else if (this.inputType === "single") {
+                        body = {
                             input_book: {
                                 ia_id: this.ia_id,
                             },
+                        };
+                        // Navigate to the list page after submission
+                        setTimeout(() => window.location.href = "[[ TOCKY_APPLICATION_ROOT ]]/list", 1000);
+                    }
+
+                    try {
+                        // Settings saved to the DETECTORS/EXTRACTORS in TockyShared (awkward: To fix)
+                        this.response = await TockyShared.apiSubmit('[[ TOCKY_APPLICATION_ROOT ]]', {
+                            creator: TockyShared.getActiveUserName(),
+                            ...body,
                             detector: {
                                 type: this.detector.value
                             },
@@ -599,6 +637,9 @@
                                 type: this.extractor.value
                             }
                         });
+                        if (this.inputType === "batch") {
+                            window.location.href = `[[ TOCKY_APPLICATION_ROOT ]]/batches`;
+                        }
                     } catch (e) {
                         this.state = "Errored";
                         this.error = e;
