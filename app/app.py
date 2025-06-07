@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from typing import Optional, cast
 import json
 from pathlib import Path
-from app.db.utils import DbContext, init_db
+from app.db.utils import DbContext, init_db, db_select_from_params
 from tocky import EXTRACTORS_BY_NAME
 from tocky.bulk_processor import TockyOptionsError, build_phase_from_options, process_from_options
 from tocky.env import get_env
@@ -137,46 +137,37 @@ def push(content: dict = Body(...), _=Depends(requires_key)):
         conn.commit()
         return {"success": True, "id": result.lastrowid}
 
+@tocky_router.get('/batches', response_class=HTMLResponse)
+def batches(request: Request):
+    return templates.TemplateResponse('batches.html', {"request": request})
+
 @tocky_router.get('/list', response_class=HTMLResponse)
 def list_view(request: Request):
     return templates.TemplateResponse('list.html', {"request": request})
 
 @tocky_router.get('/api/list')
 def api_list(request: Request, limit: int = Query(10), offset: int = Query(0), sort: str = Query('-created')):
-    direction = 'DESC' if sort[0] == '-' else 'ASC'
-    sort_field = sort.lstrip('-')
-    if sort_field not in ['id', 'created', 'state']:
-        return JSONResponse({'success': False, 'message': 'Invalid sort field'}, status_code=400)
-    where_clauses = []
-    params = []
-    for list_field in ['id', 'state', 'assignee', 'record.status', 'record.human_validation']:
-        arg_val = request.query_params.get(list_field)
-        if arg_val:
-            filter_list = arg_val.split('|')
-            if list_field == 'id':
-                filter_list = [int(x) for x in filter_list]
-            field_parts = list_field.split('.')
-            sub_fields = field_parts[1:]
-            db_field = field_parts[0]
-            if sub_fields:
-                db_field += ' ->> ?'
-            where_clauses.append(f'{db_field} IN ({",".join(["?"] * len(filter_list))})')
-            params.extend(sub_fields)
-            params.extend(filter_list)
-    with DbContext() as (conn, cur):
-        result = cur.execute(f"""
-            SELECT * FROM toc_queue
-            {"WHERE " + " AND ".join(where_clauses) if where_clauses else ""}
-            ORDER BY {sort_field} {direction}
-            LIMIT ? OFFSET ?
-        """, (*params, limit, offset))
-        return [
-            {
-                **dict(row),
-                'record': json.loads(row['record']),
-            }
-            for row in result.fetchall()
-        ]
+    return db_select_from_params(
+        table='toc_queue',
+        filter_fields=('id', 'state', 'batch_id', 'assignee', 'record.status', 'record.human_validation'),
+        sort_fields=('id', 'created', 'state', 'batch_id', 'assignee'),
+        limit=limit,
+        offset=offset,
+        sort=sort,
+        request=request,
+    )
+
+@tocky_router.get('/api/batches')
+def api_batches(request: Request, limit: int = Query(10), offset: int = Query(0), sort: str = Query('-created')):
+    return db_select_from_params(
+        table='batches',
+        filter_fields=('id', 'state', 'creator'),
+        sort_fields=('id', 'created', 'state'),
+        limit=limit,
+        offset=offset,
+        sort=sort,
+        request=request,
+    )
 
 @tocky_router.get('/api/extractor/build_prompt')
 def api_extractor_prompt(id: int = Query(...)):

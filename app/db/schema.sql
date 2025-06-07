@@ -3,6 +3,7 @@ CREATE TABLE batches (
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     creator VARCHAR(255),
     name VARCHAR(255),
+    state VARCHAR(255) NOT NULL DEFAULT 'Pending',
     record JSON NOT NULL
 );
 

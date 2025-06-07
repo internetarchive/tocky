@@ -757,8 +757,7 @@
                         },
                         "state": "Todo",
                     };
-                    /* Read the session cookie to determine assignee */
-                    const assignee = document.cookie.match(/session=([^%]+)/)?.[1];
+                    const assignee = TockyShared.getActiveUserName();
                     const params = new URLSearchParams({ assignee });
                     if (this.current_toc) {
                         params.append('last_id', this.current_toc.id);

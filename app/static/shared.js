@@ -115,6 +115,11 @@ TockyShared.EXTRACTORS = {
 TockyShared.DEFAULT_DETECTOR = TockyShared.DETECTORS.ocr_detector;
 TockyShared.DEFAULT_EXTRACTOR = TockyShared.EXTRACTORS.ai_extractor;
 
+TockyShared.getActiveUserName = function () {
+    /* Read the session cookie to determine current user */
+    return document.cookie.match(/session=([^%]+)/)?.[1];
+}
+
 TockyShared.apiSubmit = async function (base_url, data) {
     if (!TockyShared.getApiKey(false)) {
         alert("Please provide a Tocky API key");
@@ -412,7 +417,8 @@ TockyShared.Header = {
     data() {
         return {
             nav_options: [
-                { label: 'List', url: `${TockyShared.CONF.APPLICATION_ROOT}/list`, icon: 'pi pi-list' },
+                { label: 'Queue', url: `${TockyShared.CONF.APPLICATION_ROOT}/list`, icon: 'pi pi-list' },
+                { label: 'Batches', url: `${TockyShared.CONF.APPLICATION_ROOT}/batches`, icon: 'pi pi-objects-column' },
                 { label: 'Submit', url: `${TockyShared.CONF.APPLICATION_ROOT}/submit`, icon: 'pi pi-plus' },
             ],
             config: TockyShared.config,

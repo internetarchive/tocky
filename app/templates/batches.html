@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>List | Tocky</title>
+    <title>Batches | Tocky</title>
 
     <script>
         // Do this early to avoid flash of light theme
@@ -67,20 +67,23 @@
             @filter="handleFilter"
         >
             <p-column field="id" header="ID"></p-column>
-            <p-column field="assignee" header="Assignee"></p-column>
+            <p-column field="creator" header="Creator"></p-column>
             <p-column field="created" header="Created"></p-column>
+            <p-column field="name" header="Name">
+                <template #body="{ data }">
+                    <template v-if="data.name">{{ data.name }}</template>
+                    <i v-else>Batch #{{ data.id }}</i>
+                </template>
+            </p-column>
             <p-column field="state" header="State" :show-filter-match-modes="false">
                 <template #body="{ data }">
-                    <tocky-state-tag
-                        :state="data.state"
-                        :class="{'flashing': data.id in watchedRecords}"
-                    ></tocky-state-tag>
+                    <tocky-state-tag :state="data.state"></tocky-state-tag>
                 </template>
                 <template #filter="{ filterModel, filterCallback }">
                     <p-multi-select
                         v-model="filterModel.value"
                         @change="filterCallback()"
-                        :options="['To Detect', 'Detecting', 'To Extract', 'Extracting', 'To Review', 'Reviewing', 'Done', 'Errored']"
+                        :options="batchStateOptions"
                         placeholder="Filter"
                         :showClear="true"
                     >
@@ -90,56 +93,14 @@
                     </p-multi-select>
                 </template>
             </p-column>
-            <p-column field="record.ocaid" header="IA ID">
-                <template #body="{ data }">
-                    <tocky-ia-link :ocaid="data.record.ocaid"></tocky-ia-link>
-                </template>
-            </p-column>
-            <p-column field="record.status" header="Status" :show-filter-match-modes="false">
-                <template #filter="{ filterModel, filterCallback }">
-                    <p-multi-select
-                        v-model="filterModel.value"
-                        @change="filterCallback()"
-                        :options="extractionStatusOptions"
-                        placeholder="Filter"
-                        style="min-width: 12rem"
-                        :showClear="true"
-                    ></p-multi-select>
-                </template>
-            </p-column>
-            <p-column field="record.human_validation" header="Human Validation" :show-filter-match-modes="false">
-                <template #filter="{ filterModel, filterCallback }">
-                    <p-multi-select
-                        v-model="filterModel.value"
-                        @change="filterCallback()"
-                        :options="humanValidationOptions"
-                        placeholder="Filter"
-                        style="min-width: 12rem"
-                        :showClear="true"
-                    ></p-multi-select>
-                </template>
-
-                <template #body="{ data }">
-                    <span v-tooltip="data.record.comment">
-                        {{ data.record.human_validation }}
-                        <i v-if="data.record.comment" class="pi pi-comment"></i>
-                    </span>
-                </template>
-            </p-column>
-            <p-column field="record" header="Record">
-                <template #body="{ data }">
-                    <p-button text size="small" @click="showFullRecord(data)">View JSON</p-button>
-                </template>
-            </p-column>
             <p-column header="Actions">
                 <template #body="{ data }">
-                    <p-button text as="a" size="small" :href="`[[ TOCKY_APPLICATION_ROOT ]]/review/${data.id}`">Review</p-button>
+                    <p-button text as="a" size="small" :href="`[[ TOCKY_APPLICATION_ROOT ]]/list#batch_id=${data.id}`">View Jobs</p-button>
                 </template>
             </p-column>
         </p-data-table>
 
         <p-paginator
-            :first="offset"
             :rows="limit"
             :total-records="max_id"
             @page="handlePageChange"
@@ -165,10 +126,6 @@
                     max_id: 1000,
 
                     records: [],
-                    watchedRecords: {},
-                    watchedRecordsTimeout: null,
-                    maxWatch: 3 * 60_000,
-                    watchStart: 0,
 
                     dialogVisible: false,
                     fullRecord: '',
@@ -181,54 +138,29 @@
                         'state': {
                             value: (hashParams.get('state') || '').split('|'),
                         },
-                        'record.status': {
-                            value: (hashParams.get('record.status') || '').split('|'),
-                        },
-                        'record.human_validation': {
-                            value: (hashParams.get('record.human_validation') || '').split('|'),
-                        },
-                        'batch_id': {
-                            value: (hashParams.get('batch_id') || '').split('|'),
+                        'creator': {
+                            value: (hashParams.get('creator') || '').split('|'),
                         },
                     },
 
-                    // Keep in sync with bulk_processor.py
-                    extractionStatusOptions: [
-                        "TOC Extracted",
-                        "No TOC detected",
-                        "Errored",
-                        "Already has good TOC",
-                        "TOC Validation: Unparseable TOC",
-                        "TOC Validation: Label/Title Too Long",
-                        "TOC Validation: No Numbers",
-                        "TOC Validation: Not Enough Numbers",
-                        "TOC Validation: Too Few Lines With Numbers",
-                        "TOC Validation: Starts Too High",
-                        "TOC Validation: End Too Low",
-                    ],
-
-                    humanValidationOptions: [
-                        "Perfect",
-                        "Near Perfect",
-                        "Good",
-                        "Ok",
-                        "Safe Wrong",
-                        "Incomplete",
-                        "Wrong",
+                    batchStateOptions: [
+                        "Pending",
+                        "Paused",
+                        "Processing",
+                        "Completed",
+                        "Failed",
+                        "Cancelled",
                     ],
 
                 };
             },
             methods: {
-                async apiList(params) {
-                    const response = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/list?${new URLSearchParams(params).toString()}`);
+                async apiGetBatches(params) {
+                    const response = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/batches?${new URLSearchParams(params)}`);
                     return await response.json();
                 },
                 async fetchData() {
                     this.loading = true;
-                    this.watchedRecords = {};
-                    clearTimeout(this.watchedRecordsTimeout);
-
                     const params = {
                         limit: this.limit,
                         offset: this.offset,
@@ -239,43 +171,8 @@
                         }
                     }
 
-                    this.records = await this.apiList(params);
-                    for (const [index, record] of this.records.entries()) {
-                        if (record.state === 'Detecting' || record.state === 'Extracting') {
-                            this.watchedRecords[record.id] = index;
-                        }
-                    }
-                    this.watchStart = Date.now();
-                    this.startWatching();
+                    this.records = await this.apiGetBatches(params);
                     this.loading = false;
-                },
-                startWatching() {
-                    const watchedRecordsIds = Object.keys(this.watchedRecords);
-                    if (!watchedRecordsIds.length) {
-                        return;
-                    }
-
-                    if (Date.now() - this.watchStart > this.maxWatch) {
-                        for (const id of watchedRecordsIds) {
-                            delete this.watchedRecords[id];
-                        }
-                        return;
-                    }
-
-                    this.watchedRecordsTimeout = setTimeout(async () => {
-                        const records = await this.apiList({ id: watchedRecordsIds.join('|'), limit: watchedRecordsIds.length });
-                        for (const record of records) {
-                            if (record.id in this.watchedRecords && this.records[this.watchedRecords[record.id]].id === record.id) {
-                                this.records[this.watchedRecords[record.id]] = record;
-                            }
-
-                            if (record.state !== 'Detecting' && record.state !== 'Extracting') {
-                                delete this.watchedRecords[record.id];
-                            }
-                        }
-
-                        this.startWatching();
-                    }, 1000);
                 },
                 showFullRecord(record) {
                     this.fullRecord = JSON.stringify(record, null, 2);
