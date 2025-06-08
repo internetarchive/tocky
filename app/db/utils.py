@@ -3,6 +3,7 @@ from collections.abc import Callable
 import json
 import sqlite3
 from pathlib import Path
+import sys
 import time
 from typing import Any, Awaitable, Sequence, TypeVar, cast
 from functools import wraps
@@ -122,7 +123,10 @@ def throttle(period: int = 1, lock: bool = False):
                 now = time.time()
                 time_has_passed = not last_call_time or (now - last_call_time) >= period
                 if not is_locked and time_has_passed:
-                    print(f"Calling {func.__name__} at {now}, last call was at {last_call_time}")
+                    if last_call_time:
+                        print(f"[THROTTLE:{func.__name__}] Calling at {now}, last call was at {(now - last_call_time):.2f}s ago.", file=sys.stderr, flush=True)
+                    else:
+                        print(f"[THROTTLE:{func.__name__}] Calling at {now}, last call was never.", file=sys.stderr, flush=True)
                     last_call_time = now
                     cur.execute("""
                         INSERT OR REPLACE INTO tocky_internals (key, value)
@@ -158,7 +162,7 @@ def throttle(period: int = 1, lock: bool = False):
                     next_call_time = cast(float, row['value']) if row else None
                     if next_call_time and next_call_time > now:
                         # Already queued up, so do nothing
-                        print(f"Already throttled {func.__name__}, next call at {next_call_time}")
+                        print(f"[THROTTLE:{func.__name__}] Skipping, next call at {next_call_time:.2f}", file=sys.stderr, flush=True)
                     else:
                         # Update the next call time
                         cur.execute("""
@@ -167,11 +171,80 @@ def throttle(period: int = 1, lock: bool = False):
                         """, (next_key, json.dumps(now + period)))
                         conn.commit()
                         sleep_time = period - (now - last_call_time) if last_call_time else period
-                        print(f"Throttling {func.__name__}, next call at {now + sleep_time}")
+                        print(f"[THROTTLE:{func.__name__}] Throttling, next call at {now + sleep_time:.2f}", file=sys.stderr, flush=True)
                         await asyncio.sleep(sleep_time)
                         await wrapper()
                         return
 
         return wrapper
 
+    return decorator
+
+
+def rate_limit(
+    calls: int,
+    period: int,
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
+    """
+    Rate limit a function to a certain number of calls per period.
+    
+    :param calls: Number of allowed calls in the period.
+    :param period: Time in seconds for the rate limit.
+    """
+
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        key = f"{func.__module__}.{func.__name__}_rate_limit"
+
+        @wraps(func)
+        def wrapper(*args, **kwargs) -> T:
+            # GUID for the call, to ensure uniqueness
+            request_time = time.time()
+            call_id = f"#{request_time}"
+            while True:
+                with DbContext() as (conn, cur):
+                    cur.execute("SELECT value FROM tocky_internals WHERE key = ?", (key,))
+                    row = cur.fetchone()
+                    if row:
+                        queue, last_calls = cast(tuple[list[str], list[float]], json.loads(row['value']))
+                    else:
+                        queue: list[str] = []
+                        last_calls: list[float] = []
+                    
+                    now = time.time()
+                    # Clean up old calls
+                    last_calls = [t for t in last_calls if now - t < period]
+                    available_calls = max(0, calls - len(last_calls))
+
+                    if len(queue) < available_calls or call_id in queue[:available_calls]:
+                        # Remove the call from the queue
+                        queue = [c for c in queue if c != call_id]
+
+                        # Add the current call time
+                        last_calls.append(now)
+                        cur.execute("""
+                            INSERT OR REPLACE INTO tocky_internals (key, value)
+                            VALUES (?, ?)
+                        """, (key, json.dumps((queue, last_calls))))
+                        conn.commit()
+
+                        print(f"[RATE-LIMIT:{func.__name__}] Calling, after {now - request_time:.2f}s", file=sys.stderr, flush=True)
+                        return func(*args, **kwargs)
+                    else:
+                        # If we have reached the limit, wait for the next available slot
+                        wait_time = period - (now - last_calls[0])
+                        print(f"[RATE-LIMIT:{func.__name__}] Rate limit exceeded, waiting {wait_time:.2f} seconds")
+
+                        # Add the call to the queue if not already there
+                        if call_id not in queue:
+                            queue.append(call_id)
+                            cur.execute("""
+                                INSERT OR REPLACE INTO tocky_internals (key, value)
+                                VALUES (?, ?)
+                            """, (key, json.dumps((queue, last_calls))))
+                            conn.commit()
+
+                        time.sleep(wait_time)
+                        continue
+
+        return wrapper 
     return decorator

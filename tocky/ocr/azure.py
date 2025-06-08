@@ -1,10 +1,13 @@
 import io
+import sys
 from typing import TypedDict, cast
 import requests
+from app.db.utils import rate_limit
 from tocky.utils import PageScan
 from lxml import etree
 import os
 from PIL import Image
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 class AzureOcrResponse(TypedDict):
     modelVersion: str
@@ -49,6 +52,26 @@ def image_to_bytes(image: Image.Image) -> bytes:
         image.save(output, format='JPEG')
         return output.getvalue()
 
+
+class retry_if_status_code(retry_if_exception):
+    """Retries if the response status code is in the specified set."""
+
+    def __init__(self, status_codes: set[int]) -> None:
+        self.status_codes = status_codes
+        super().__init__(lambda e: isinstance(e, requests.RequestException) and e.response is not None and e.response.status_code in self.status_codes)
+
+
+# This can raise 429s, so use retry
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(),
+    retry=retry_if_status_code({429, 500, 502, 503, 504}),
+    before_sleep=lambda retry_state: print(f"[RETRY:fetch_ocr_azure] Sleeping after error (R{retry_state.attempt_number})", file=sys.stderr, flush=True),
+    reraise=True,
+)
+# The azure rate limit for the free tier F0 is 20 requests per minute. To avoid
+# hitting that limit too quickly, limit to 5 requests / 15 seconds.
+@rate_limit(5, 15)
 def fetch_ocr_azure(image: Image.Image) -> AzureOcrResponse:
     subscription_key = os.getenv("AZURE_SUBSCRIPTION_KEY")
     endpoint = os.getenv("AZURE_ENDPOINT")
@@ -72,7 +95,7 @@ def fetch_ocr_azure(image: Image.Image) -> AzureOcrResponse:
         },
         data=image_to_bytes(image)
     )
-    # response.raise_for_status()
+    response.raise_for_status()
     return cast(AzureOcrResponse, response.json())
 
 def azure_read_result_to_djvu_xml(read_result: AzureOcrReadResult) -> str:

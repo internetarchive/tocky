@@ -18,6 +18,7 @@ pycountry = "^23.12.11"
 python-dotenv = "^1.0.1"
 pyyaml = "^6.0.2"
 filelock = "^3.18.0"
+tenacity = "^9.1.2"
 
 # Extra dependency groups
 # For tesseract

@@ -1,3 +1,4 @@
+import asyncio
 from itertools import cycle, islice
 import sys
 from app.db.utils import DbContext, throttle
@@ -31,10 +32,11 @@ async def process_batches():
         if budget <= 0:
             print(f"[WORKER] No budget for new jobs, exiting.", file=sys.stderr, flush=True)
 
-
             if batches:
+                print(f"[WORKER] Queuing up next call to process_batches", file=sys.stderr, flush=True)
                 t = process_batches()
                 return
 
         for batch in islice(cycle(batches), budget):
             await batch.start_next_job()
+            await asyncio.sleep(1)  # Avoid a thundering herd effect
