@@ -1,9 +1,10 @@
 import asyncio
+from collections.abc import Callable
 import json
 import sqlite3
 from pathlib import Path
 import time
-from typing import Sequence, TypeVar, cast
+from typing import Any, Awaitable, Sequence, TypeVar, cast
 from functools import wraps
 
 from fastapi import Request

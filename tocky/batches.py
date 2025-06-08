@@ -137,7 +137,7 @@ class DbBatch(Batch):
                     'page': self.offset + 1,
                     # Need to sort by something to ensure consistent results; might want
                     # to make this configurable in the future.
-                    'sort': 'identifier',
+                    'sort': '-week',
                     'output': 'json',
                 })
                 resp.raise_for_status()

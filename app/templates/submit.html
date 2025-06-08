@@ -118,6 +118,18 @@
                                         ></p-input-text>
                                         <label>Internet Archive Query</label>
                                     </p-float-label>
+                                    <p-float-label>
+                                        <p-input-number
+                                            v-model="batchOptions.maxLimit"
+                                            mode="decimal"
+                                            :min="1"
+                                            disabled
+                                        ></p-input-number>
+                                        <label>
+                                            Max Limit
+                                            <i class="ui icon question circle outline" v-tooltip="`Limit number of books processed. Currently restricted to 10.`"></i>
+                                        </label>
+                                    </p-float-label>
                                     <div class="flex-row">
                                         <p-button
                                             small
@@ -462,6 +474,7 @@
                     batchOptions: {
                         name: "",
                         query: "",
+                        maxLimit: 10,
                         
                         // TMP not supported yet
                         useDelayedApiCalls: true,
@@ -613,6 +626,7 @@
                                 pull_strategy: this.batchOptions.pullStrategy,
                                 openlibrary_only: this.batchOptions.openlibraryOnly,
                                 allow_microfilm: this.batchOptions.allowMicrofilm,
+                                max_limit: this.batchOptions.maxLimit,
                             },
                         };
                     } else if (this.inputType === "single") {

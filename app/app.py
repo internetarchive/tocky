@@ -279,7 +279,7 @@ def ia_toc_img(id: int = Query(...), index: int = Query(...), _=Depends(requires
 def submit_post(background_tasks: BackgroundTasks, background: bool = Query(False), submit_options: dict = Body(...), _=Depends(requires_key)):
     if submit_options.get('batch'):
         batch = Batch.from_submit_input(submit_options)
-        batch.limit = batch.get_total()
+        batch.limit = min(batch.get_total(), cast(int, submit_options['batch']['max_limit']))
         with DbContext() as (conn, cur):
             cur.execute(*batch.to_sql())
             conn.commit()
