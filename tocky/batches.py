@@ -41,7 +41,7 @@ class Batch:
     def from_submit_input(input_dict: dict):
         return Batch(
             creator=input_dict.get('creator'),
-            name=input_dict.get('name'),
+            name=input_dict['batch'].get('name'),
             state='Pending',
             offset=0,
             limit=0,  # Computed later
