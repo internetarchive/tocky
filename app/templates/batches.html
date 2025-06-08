@@ -75,6 +75,18 @@
                     <i v-else>Batch #{{ data.id }}</i>
                 </template>
             </p-column>
+            <p-column field="progress" header="Progress">
+                <template #body="{ data }">
+                    <p-progress-bar
+                        v-if="data.record.limit"
+                        :value="100 * data.record.offset / data.record.limit"
+                    >{{ data.record.offset }} / {{ data.record.limit }}
+                    </p-progress-bar>
+                    <template v-else>
+                        ?
+                    </template>
+                </template>
+            </p-column>
             <p-column field="state" header="State" :show-filter-match-modes="false">
                 <template #body="{ data }">
                     <tocky-state-tag :state="data.state"></tocky-state-tag>

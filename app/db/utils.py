@@ -1,7 +1,10 @@
+import asyncio
 import json
 import sqlite3
 from pathlib import Path
-from typing import Sequence
+import time
+from typing import Sequence, TypeVar, cast
+from functools import wraps
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -83,3 +86,91 @@ def db_select_from_params(
             }
             for row in result.fetchall()
         ]
+
+T = TypeVar('T')
+
+def throttle(period: int = 1, lock: bool = False):
+    """
+    Throttle function to prevent too frequent calls.
+    Stores the last call time in the database.
+
+    :param period: Time in seconds to wait before allowing the next call.
+    :param lock: If True, will use a lock to ensure only one call can be made at a time.
+    """
+
+    def decorator(func):
+        @wraps(func)
+        async def wrapper():
+            key = f"{func.__module__}.{func.__name__}_throttle"
+            
+            with DbContext() as (conn, cur):
+                is_locked = False
+                if lock:
+                    lock_key = f"{key}_lock"
+                    cur.execute("SELECT value FROM tocky_internals WHERE key = ?", (lock_key,))
+                    row = cur.fetchone()
+                    is_locked = json.loads(row['value']) if row else False
+
+                cur.execute("SELECT value FROM tocky_internals WHERE key = ?", (key,))
+                row = cur.fetchone()
+                if row:
+                    last_call_time = cast(float, row['value'])
+                else:
+                    last_call_time = None
+
+                now = time.time()
+                time_has_passed = not last_call_time or (now - last_call_time) >= period
+                if not is_locked and time_has_passed:
+                    print(f"Calling {func.__name__} at {now}, last call was at {last_call_time}")
+                    last_call_time = now
+                    cur.execute("""
+                        INSERT OR REPLACE INTO tocky_internals (key, value)
+                        VALUES (?, ?)
+                    """, (key, json.dumps(last_call_time)))
+                    conn.commit()
+
+                    if lock:
+                        # Acquire lock
+                        cur.execute("""
+                            INSERT OR REPLACE INTO tocky_internals (key, value)
+                            VALUES (?, ?)
+                        """, (lock_key, json.dumps(True)))
+                        conn.commit()
+                    try:
+                        await func()
+                    finally:
+                        if lock:
+                            # Release lock
+                            cur.execute("""
+                                INSERT OR REPLACE INTO tocky_internals (key, value)
+                                VALUES (?, ?)
+                            """, (lock_key, json.dumps(False)))
+                            conn.commit()
+                    return
+                else:
+                    next_key = f"{key}_next"
+                    cur.execute("""
+                        SELECT value FROM tocky_internals
+                        WHERE key = ?
+                    """, (next_key,))
+                    row = cur.fetchone()
+                    next_call_time = cast(float, row['value']) if row else None
+                    if next_call_time and next_call_time > now:
+                        # Already queued up, so do nothing
+                        print(f"Already throttled {func.__name__}, next call at {next_call_time}")
+                    else:
+                        # Update the next call time
+                        cur.execute("""
+                            INSERT OR REPLACE INTO tocky_internals (key, value)
+                            VALUES (?, ?)
+                        """, (next_key, json.dumps(now + period)))
+                        conn.commit()
+                        sleep_time = period - (now - last_call_time) if last_call_time else period
+                        print(f"Throttling {func.__name__}, next call at {now + sleep_time}")
+                        await asyncio.sleep(sleep_time)
+                        await wrapper()
+                        return
+
+        return wrapper
+
+    return decorator

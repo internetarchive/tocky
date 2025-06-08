@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Request, Depends, HTTPException, Query, Body
+import asyncio
+from contextlib import asynccontextmanager
+from fastapi import BackgroundTasks, FastAPI, Request, Depends, HTTPException, Query, Body
 from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
@@ -8,7 +10,9 @@ from typing import Optional, cast
 import json
 from pathlib import Path
 from app.db.utils import DbContext, init_db, db_select_from_params
+from app.worker import process_batches
 from tocky import EXTRACTORS_BY_NAME
+from tocky.batches import Batch
 from tocky.bulk_processor import TockyOptionsError, build_phase_from_options, process_from_options
 from tocky.env import get_env
 from tocky.extractor.ai_extractor import AiExtractor
@@ -22,12 +26,23 @@ env = get_env()
 init_db()
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(process_batches())
+    yield
+    print("App or worker is shutting down...")
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        print("Background task cancelled successfully.")
+
+app = FastAPI(lifespan=lifespan)
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # FIXME
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -105,7 +120,7 @@ def pop(assignee: Optional[str] = Query(None), last_id: int = Query(0), _=Depend
             return None
 
 @tocky_router.post('/update/{id}')
-def update(id: int, content: dict = Body(...), assignee: Optional[str] = Query(None), _=Depends(requires_key)):
+def update(background_tasks: BackgroundTasks, id: int, content: dict = Body(...), assignee: Optional[str] = Query(None), _=Depends(requires_key)):
     """Reads the record from the content body and writes it back to sqlite"""
     state = content.get('state', 'Done')
     set_requests = [
@@ -123,17 +138,19 @@ def update(id: int, content: dict = Body(...), assignee: Optional[str] = Query(N
             WHERE id = ?
         """, (*set_params, id))
         conn.commit()
+        background_tasks.add_task(process_batches)
         return {"success": True}
 
 @tocky_router.put('/push')
 def push(content: dict = Body(...), _=Depends(requires_key)):
     """Reads a record from the content body and adds a new row to sqlite"""
     state = content.get('state', 'To Review')
+    batch_id = content.get('batch_id', None)
     with DbContext() as (conn, cur):
         result = cur.execute("""
-            INSERT INTO toc_queue (state, record)
-            VALUES (?, ?)
-        """, (state, json.dumps(content),))
+            INSERT INTO toc_queue (batch_id, state, record)
+            VALUES (?, ?, ?)
+        """, (batch_id, state, json.dumps(content),))
         conn.commit()
         return {"success": True, "id": result.lastrowid}
 
@@ -259,25 +276,29 @@ def ia_toc_img(id: int = Query(...), index: int = Query(...), _=Depends(requires
         return StreamingResponse(stream(), media_type='image/jpeg')
 
 @tocky_router.post('/submit')
-def submit_post(submit_options: dict = Body(...), _=Depends(requires_key)):
+def submit_post(background_tasks: BackgroundTasks, background: bool = Query(False), submit_options: dict = Body(...), _=Depends(requires_key)):
     if submit_options.get('batch'):
+        batch = Batch.from_submit_input(submit_options)
+        batch.limit = batch.get_total()
         with DbContext() as (conn, cur):
-            cur.execute("""
-                INSERT INTO batches (creator, name, record)
-                VALUES (?, ?, ?)
-            """, (
-                submit_options.get('creator'),
-                submit_options['batch'].get('name'),
-                json.dumps(submit_options)
-            ))
+            cur.execute(*batch.to_sql())
             conn.commit()
             batch_id = cur.lastrowid
+            background_tasks.add_task(process_batches)
             return {"success": True, "batch_id": batch_id}
 
-    try:
-        state = process_from_options(submit_options, push=True)
-        return state.to_response_dict()
-    except TockyOptionsError as e:
-        return JSONResponse({'success': False, 'message': str(e)}, status_code=400)
+    if background:
+        background_tasks.add_task(
+            process_from_options,
+            submit_options,
+            push=True,
+        )
+        return JSONResponse({'success': True, 'message': 'Batch processing started'}, status_code=202)
+    else:
+        try:
+            state = process_from_options(submit_options, push=True)
+            return state.to_response_dict()
+        except TockyOptionsError as e:
+            return JSONResponse({'success': False, 'message': str(e)}, status_code=400)
 
 app.include_router(tocky_router)

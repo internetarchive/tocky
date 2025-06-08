@@ -224,6 +224,9 @@
                     const response = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/list?${new URLSearchParams(params).toString()}`);
                     return await response.json();
                 },
+                isRunning(record) {
+                    return record.state === 'Detecting' || record.state === 'Extracting' || record.state === 'To Detect';
+                },
                 async fetchData() {
                     this.loading = true;
                     this.watchedRecords = {};
@@ -241,7 +244,7 @@
 
                     this.records = await this.apiList(params);
                     for (const [index, record] of this.records.entries()) {
-                        if (record.state === 'Detecting' || record.state === 'Extracting') {
+                        if (this.isRunning(record)) {
                             this.watchedRecords[record.id] = index;
                         }
                     }
@@ -269,7 +272,7 @@
                                 this.records[this.watchedRecords[record.id]] = record;
                             }
 
-                            if (record.state !== 'Detecting' && record.state !== 'Extracting') {
+                            if (!this.isRunning(record)) {
                                 delete this.watchedRecords[record.id];
                             }
                         }

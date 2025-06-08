@@ -50,6 +50,7 @@ class ItemProcessingState:
   detector: AbstractDetector
   extractor: AbstractExtractor
 
+  batch_id: int | None = None
   detector_result: ResultStat[list[int]] | None = None
   extractor_result: ResultStat[list[TocEntry]] | None = None
 
@@ -65,6 +66,7 @@ class ItemProcessingState:
   def to_response_dict(self):
     result = {
         'tocky_version': get_tocky_version(),
+        'batch_id': self.batch_id,
         'success': all(
             result and result.success
             for result in [self.detector_result, self.extractor_result]
@@ -138,8 +140,9 @@ def process_ia_book(
   detector: AbstractDetector,
   extractor: AbstractExtractor,
   push: bool = False,
+  batch_id: int | None = None,
 ) -> ItemProcessingState:
-  state = ItemProcessingState(ocaid=ocaid, detector=detector, extractor=extractor)
+  state = ItemProcessingState(ocaid=ocaid, batch_id=batch_id, detector=detector, extractor=extractor)
   toc_queue_id = 0
   if push:
     toc_queue_id = push_to_toc_queue(state.to_db_dict())
@@ -215,6 +218,7 @@ def process_from_options(options: dict, push=False):
         raise TockyOptionsError('IA ID is required')
 
     ia_id = options['input_book']['ia_id']
+    batch_id = options.get('batch_id', None)
 
     # Set up detector
     detector = build_phase_from_options(DETECTERS_BY_NAME, options['detector']['type'], options['detector']['options'])
@@ -224,7 +228,7 @@ def process_from_options(options: dict, push=False):
 
     # Now let's run some stuff!
     detector.debug = False    
-    return process_ia_book(ia_id, detector, extractor, push=push)
+    return process_ia_book(ia_id, detector, extractor, push=push, batch_id=batch_id)
 
 
 def push_to_toc_queue(record: dict) -> int:

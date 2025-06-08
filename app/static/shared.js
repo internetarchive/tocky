@@ -135,7 +135,7 @@ TockyShared.apiSubmit = async function (base_url, data) {
         throw new Error(`Invalid extractor type: ${data.extractor.type}`);
     }
 
-    const res = await fetch(`${base_url}/submit`, {
+    const res = await fetch(`${base_url}/submit?background=true`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -173,7 +173,7 @@ TockyShared.StateTag = {
     },
     methods: {
         mapStateToSeverity(state) {
-            if (state === 'Done') {
+            if (state === 'Done' || state === 'Completed') {
                 return 'success';
             }
             if (state === 'Errored') {

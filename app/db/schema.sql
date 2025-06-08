@@ -1,6 +1,14 @@
+CREATE TABLE tocky_internals (
+    key VARCHAR(255) PRIMARY KEY,
+    value JSON NOT NULL
+);
+
+CREATE INDEX idx_internals_key ON tocky_internals (key);
+
 CREATE TABLE batches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     creator VARCHAR(255),
     name VARCHAR(255),
     state VARCHAR(255) NOT NULL DEFAULT 'Pending',

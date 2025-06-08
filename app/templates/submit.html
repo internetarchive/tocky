@@ -544,7 +544,7 @@
                 buildIaValidateUrl() {
                     const params = new URLSearchParams({
                         q: [
-                            this.batchOptions.query,
+                            '(' + this.batchOptions.query + ')',
                             this.toc_filter,
                         ].filter(Boolean).join(" AND "),
                         rows: 0,
@@ -585,7 +585,7 @@
                 buildIaSearchUrl(query='') {
                     const params = new URLSearchParams({
                         q: [
-                            query,
+                            '(' + query + ')',
                             this.toc_filter,
                         ].filter(Boolean).join(" AND "),
                     });
@@ -621,8 +621,6 @@
                                 ia_id: this.ia_id,
                             },
                         };
-                        // Navigate to the list page after submission
-                        setTimeout(() => window.location.href = "[[ TOCKY_APPLICATION_ROOT ]]/list", 1000);
                     }
 
                     try {
@@ -637,8 +635,14 @@
                                 type: this.extractor.value
                             }
                         });
+
                         if (this.inputType === "batch") {
                             window.location.href = `[[ TOCKY_APPLICATION_ROOT ]]/batches`;
+                        } else {
+                            // Wait for background tasks to start
+                            setTimeout(() => {
+                                window.location.href = "[[ TOCKY_APPLICATION_ROOT ]]/list";
+                            }, 2000);
                         }
                     } catch (e) {
                         this.state = "Errored";
