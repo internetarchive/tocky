@@ -22,6 +22,7 @@ CREATE TABLE toc_queue (
     creator VARCHAR(255),
     assignee VARCHAR(255),
     batch_id INTEGER,
+    process_id INTEGER,
     FOREIGN KEY (batch_id) REFERENCES batches(id)
     record JSON NOT NULL,
 );

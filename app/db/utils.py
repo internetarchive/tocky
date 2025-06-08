@@ -1,11 +1,12 @@
 import asyncio
 from collections.abc import Callable
 import json
+import os
 import sqlite3
 from pathlib import Path
 import sys
 import time
-from typing import Any, Awaitable, Sequence, TypeVar, cast
+from typing import Sequence, TypeVar, cast
 from functools import wraps
 
 from fastapi import Request
@@ -181,6 +182,15 @@ def throttle(period: int = 1, lock: bool = False):
     return decorator
 
 
+def is_pid_running(pid: int) -> bool:
+    """Check if a process with the given PID is running."""
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
 def rate_limit(
     calls: int,
     period: int,
@@ -193,13 +203,42 @@ def rate_limit(
     """
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        pid = os.getpid()
         key = f"{func.__module__}.{func.__name__}_rate_limit"
+
+        # Remove queued calls from not running processes
+        with DbContext() as (conn, cur):
+            cur.execute("SELECT value FROM tocky_internals WHERE key = ?", (key,))
+            row = cur.fetchone()
+            if row:
+                queue, last_calls = cast(tuple[list[str], list[float]], json.loads(row['value']))
+            else:
+                queue: list[str] = []
+                last_calls: list[float] = []
+            
+            # Remove calls from other processes
+            queue_pids = {
+                int(c.split('#')[0] or '0') # Previous version didn't store PID
+                for c in queue
+            }
+            running_pids = {str(c) for c in queue_pids if c and is_pid_running(c)}
+            new_queue = [c for c in queue if c.split('#')[0] in running_pids]
+
+            if queue != new_queue:
+                print(f"[RATE-LIMIT:{func.__name__}] Cleaning up queue, removed {len(queue) - len(new_queue)} calls from dead processes", file=sys.stderr, flush=True)
+
+            # Store the current process ID and the key for the rate limit
+            cur.execute("""
+                INSERT OR REPLACE INTO tocky_internals (key, value)
+                VALUES (?, ?)
+            """, (key, json.dumps((new_queue, last_calls))))
+            conn.commit()
 
         @wraps(func)
         def wrapper(*args, **kwargs) -> T:
             # GUID for the call, to ensure uniqueness
             request_time = time.time()
-            call_id = f"#{request_time}"
+            call_id = f"{pid}#{request_time}"
             while True:
                 with DbContext() as (conn, cur):
                     cur.execute("SELECT value FROM tocky_internals WHERE key = ?", (key,))
@@ -231,7 +270,7 @@ def rate_limit(
                         return func(*args, **kwargs)
                     else:
                         # If we have reached the limit, wait for the next available slot
-                        wait_time = period - (now - last_calls[0])
+                        wait_time = period - (now - last_calls[0]) if last_calls else period
                         print(f"[RATE-LIMIT:{func.__name__}] Rate limit exceeded, waiting {wait_time:.2f} seconds")
 
                         # Add the call to the queue if not already there
@@ -248,3 +287,27 @@ def rate_limit(
 
         return wrapper 
     return decorator
+
+def clear_dead_jobs():
+    """
+    Clear jobs that are in the 'Processing' state but have not been updated for a long time.
+    This is useful to clean up jobs that may have been left in a processing state due to crashes or other issues.
+    """
+    with DbContext() as (conn, cur):
+        cur.execute("""
+            SELECT id, process_id FROM toc_queue
+            WHERE state IN ('To Extract', 'Extracting', 'To Detect', 'Detecting')
+        """) 
+        rows = cur.fetchall()
+        for row in rows:
+            job_id = row['id']
+            pid = row['process_id']
+            if not pid or not is_pid_running(pid):
+                print(f"[DB-CLEANUP] Job {job_id} is dead, clearing it", file=sys.stderr, flush=True)
+                # Set its state to 'Errored'
+                cur.execute("""
+                    UPDATE toc_queue
+                    SET state = 'Errored'
+                    WHERE id = ?
+                """, (job_id,))
+                conn.commit()

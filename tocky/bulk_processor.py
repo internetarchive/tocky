@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 import dataclasses
+import os
 from typing import Literal, TypeVar, TypedDict
 import json
 import traceback
@@ -50,6 +51,7 @@ class ItemProcessingState:
   detector: AbstractDetector
   extractor: AbstractExtractor
 
+  process_id: int = field(default_factory=lambda: os.getpid())
   batch_id: int | None = None
   detector_result: ResultStat[list[int]] | None = None
   extractor_result: ResultStat[list[TocEntry]] | None = None
@@ -100,6 +102,7 @@ class ItemProcessingState:
     return {
       'state': self.state,
       'status': self.status,
+      'process_id': self.process_id,
 
       **self.to_response_dict(),
 

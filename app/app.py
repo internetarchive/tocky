@@ -9,7 +9,7 @@ from fastapi import APIRouter
 from typing import Optional, cast
 import json
 from pathlib import Path
-from app.db.utils import DbContext, init_db, db_select_from_params
+from app.db.utils import DbContext, clear_dead_jobs, init_db, db_select_from_params
 from app.worker import process_batches
 from tocky import EXTRACTORS_BY_NAME
 from tocky.batches import Batch
@@ -28,6 +28,7 @@ init_db()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    clear_dead_jobs()
     task = asyncio.create_task(process_batches())
     yield
     print("App or worker is shutting down...")
@@ -145,12 +146,13 @@ def update(background_tasks: BackgroundTasks, id: int, content: dict = Body(...)
 def push(content: dict = Body(...), _=Depends(requires_key)):
     """Reads a record from the content body and adds a new row to sqlite"""
     state = content.get('state', 'To Review')
+    process_id = content['process_id']
     batch_id = content.get('batch_id', None)
     with DbContext() as (conn, cur):
         result = cur.execute("""
-            INSERT INTO toc_queue (batch_id, state, record)
-            VALUES (?, ?, ?)
-        """, (batch_id, state, json.dumps(content),))
+            INSERT INTO toc_queue (process_id, batch_id, state, record)
+            VALUES (?, ?, ?, ?)
+        """, (process_id, batch_id, state, json.dumps(content),))
         conn.commit()
         return {"success": True, "id": result.lastrowid}
 
