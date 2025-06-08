@@ -11,7 +11,7 @@ THROTTLE_PERIOD = 5
 async def process_batches():
     with DbContext() as (conn, cur):
         # Fetch number of running jobs
-        cur.execute("SELECT COUNT(*) FROM toc_queue WHERE state NOT IN ('Done', 'Errored', 'To Review')")
+        cur.execute("SELECT COUNT(*) FROM toc_queue WHERE state NOT IN ('Done', 'Errored', 'To Review', 'Reviewing')")
         running_jobs_count = cur.fetchone()[0]
         budget = MAX_RUNNING_JOBS - running_jobs_count
         print(f"[WORKER] Running jobs: {running_jobs_count}, Budget for new jobs: {budget}", file=sys.stderr, flush=True)
