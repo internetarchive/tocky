@@ -66,7 +66,18 @@
             lazy
             @filter="handleFilter"
         >
-            <p-column field="id" header="ID"></p-column>
+            <p-column field="id" header="ID">
+                <template #body="{ data }">
+                    {{ data.id }}
+                    <p-button
+                        v-if="data.batch_id"
+                        outlined
+                        size="small"
+                        rounded
+                        @click="handleFilter({filters: Object.assign({}, filters, { batch_id: {value: [data.batch_id]} })})"
+                    >Batch #{{ data.batch_id }}</p-button>
+                </template>
+            </p-column>
             <p-column field="assignee" header="Assignee"></p-column>
             <p-column field="created" header="Created"></p-column>
             <p-column field="state" header="State" :show-filter-match-modes="false">
