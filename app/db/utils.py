@@ -18,8 +18,8 @@ env = get_env()
 
 
 class DbContext:
-    def __init__(self):
-        self.conn = sqlite3.connect(env.TOCKY_QUEUE_DB_PATH)
+    def __init__(self, timeout: float = 5.0):
+        self.conn = sqlite3.connect(env.TOCKY_QUEUE_DB_PATH, timeout=timeout)
         self.conn.row_factory = sqlite3.Row
 
     def __enter__(self):
@@ -240,7 +240,9 @@ def rate_limit(
             request_time = time.time()
             call_id = f"{pid}#{request_time}"
             while True:
-                with DbContext() as (conn, cur):
+                # Use larger timeout to avoid lock contention
+                with DbContext(timeout=30) as (conn, cur):
+                    cur.execute("BEGIN IMMEDIATE")
                     cur.execute("SELECT value FROM tocky_internals WHERE key = ?", (key,))
                     row = cur.fetchone()
                     if row:
@@ -248,18 +250,21 @@ def rate_limit(
                     else:
                         queue: list[str] = []
                         last_calls: list[float] = []
-                    
+
                     now = time.time()
-                    # Clean up old calls
+
+                    # Update the state
+                    if call_id not in queue:
+                        queue.append(call_id)
                     last_calls = [t for t in last_calls if now - t < period]
                     available_calls = max(0, calls - len(last_calls))
 
-                    if len(queue) < available_calls or call_id in queue[:available_calls]:
+                    if call_id in queue[:available_calls]:
                         # Remove the call from the queue
-                        queue = [c for c in queue if c != call_id]
-
-                        # Add the current call time
+                        queue = [cid for cid in queue if cid != call_id]
                         last_calls.append(now)
+
+                        # Commit state + release the lock
                         cur.execute("""
                             INSERT OR REPLACE INTO tocky_internals (key, value)
                             VALUES (?, ?)
@@ -273,17 +278,14 @@ def rate_limit(
                         wait_time = period - (now - last_calls[0]) if last_calls else period
                         print(f"[RATE-LIMIT:{func.__name__}] Rate limit exceeded, waiting {wait_time:.2f} seconds")
 
-                        # Add the call to the queue if not already there
-                        if call_id not in queue:
-                            queue.append(call_id)
-                            cur.execute("""
-                                INSERT OR REPLACE INTO tocky_internals (key, value)
-                                VALUES (?, ?)
-                            """, (key, json.dumps((queue, last_calls))))
-                            conn.commit()
+                        cur.execute("""
+                            INSERT OR REPLACE INTO tocky_internals (key, value)
+                            VALUES (?, ?)
+                        """, (key, json.dumps((queue, last_calls))))
+                        # Release the lock
+                        conn.commit()
 
                         time.sleep(wait_time)
-                        continue
 
         return wrapper 
     return decorator

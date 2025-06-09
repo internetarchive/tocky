@@ -1,6 +1,7 @@
 # Private
 *.local
 ia_config.ini
+data/
 
 # Editors
 .vscode/
