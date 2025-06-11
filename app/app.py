@@ -146,13 +146,13 @@ def update(background_tasks: BackgroundTasks, id: int, content: dict = Body(...)
 def push(content: dict = Body(...), _=Depends(requires_key)):
     """Reads a record from the content body and adds a new row to sqlite"""
     state = content.get('state', 'To Review')
-    process_id = content['process_id']
+    process_id_str = content['process_id_str']
     batch_id = content.get('batch_id', None)
     with DbContext() as (conn, cur):
         result = cur.execute("""
-            INSERT INTO toc_queue (process_id, batch_id, state, record)
+            INSERT INTO toc_queue (process_id_str, batch_id, state, record)
             VALUES (?, ?, ?, ?)
-        """, (process_id, batch_id, state, json.dumps(content),))
+        """, (process_id_str, batch_id, state, json.dumps(content),))
         conn.commit()
         return {"success": True, "id": result.lastrowid}
 

@@ -22,7 +22,8 @@ CREATE TABLE toc_queue (
     creator VARCHAR(255),
     assignee VARCHAR(255),
     batch_id INTEGER,
-    process_id INTEGER,
+    -- PID with the create_time. E.g. "123#1749368288.537638"
+    process_id_str VARCHAR(255),
     FOREIGN KEY (batch_id) REFERENCES batches(id)
     record JSON NOT NULL,
 );

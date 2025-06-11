@@ -312,14 +312,15 @@ def clear_dead_jobs():
     """
     with DbContext() as (conn, cur):
         cur.execute("""
-            SELECT id, process_id FROM toc_queue
+            SELECT id, process_id_str FROM toc_queue
             WHERE state IN ('To Extract', 'Extracting', 'To Detect', 'Detecting')
         """) 
         rows = cur.fetchall()
         for row in rows:
             job_id = row['id']
-            pid = row['process_id']
-            if not pid or not is_process_running(pid):
+            process_id_str = row['process_id_str']
+            (pid, create_time) = process_id_str.split('#')
+            if not pid or not is_process_running(int(pid), float(create_time)):
                 print(f"[DB-CLEANUP] Job {job_id} is dead, clearing it", file=sys.stderr, flush=True)
                 # Set its state to 'Errored'
                 cur.execute("""

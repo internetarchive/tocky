@@ -4,6 +4,7 @@ import os
 from typing import Literal, TypeVar, TypedDict
 import json
 import traceback
+import psutil
 import requests
 
 
@@ -45,13 +46,20 @@ ExtractionStatus = Literal[
   "TOC Validation: End Too Low",
 ]
 
+
+def get_process_id_str() -> str:
+    """Get the current process ID as a string."""
+    p = psutil.Process(os.getpid())
+    return f"{p.pid}#{p.create_time()}"
+
+
 @dataclass
 class ItemProcessingState:
   ocaid: str
   detector: AbstractDetector
   extractor: AbstractExtractor
 
-  process_id: int = field(default_factory=lambda: os.getpid())
+  process_id_str: str = field(default_factory=get_process_id_str)
   batch_id: int | None = None
   detector_result: ResultStat[list[int]] | None = None
   extractor_result: ResultStat[list[TocEntry]] | None = None
@@ -102,7 +110,7 @@ class ItemProcessingState:
     return {
       'state': self.state,
       'status': self.status,
-      'process_id': self.process_id,
+      'process_id_str': self.process_id_str,
 
       **self.to_response_dict(),
 
