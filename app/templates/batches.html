@@ -66,6 +66,18 @@
             padding: 0;
             border-radius: 0;
         }
+
+        .batch-query-link a {
+            color: inherit;
+        }
+        .tocky-truncate-ellipsis {
+            display: -webkit-box;
+            word-break: break-all;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
 
@@ -84,16 +96,33 @@
             lazy
             @filter="handleFilter"
         >
-            <p-column field="id" header="ID"></p-column>
-            <p-column field="creator" header="Creator"></p-column>
-            <p-column field="created" header="Created"></p-column>
-            <p-column field="name" header="Name">
+            <p-column field="id" header="ID">
+                <template #body="{ data }">
+                    #{{ data.id }}
+                </template>
+            </p-column>
+            <p-column field="creator" header="Creator" style="white-space: nowrap;"></p-column>
+            <p-column field="created" header="Created" style="white-space: nowrap;"></p-column>
+            <p-column field="name" header="Name" style="width: 50%">
                 <template #body="{ data }">
                     <template v-if="data.name">{{ data.name }}</template>
                     <i v-else>Batch #{{ data.id }}</i>
+                    <p-button
+                        as="a" 
+                        text
+                        size="small"
+                        class="batch-query-link"
+                        :href="buildIaSearchUrl(data.record)"
+                        target="_blank"
+                    >
+                        <span
+                            class="tocky-truncate-ellipsis"
+                        >{{data.record.query}}</span>
+                        <i class="pi pi-external-link" style="font-size: inherit"></i>
+                    </p-button>
                 </template>
             </p-column>
-            <p-column field="state" header="State" :show-filter-match-modes="false">
+            <p-column field="state" header="State" :show-filter-match-modes="false" style="min-width: 150px; white-space: nowrap;">
                 <template #body="{ data }">
                     <tocky-state-tag :state="data.state"></tocky-state-tag>
                     <p-progress-bar
@@ -125,7 +154,7 @@
                     </p-multi-select>
                 </template>
             </p-column>
-            <p-column header="Actions">
+            <p-column header="Actions" style="white-space: nowrap;">
                 <template #body="{ data }">
                     <p-button text as="a" size="small" :href="`[[ TOCKY_APPLICATION_ROOT ]]/list#batch_id=${data.id}`">View Jobs</p-button>
                 </template>
@@ -187,6 +216,12 @@
                 };
             },
             methods: {
+                buildIaSearchUrl(batchRecord) {
+                    const url = new URL('https://archive.org/search');
+                    url.searchParams.set('q', '(' + batchRecord.query + ') AND ' + batchRecord.toc_filter);
+                    url.searchParams.set('sort', '-week');
+                    return url;
+                },
                 jobStateToPrimeVueSeverity: TockyShared.jobStateToPrimeVueSeverity,
                 async apiGetBatches(params) {
                     const response = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/batches?${new URLSearchParams(params)}`);

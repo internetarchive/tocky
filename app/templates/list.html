@@ -68,7 +68,7 @@
         >
             <p-column field="id" header="ID">
                 <template #body="{ data }">
-                    {{ data.id }}
+                    #{{ data.id }}
                     <p-button
                         v-if="data.batch_id"
                         outlined
