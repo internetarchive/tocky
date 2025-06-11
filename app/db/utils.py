@@ -55,6 +55,8 @@ def db_select_from_params(
     offset: int,
     sort: str,
     request: Request,
+    table_alias: str | None = None,
+    select_extras: Sequence[str] | None = None,
 ):
     direction = 'DESC' if sort[0] == '-' else 'ASC'
     sort_field = sort.lstrip('-')
@@ -73,12 +75,18 @@ def db_select_from_params(
             db_field = field_parts[0]
             if sub_fields:
                 db_field += ' ->> ?'
+            if table_alias:
+                db_field = f"{table_alias}.{db_field}"
             where_clauses.append(f'{db_field} IN ({",".join(["?"] * len(filter_list))})')
             params.extend(sub_fields)
             params.extend(filter_list)
     with DbContext() as (conn, cur):
+        select_fields = [
+            f"{table_alias}.*" if table_alias else f"{table}.*",
+            *(select_extras or []),
+        ]
         result = cur.execute(f"""
-            SELECT * FROM {table}
+            SELECT {', '.join(select_fields)} FROM {table} {table_alias or ''}
             {"WHERE " + " AND ".join(where_clauses) if where_clauses else ""}
             ORDER BY {sort_field} {direction}
             LIMIT ? OFFSET ?

@@ -48,6 +48,24 @@
         .p-multiselect-list-container {
             scrollbar-width: thin;
         }
+
+        .p-progressbar.tocky-many-progress-bar {
+            height: 7px;
+        }
+        .tocky-many-progress-bar .p-progressbar-label {
+            display: flex;
+            height: 100%;
+            width: 100%;
+            gap: 1px;
+            background: transparent;
+        }
+        .tocky-many-progress-bar .p-progressbar-value {
+            background: transparent;
+        }
+        .tocky-many-progress-bar .p-button {
+            padding: 0;
+            border-radius: 0;
+        }
     </style>
 </head>
 
@@ -75,21 +93,23 @@
                     <i v-else>Batch #{{ data.id }}</i>
                 </template>
             </p-column>
-            <p-column field="progress" header="Progress">
-                <template #body="{ data }">
-                    <p-progress-bar
-                        v-if="data.record.limit"
-                        :value="100 * data.record.offset / data.record.limit"
-                    >{{ data.record.offset }} / {{ data.record.limit }}
-                    </p-progress-bar>
-                    <template v-else>
-                        ?
-                    </template>
-                </template>
-            </p-column>
             <p-column field="state" header="State" :show-filter-match-modes="false">
                 <template #body="{ data }">
                     <tocky-state-tag :state="data.state"></tocky-state-tag>
+                    <p-progress-bar
+                        class="tocky-many-progress-bar"
+                        style="margin-top: 4px;"
+                        v-if="data.record.limit"
+                        :value="100 * data.record.offset / data.record.limit"
+                    >
+                        <p-button
+                            v-for="(count, state) in data.job_states"
+                            :key="state"
+                            :title="`${state}: ${count}`"
+                            :severity="jobStateToPrimeVueSeverity(state)"
+                            :style="{flex: count, height: '100%'}"
+                        ></p-button>
+                    </p-progress-bar>
                 </template>
                 <template #filter="{ filterModel, filterCallback }">
                     <p-multi-select
@@ -167,6 +187,7 @@
                 };
             },
             methods: {
+                jobStateToPrimeVueSeverity: TockyShared.jobStateToPrimeVueSeverity,
                 async apiGetBatches(params) {
                     const response = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/batches?${new URLSearchParams(params)}`);
                     return await response.json();

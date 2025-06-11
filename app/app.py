@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import BackgroundTasks, FastAPI, Request, Depends, HTTPException, Query, Body
+from fastapi import BackgroundTasks, FastAPI, Request, Depends, HTTPException, Query, Body, Response
 from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
@@ -178,15 +178,36 @@ def api_list(request: Request, limit: int = Query(10), offset: int = Query(0), s
 
 @tocky_router.get('/api/batches')
 def api_batches(request: Request, limit: int = Query(10), offset: int = Query(0), sort: str = Query('-created')):
-    return db_select_from_params(
+    result = db_select_from_params(
         table='batches',
+        table_alias='b',
         filter_fields=('id', 'state', 'creator'),
         sort_fields=('id', 'created', 'state'),
         limit=limit,
         offset=offset,
         sort=sort,
         request=request,
+        select_extras=(
+            """
+            (
+                SELECT
+                    json_group_object(state, cnt)
+                FROM (
+                    SELECT
+                        state,
+                        COUNT(*) AS cnt
+                    FROM toc_queue
+                    WHERE batch_id = b.id
+                    GROUP BY state
+                )
+            ) AS job_states
+            """,
+        )
     )
+    if not isinstance(result, Response):
+        for row in result:
+            row['job_states'] = json.loads(row['job_states'])
+    return result
 
 @tocky_router.get('/api/extractor/build_prompt')
 def api_extractor_prompt(id: int = Query(...)):

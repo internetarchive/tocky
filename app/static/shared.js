@@ -164,24 +164,48 @@ TockyShared.apiSubmit = async function (base_url, data) {
     }
     return await res.json();
 };
+
+
+TockyShared.jobStateToPrimeVueSeverity = function (state) {
+    if (state === 'Done' || state === 'Completed') {
+        return 'success';
+    }
+    if (state === 'Errored') {
+        return 'danger';
+    }
+    if (state === 'To Review') {
+        return 'help';
+    }
+    return 'info';
+};
+
 TockyShared.StateTag = {
     template: `
-        <p-tag :value="state" :severity="mapStateToSeverity(state)"></p-tag>
+        <p-tag
+            :value="state"
+            :class="{'p-tag-help': jobStateToPrimeVueSeverity(state) === 'help'}"
+            :severity="jobStateToPrimeVueSeverity(state)"
+        ></p-tag>
     `,
     props: {
         state: String,
     },
     methods: {
-        mapStateToSeverity(state) {
-            if (state === 'Done' || state === 'Completed') {
-                return 'success';
-            }
-            if (state === 'Errored') {
-                return 'danger';
-            }
-            return 'info';
-        }
+        jobStateToPrimeVueSeverity: TockyShared.jobStateToPrimeVueSeverity,
     },
+    mounted() {
+        registerStyleTag('tocky-state-tag', `
+            .p-tag-help {
+                background: var(--p-purple-100);
+                color: var(--p-purple-700);
+            }
+
+            .tocky-dark-mode .p-tag-help {
+                background: color-mix(in srgb,var(--p-purple-500),transparent 84%);
+                color: var(--p-purple-300);
+            }
+        `);
+    }
 };
 
 TockyShared.CopyButton = {
