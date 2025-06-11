@@ -433,7 +433,17 @@
 
         <p-toolbar>
             <template #start v-if="current_toc">
-                <div>ID: #{{current_toc.id}}</div>
+                <div>
+                    ID: #{{current_toc.id}}
+                    <p-button
+                        v-if="current_toc.batch_id"
+                        outlined
+                        size="small"
+                        rounded
+                        as="a"
+                        :href="`[[ TOCKY_APPLICATION_ROOT ]]/list#batch_id=${current_toc.batch_id}`"
+                    >Batch #{{ current_toc.batch_id }}</p-button>
+                </div>
                 <p-divider layout="vertical"></p-divider>
                 <div>State: <tocky-state-tag :state="current_toc.state"></tocky-state-tag></div>
                 <p-divider layout="vertical"></p-divider>
