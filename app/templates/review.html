@@ -402,7 +402,7 @@
                                 :text="!changesToSubmit"
                                 :icon="(!changesToSubmit && current_toc.record.state === 'Done') ? 'pi pi-check' : null"
                             ></p-button>
-                            <p-divider layout="vertical"></p-divider>
+                            <div style="width: 10px;"></div>
                             <p-button
                                 :label="save_to_ol_button.label"
                                 @click="saveToOL"
@@ -411,6 +411,16 @@
                                 :text="!changedSinceOlSave"
                                 :icon="save_to_ol_button.icon"
                                 v-tooltip.top="save_to_ol_button.error"
+                            ></p-button>
+                        </template>
+                        <template #end>
+                            <p-button
+                                label="Get next TOC"
+                                icon="pi pi-angle-right"
+                                icon-pos="right"
+                                :outlined="changesToSubmit"
+                                @click="getNextToc"
+                                v-tooltip.top="`Get the next TOC to review`"
                             ></p-button>
                         </template>
                     </p-toolbar>
@@ -439,14 +449,6 @@
                     @click="ev => $refs.advanced_menu.toggle(ev)"
                 >Advanced...</p-button>
                 <p-menu ref="advanced_menu" id="advanced_menu" :model="advanced_menu_options" :popup="true"></p-menu>
-            </template>
-
-            <template #end>
-                <p-button
-                    label="Get next TOC"
-                    @click="getNextToc"
-                    v-tooltip.top="`Get the next TOC to review`"
-                ></p-button>
             </template>
         </p-toolbar>
 
