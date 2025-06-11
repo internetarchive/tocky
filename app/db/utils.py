@@ -8,6 +8,7 @@ import sys
 import time
 from typing import Sequence, TypeVar, cast
 from functools import wraps
+from psutil import Process
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -182,11 +183,15 @@ def throttle(period: int = 1, lock: bool = False):
     return decorator
 
 
-def is_pid_running(pid: int) -> bool:
-    """Check if a process with the given PID is running."""
+def is_process_running(pid: int, create_time: float | None = None) -> bool:
+    """Check if a process with the given PID, and optionally given create_time, is running."""
     try:
         os.kill(pid, 0)
-        return True
+        # It's running, now check if the create time matches
+        if create_time is not None:
+            return Process(pid).create_time() == create_time
+        else:
+            return True
     except OSError:
         return False
 
@@ -204,6 +209,7 @@ def rate_limit(
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         pid = os.getpid()
+        id_prefix = f"{pid}#{Process(pid).create_time()}"
         key = f"{func.__module__}.{func.__name__}_rate_limit"
 
         # Remove queued calls from not running processes
@@ -216,29 +222,38 @@ def rate_limit(
                 queue: list[str] = []
                 last_calls: list[float] = []
             
-            # Remove calls from other processes
-            queue_pids = {
-                int(c.split('#')[0] or '0') # Previous version didn't store PID
-                for c in queue
+            # Remove calls from no longer running processes
+            # Tuple of (pid, create_time) is used to identify the process
+            queue_processes: set[tuple[int, float]] = {
+                # Get the PID and create time, drop the request id
+                (int(pid), float(pid_create_time))
+                for pid, pid_create_time, req_id in (
+                    tuple(c.split('#'))
+                    for c in queue
+                )
             }
-            running_pids = {str(c) for c in queue_pids if c and is_pid_running(c)}
-            new_queue = [c for c in queue if c.split('#')[0] in running_pids]
+            running_processes = {
+                f"{pid}#{create_time}"
+                for (pid, create_time) in queue_processes
+                if is_process_running(pid, create_time)
+            }
+            new_queue = [c for c in queue if c.rsplit('#', 1)[0] in running_processes]
 
             if queue != new_queue:
                 print(f"[RATE-LIMIT:{func.__name__}] Cleaning up queue, removed {len(queue) - len(new_queue)} calls from dead processes", file=sys.stderr, flush=True)
 
-            # Store the current process ID and the key for the rate limit
-            cur.execute("""
-                INSERT OR REPLACE INTO tocky_internals (key, value)
-                VALUES (?, ?)
-            """, (key, json.dumps((new_queue, last_calls))))
-            conn.commit()
+                # Store the current process ID and the key for the rate limit
+                cur.execute("""
+                    INSERT OR REPLACE INTO tocky_internals (key, value)
+                    VALUES (?, ?)
+                """, (key, json.dumps((new_queue, last_calls))))
+                conn.commit()
 
         @wraps(func)
         def wrapper(*args, **kwargs) -> T:
             # GUID for the call, to ensure uniqueness
             request_time = time.time()
-            call_id = f"{pid}#{request_time}"
+            call_id = f"{id_prefix}#{request_time}"
             while True:
                 # Use larger timeout to avoid lock contention
                 with DbContext(timeout=30) as (conn, cur):
@@ -304,7 +319,7 @@ def clear_dead_jobs():
         for row in rows:
             job_id = row['id']
             pid = row['process_id']
-            if not pid or not is_pid_running(pid):
+            if not pid or not is_process_running(pid):
                 print(f"[DB-CLEANUP] Job {job_id} is dead, clearing it", file=sys.stderr, flush=True)
                 # Set its state to 'Errored'
                 cur.execute("""
