@@ -133,10 +133,12 @@
                     >
                         <p-button
                             v-for="(count, state) in data.job_states"
+                            as="a"
                             :key="state"
                             :title="`${state}: ${count}`"
                             :severity="jobStateToPrimeVueSeverity(state)"
                             :style="{flex: count, height: '100%'}"
+                            :href="`[[ TOCKY_APPLICATION_ROOT ]]/list#batch_id=${data.id}&state=${state}`"
                         ></p-button>
                     </p-progress-bar>
                 </template>
