@@ -32,3 +32,4 @@ CREATE INDEX idx_q_created ON toc_queue (created);
 CREATE INDEX idx_q_state ON toc_queue (state);
 CREATE INDEX idx_q_batch_id ON toc_queue (batch_id);
 CREATE INDEX idx_q_batch_id_state ON toc_queue (batch_id, state);
+CREATE INDEX idx_q_record_ocaid ON toc_queue (json_extract(record, '$.ocaid'));

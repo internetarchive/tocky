@@ -176,6 +176,9 @@ TockyShared.jobStateToPrimeVueSeverity = function (state) {
     if (state === 'To Review') {
         return 'help';
     }
+    if (state === 'Skipped') {
+        return 'secondary';
+    }
     return 'info';
 };
 

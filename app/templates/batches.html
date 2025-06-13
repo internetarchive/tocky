@@ -125,6 +125,10 @@
             <p-column field="state" header="State" :show-filter-match-modes="false" style="min-width: 150px; white-space: nowrap;">
                 <template #body="{ data }">
                     <tocky-state-tag :state="data.state"></tocky-state-tag>
+                    ∙
+                    <small>
+                        {{ Object.values(data.job_states || {}).reduce((a, b) => a + b, 0) }} jobs
+                    </small>
                     <p-progress-bar
                         class="tocky-many-progress-bar"
                         style="margin-top: 4px;"
@@ -132,12 +136,13 @@
                         :value="100 * data.record.offset / data.record.limit"
                     >
                         <p-button
-                            v-for="(count, state) in data.job_states"
+                            v-for="(count, state) in Object.assign(data.record.skipped ? {Skipped: data.record.skipped} : {}, data.job_states)"
                             as="a"
                             :key="state"
                             :title="`${state}: ${count}`"
                             :severity="jobStateToPrimeVueSeverity(state)"
                             :style="{flex: count, height: '100%'}"
+                            :disabled="state === 'Skipped'"
                             :href="`[[ TOCKY_APPLICATION_ROOT ]]/list#batch_id=${data.id}&state=${state}`"
                         ></p-button>
                     </p-progress-bar>

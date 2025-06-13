@@ -32,6 +32,7 @@ class Batch:
     toc_filter: str
     detector: dict
     extractor: dict
+    skip_processed_books: bool
 
     @property
     def full_query(self) -> str:
@@ -49,6 +50,7 @@ class Batch:
             toc_filter=input_dict['batch']['toc_filter'],
             detector=input_dict['detector'],
             extractor=input_dict['extractor'],
+            skip_processed_books=input_dict['batch']['skip_processed_books']
         )
     
     def to_sql(self) -> tuple[str, tuple]:
@@ -84,6 +86,7 @@ class DbBatch(Batch):
     id: int
     created: datetime
     updated: datetime
+    skipped: int = 0
 
     @staticmethod
     def from_db_row(row: dict) -> 'DbBatch':
@@ -105,6 +108,8 @@ class DbBatch(Batch):
             toc_filter=batch['toc_filter'],
             detector=batch['detector'],
             extractor=batch['extractor'],
+            # This field was added later, so if unspecified assume false
+            skip_processed_books=batch.get('skip_processed_books', False),
         )
 
     async def start_next_job(self) -> None:
@@ -148,29 +153,50 @@ class DbBatch(Batch):
                     conn.commit()
                     print(f"[TOCKY-BATCH] Batch #{self.id}: no more records, marking as completed.", file=sys.stderr, flush=True)
                     return
-                ia_record = ia_record[0]
-                print(f"[TOCKY-BATCH] Batch #{self.id}: Processing {ia_record['identifier']} at offset {self.offset}\n{resp.url}", file=sys.stderr, flush=True)
 
-                await client.post(
-                    f'{env.TOCKY_INTERNAL_URL}/submit',
-                    timeout=5,
-                    headers={
-                        'X-API-KEY': env.TOCKY_SERVER_KEY,
-                        'Content-Type': 'application/json',
-                    },
-                    params={
-                        'background': 'true',
-                    },
-                    json={
-                        'creator': self.creator,
-                        'batch_id': self.id,
-                        'input_book': {
-                            'ia_id': ia_record['identifier'],
+                ia_record = ia_record[0]
+
+                skip = False
+                if self.skip_processed_books:
+                    cur.execute("""
+                        SELECT COUNT(*) FROM toc_queue
+                        WHERE record->>'$.ocaid' = ? AND state != 'Errored'
+                    """, (ia_record['identifier'],))
+                    skip = cur.fetchone()[0] > 0
+
+
+                if skip:
+                    print(f"[TOCKY-BATCH] Batch #{self.id}: Skipping already processed book {ia_record['identifier']}", file=sys.stderr, flush=True)
+                    self.skipped += 1
+                    cur.execute("""
+                        UPDATE batches
+                        SET record = json_set(record, '$.skipped', ?), updated = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    """, (self.skipped, self.id))
+                    conn.commit()
+                else:
+                    print(f"[TOCKY-BATCH] Batch #{self.id}: Processing {ia_record['identifier']} at offset {self.offset}\n{resp.url}", file=sys.stderr, flush=True)
+
+                    await client.post(
+                        f'{env.TOCKY_INTERNAL_URL}/submit',
+                        timeout=5,
+                        headers={
+                            'X-API-KEY': env.TOCKY_SERVER_KEY,
+                            'Content-Type': 'application/json',
                         },
-                        'detector': self.detector,
-                        'extractor': self.extractor,
-                    }
-                )
+                        params={
+                            'background': 'true',
+                        },
+                        json={
+                            'creator': self.creator,
+                            'batch_id': self.id,
+                            'input_book': {
+                                'ia_id': ia_record['identifier'],
+                            },
+                            'detector': self.detector,
+                            'extractor': self.extractor,
+                        }
+                    )
 
             # Update batch offset
             self.offset += 1

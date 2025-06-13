@@ -193,6 +193,13 @@
                                     ></p-checkbox>
                                     Allow microfilm
                                 </label>
+                                <label>
+                                    <p-checkbox
+                                        v-model="batchOptions.skipProcessedBooks"
+                                        :binary="true"
+                                    ></p-checkbox>
+                                    Skip already processed books
+                                </label>
                                 <p-divider></p-divider>
                                 <p-message severity="info">
                                     <p>Advanced batch processing options are still in development and not available for use yet. Check back later!</p>
@@ -482,6 +489,7 @@
                         pullStrategy: "manual",
                         openlibraryOnly: true,
                         allowMicrofilm: false,
+                        skipProcessedBooks: true,
                     },
 
                     batchPullStrategyOptions: [
@@ -626,6 +634,7 @@
                                 pull_strategy: this.batchOptions.pullStrategy,
                                 openlibrary_only: this.batchOptions.openlibraryOnly,
                                 allow_microfilm: this.batchOptions.allowMicrofilm,
+                                skip_processed_books: this.batchOptions.skipProcessedBooks,
                                 max_limit: this.batchOptions.maxLimit,
                             },
                         };
