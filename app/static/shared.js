@@ -321,6 +321,18 @@ TockyShared.PageSelector = {
             }
         },
     },
+    watch: {
+        async layout(newLayout) {
+            if (newLayout === 'grid') {
+                await this.$nextTick();
+                /** @type {HTMLElement} */
+                const selectedImg = this.$el.querySelector('.selected');
+                if (selectedImg) {
+                    selectedImg.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
+                }
+            }
+        }
+    },
     mounted() {
         registerStyleTag('tocky-page-selector', `
             .tocky-page-selector {
