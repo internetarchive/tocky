@@ -166,8 +166,14 @@ def list_view(request: Request):
     return templates.TemplateResponse('list.html', {"request": request})
 
 @tocky_router.get('/api/list')
-def api_list(request: Request, limit: int = Query(10), offset: int = Query(0), sort: str = Query('-created')):
-    return db_select_from_params(
+def api_list(
+    request: Request,
+    limit: int = Query(10),
+    offset: int = Query(0),
+    flat_ocr: bool = Query(False),
+    sort: str = Query('-created'),
+):
+    results = db_select_from_params(
         table='toc_queue',
         filter_fields=('id', 'state', 'batch_id', 'assignee', 'record.status', 'record.human_validation'),
         sort_fields=('id', 'created', 'state', 'batch_id', 'assignee'),
@@ -176,6 +182,19 @@ def api_list(request: Request, limit: int = Query(10), offset: int = Query(0), s
         sort=sort,
         request=request,
     )
+
+    if flat_ocr and not isinstance(results, Response):
+        for row in results:
+            if row['record']['toc_raw_ocr'][0].startswith('<OBJECT'):
+                # This is a DjVu XML, we need to redo OCR
+                row['record']['toc_flat_ocr'] = [
+                    print_ocr(ocr) for ocr in row['record']['toc_raw_ocr']
+                ]
+            else:
+                # This is a plain text OCR
+                row['record']['toc_flat_ocr'] = row['record']['toc_raw_ocr']
+
+    return results
 
 @tocky_router.get('/api/batches')
 def api_batches(request: Request, limit: int = Query(10), offset: int = Query(0), sort: str = Query('-created')):

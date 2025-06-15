@@ -226,7 +226,7 @@
                         <p-tab-panel value="ocr">
                             <pre
                                 class="page-ocr"
-                                v-for="page in current_toc.record.toc_raw_ocr"
+                                v-for="page in current_toc.record.toc_flat_ocr"
                                 :style="{ width: `${getCanvasWidth(page)}ch` }"
                             >{{page}}</pre>
                         </p-tab-panel>
@@ -671,9 +671,7 @@
                     if (!this.parsedOcr || !this.corrected_toc || !this.stitchEnabled) {
                         return null;
                     }
-                    const result = Vue.reactive(new OcrTocStitch(this.parsedOcr, this.corrected_toc));
-                    console.log('Stitched OCR:', result);
-                    return result;
+                    return Vue.reactive(new OcrTocStitch(this.parsedOcr, this.corrected_toc));
                 },
                 hasNesting() {
                     return this.corrected_toc?.some((entry) => entry.level > 0);
@@ -702,7 +700,7 @@
 
             async mounted() {
                 if (this.specific_id) {
-                    const params = new URLSearchParams({ id: this.specific_id });
+                    const params = new URLSearchParams({ id: this.specific_id, flat_ocr: true });
                     const resp = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/list?${params}`, {
                         headers: {
                             'Content-Type': 'application/json',
