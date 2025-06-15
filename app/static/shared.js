@@ -1,3 +1,4 @@
+// @ts-check
 const TockyShared = {};
 
 TockyShared.CONF = window.TOCKY_CONF;
@@ -239,6 +240,295 @@ TockyShared.CopyButton = {
     },
 };
 
+class Rect {
+    /**
+     * @param {number} x1 - The x-coordinate of the left edge.
+     * @param {number} y1 - The y-coordinate of the top edge.
+     * @param {number} x2 - The x-coordinate of the right edge.
+     * @param {number} y2 - The y-coordinate of the bottom edge.
+     */
+    constructor(x1, y1, x2, y2) {
+        this.x1 = x1;
+        this.y1 = y1;
+        this.x2 = x2;
+        this.y2 = y2;
+    }
+
+    get width() {
+        return this.x2 - this.x1;
+    }
+
+    get height() {
+        return this.y2 - this.y1;
+    }
+
+    static fromLBRT([left, bottom, right, top]) {
+        return new Rect(left, top, right, bottom);
+    }
+
+    toString() {
+        return `${this.x1},${this.y1},${this.x2},${this.y2}`;
+    }
+
+    toCSS(unit = 'px') {
+        if (unit === '%') {
+            return `left: ${this.x1 * 100}%; top: ${this.y1 * 100}%; width: ${this.width * 100}%; height: ${this.height * 100}%;`;
+        } else {
+            return `left: ${this.x1}${unit}; top: ${this.y1}${unit}; width: ${this.width}${unit}; height: ${this.height}${unit};`;
+        }
+    }
+
+    normalize(width, height) {
+        // Normalize coordinates to a 0-1 range based on the given width and height
+        return new Rect(
+            this.x1 / width,
+            this.y1 / height,
+            this.x2 / width,
+            this.y2 / height
+        );
+    }
+
+    /**
+     * @param {Rect[]} rects
+     */
+    static getBoundingBox(rects) {
+        if (rects.length === 0) return null;
+
+        const x1 = Math.min(...rects.map(r => r.x1));
+        const y1 = Math.min(...rects.map(r => r.y1));
+        const x2 = Math.max(...rects.map(r => r.x2));
+        const y2 = Math.max(...rects.map(r => r.y2));
+
+        return new Rect(x1, y1, x2, y2);
+    }
+}
+
+/**
+ * @param {TocEntry[]} tocJson
+ * @returns {TaggedWord[]}
+ */
+function tocJsonToTaggedWords(tocJson) {
+    /** @type {TaggedWord[]} */
+    const taggedWords = [];
+    for (let [index, entry] of Object.entries(tocJson)) {
+        for (const field of ["label", "title", "authors", "subtitle", "description", "pagenum"]) {
+            if (!(field in entry)) continue;
+
+            if (field === "authors" && entry.authors) {
+                for (const [authorIndex, author] of entry.authors.entries()) {
+                    for (const word of author.matchAll(/\S+/g) || []) {
+                        taggedWords.push({
+                            word: word[0],
+                            tocEntry: entry,
+                            tocPath: `${index}.${field}.${authorIndex}`,
+                            tocWordOffset: word.index,
+                        });
+                    }
+                }
+            } else {
+                for (const word of entry[field].matchAll(/\S+/g) || []) {
+                    taggedWords.push({
+                        word: word[0],
+                        tocEntry: entry,
+                        tocPath: `${index}.${field}`,
+                        tocWordOffset: word.index,
+                    });
+                }
+            }
+        }
+    }
+    return taggedWords;
+}
+
+class OcrTocStitch {
+    /**
+     * @param {OcrPage[]} ocr
+     * @param {TocEntry[]} tocJson
+     */
+    constructor(ocr, tocJson) {
+        const stitchedWords = /** @type {StitchedWord[]} */(tocJsonToTaggedWords(tocJson));
+
+        for (const word of stitchedWords) {
+            word.ocrWords = ocr.flatMap(page => page.findAllWords(word.word));
+        }
+
+        this.words = stitchedWords;
+        const matchedOcrWords = new Set(stitchedWords.flatMap(word => word.ocrWords.map(w => w.id)));
+
+        this.deletedWords = new Set(
+            ocr.flatMap(page => page.words)
+                .filter(ocrWord => !matchedOcrWords.has(ocrWord.id))
+                .map(ocrWord => ocrWord.id)
+        );
+        this.addedWords = new Set(
+            stitchedWords
+                .filter(word => word.ocrWords.length === 0)
+                .flatMap(word => word.ocrWords.map(w => w.id))
+        );
+        this.highlightedWords = new Set();
+        /** @type {Map<OcrWord, Set<string>>} */
+        this.ocrWordToExtraClasses = new Map();
+        /** @type {Map<string, OcrWord[]>} */
+        this.classToOcrWords = new Map();
+    }
+
+    /**
+     * @param {OcrWord[]} ocrWords
+     * @param {string} cls - The class to set for the OCR word.
+     */
+    setExtraClass(ocrWords, cls) {
+        this.clearExtraClass(cls);
+        // then add the new class
+        for (const ocrWord of ocrWords) {
+            const extraClasses = this.ocrWordToExtraClasses.get(ocrWord) || new Set();
+            extraClasses.add(cls);
+            this.ocrWordToExtraClasses.set(ocrWord, extraClasses);
+            const existingClasses = this.classToOcrWords.get(cls) || [];
+            existingClasses.push(ocrWord);
+            this.classToOcrWords.set(cls, existingClasses);
+        }
+    }
+
+    /**
+     * @param {string} cls - The class to clear from the OCR words.
+     **/
+    clearExtraClass(cls) {
+        const ocrWords = this.classToOcrWords.get(cls);
+        if (!ocrWords) return;
+
+        for (const ocrWord of ocrWords) {
+            const extraClasses = this.ocrWordToExtraClasses.get(ocrWord);
+            if (extraClasses) {
+                extraClasses.delete(cls);
+                if (extraClasses.size === 0) {
+                    this.ocrWordToExtraClasses.delete(ocrWord);
+                } else {
+                    this.ocrWordToExtraClasses.set(ocrWord, extraClasses);
+                }
+            }
+        }
+        this.classToOcrWords.delete(cls);
+    }
+
+
+    /**
+     * @param {TocEntry[]} tocEntries
+     */
+    getOcrWordsForTocEntries(tocEntries) {
+        const tocEntriesSet = new Set(tocEntries);
+        return this.words
+            .filter(word => tocEntriesSet.has(word.tocEntry) && word.ocrWords.length <= 2)
+            .flatMap(word => word.ocrWords);
+    }
+
+    /**
+     * @param {OcrWord[]} ocrWords
+     */
+    highlightWords(ocrWords) {
+        this.highlightedWords.clear();
+        for (const ocrWord of ocrWords) {
+            this.highlightedWords.add(ocrWord.id);
+        }
+    }
+
+    /**
+     * @param {OcrWord[]} ocrWords
+     * @returns {{ page: OcrPage, words: OcrWord[] } | undefined}
+     */
+    findMostMatchingOcrPage(ocrWords) {
+        return _.chain(ocrWords)
+            .groupBy(word => word.page)
+            .map((words, page) => ({
+                page,
+                count: words.length,
+                words: words,
+            }))
+            .sortBy('count')
+            .reverse()
+            .find()
+            .value();
+    }
+
+    /**
+     * @param {OcrWord} ocrWord
+     */
+    getOcrWordCSSClass(ocrWord) {
+        if (this.addedWords.has(ocrWord.id)) {
+            return 'added';
+        }
+        if (this.deletedWords.has(ocrWord.id)) {
+            return 'deleted';
+        }
+        return 'matched';
+    }
+    
+    /**
+     * @param {OcrWord} ocrWord
+     */
+    getOcrWordHighlighted(ocrWord) {
+        return this.highlightedWords.has(ocrWord.id) ? 'highlighted' : '';
+    }
+
+    /**
+     * @param {OcrWord} ocrWord
+     */
+    getOcrWordExtraClasses(ocrWord) {
+        const extraClasses = this.ocrWordToExtraClasses.get(ocrWord);
+        if (!extraClasses || extraClasses.size === 0) {
+            return '';
+        }
+        return Array.from(extraClasses);
+    }
+}
+
+class OcrWord {
+    /**
+     * @param {OcrPage} page - The OCR page containing the word.
+     * @param {number} wordIndex - The index of the word in the page's words array.
+     * @param {Element} wordElement - The XML element representing a word in the OCR XML.
+     * @example `<WORD coords="1388,193,1489,158" x-confidence="98.5">PAGE</WORD>`
+     */
+    constructor(page, wordIndex, wordElement) {
+        this.element = wordElement;
+        /** @type {string} */
+        this.text = /** @type {string} */(wordElement.textContent);
+        /** @type {Rect} */
+        this.coords = Rect.fromLBRT(wordElement.getAttribute('coords').split(',').map(parseFloat));
+        this.id = `PageLeaf#${page.leafNumber}/Word#${wordIndex}`;
+        this.page = page;
+    }
+}
+
+class OcrPage {
+    /**
+     * @param {string} ocrXml - The OCR XML string to parse.
+     */
+    constructor(ocrXml) {
+        // parse the OBJECT as xml
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(ocrXml, "application/xml");
+        this.xmlObject = xmlDoc.querySelector('OBJECT');
+        // eg `<OBJECT data="file://localhost/var/tmp/autoclean/derive/goodytwoshoes00newyiala/goodytwoshoes00newyiala.djvu" type="image/x.djvu" usemap="goodytwoshoes00newyiala_0001.djvu" width="2454" height="3192">`
+        // Leaf number is in usemap, eg `usemap="goodytwoshoes00newyiala_0001.djvu"`
+        this.leafNumber = parseInt(this.xmlObject.getAttribute('usemap').match(/_(\d+)\./)[1], 10);
+        this.width = parseFloat(this.xmlObject.getAttribute('width'));
+        this.height = parseFloat(this.xmlObject.getAttribute('height'));
+        this.words = Array.from(this.xmlObject.querySelectorAll('WORD'))
+            .map((wordElement, i) => new OcrWord(this, i, wordElement));
+    }
+
+    /**
+     * @param {string} word
+     */
+    findAllWords(word) {
+        /** @param {string} text */
+        function normalizeText(text) {
+            return text.toLowerCase().trim().replace(/[.:]+$/, '');
+        }
+        return this.words.filter(ocrWord => normalizeText(ocrWord.text) === normalizeText(word))
+    }
+}
+
 // v-models
 TockyShared.PageSelector = {
     template: `
@@ -254,6 +544,15 @@ TockyShared.PageSelector = {
                     :class="{ 'selected': page.selected }"
                     @click="toggleLeafNumber(page.number)"
                 >
+                <div class="tocky-page-selector__ocr" v-if="ocr && ocr[index]">
+                    <span
+                        v-for="(word, widx) in ocr[index].words"
+                        :key="widx"
+                        :class="[stitch?.getOcrWordCSSClass(word), stitch?.getOcrWordHighlighted(word), ...(stitch?.getOcrWordExtraClasses(word) || [])]"
+                        :style="word.coords.normalize(ocr[index].width, ocr[index].height).toCSS('%')"
+                        :title="word.text"
+                    ></span>
+                </div>
                 <p-button
                     as="a"
                     :href="\`https://archive.org/details/\${iaId}/page/leaf\${page.number}\`"
@@ -285,6 +584,20 @@ TockyShared.PageSelector = {
             type: Boolean,
             default: false,
         },
+        /**
+         * @type {OcrPage[]}
+         **/
+        ocr: {
+            type: Array,
+            default: null,
+        },
+        /**
+         * @type {OcrTocStitch[]}
+         */
+        stitch: {
+            type: Object,
+            default: null,
+        }
     },
     emits: ['update:modelValue'],
     methods: {
@@ -367,6 +680,7 @@ TockyShared.PageSelector = {
             }
             
             .tocky-page-selector img.selected {
+                /** Keep 4px in sync with text layer offset */
                 border: 4px solid green;
             }
 
@@ -389,13 +703,49 @@ TockyShared.PageSelector = {
 
             .tocky-page-selector__page {
                 position: relative;
-                padding: 0 5px;
             }
             .tocky-page-selector__page .p-tag {
                 position: absolute;
                 bottom: 12px;
                 left: 50%;
                 transform: translateX(-50%);
+            }
+            .tocky-page-selector__ocr {
+                position: absolute;
+                /** Match selected border */
+                inset: 4px;
+                mix-blend-mode: multiply;
+            }
+            .tocky-page-selector__ocr span {
+                position: absolute;
+                color: transparent;
+                border-radius: 3px;
+                font-size: 9px;
+                line-height: 1em;
+                opacity: 0.2;
+                transition: opacity 0.2s;
+                --ocr-span-color: var(--p-blue-500);
+                background-color: var(--ocr-span-color);
+            }
+
+            .tocky-page-selector__ocr span.added {
+                --ocr-span-color: var(--p-green-500);
+            }
+            .tocky-page-selector__ocr span.deleted {
+                --ocr-span-color: var(--p-red-500);
+                opacity: 0.5;
+            }
+            .tocky-page-selector__ocr span.matched {
+                --ocr-span-color: var(--p-blue-500);
+            }
+            .tocky-page-selector__ocr span.highlighted {
+                opacity: 0.35;
+            }
+            .tocky-page-selector__ocr span.hovered {
+                opacity: 0.5;
+            }
+            .tocky-page-selector__ocr span.selected {
+                outline: 2px solid var(--ocr-span-color);
             }
         `);
     }

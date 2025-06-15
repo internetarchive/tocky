@@ -247,8 +247,19 @@
                                 :context="editing_toc_pages"
                                 :readonly="!editing_toc_pages"
                                 :layout="editing_toc_pages ? 'grid' : 'vertical'"
+                                :ocr="editing_toc_pages ? null : parsedOcr"
+                                :stitch="editing_toc_pages ? null : stitch"
                             ></tocky-page-selector>
                             <p-toolbar style="position: sticky; bottom: 0;">
+                                <template #start>
+                                    <p-button
+                                        icon="pi pi-link"
+                                        v-tooltip="`Enable scroll-link + word stitching (experimental)`"
+                                        v-if="!editing_toc_pages"
+                                        @click="stitchEnabled = !stitchEnabled"
+                                        :outlined="!stitchEnabled"
+                                    />
+                                </template>
                                 <template #center>
                                     {{corrected_toc_pages.length}} pages
                                     <p-button
@@ -310,7 +321,7 @@
                                     :theme="config.darkMode ? 'vs-dark' : null"
                                 ></vue-monaco-editor>
                             </p-tab-panel>
-                            <p-tab-panel value="table" class="floating-toolbar--container">
+                            <p-tab-panel value="table" class="floating-toolbar--container" @scroll.passive="handleTocTableScroll">
                                 <p-toolbar class="floating-toolbar tocky-toolbar-thin" style="position: sticky; top: 0; z-index: 100;">
                                     <template #start v-if="selectedTocRows.length">
                                         {{selectedTocRows.length}} rows selected
@@ -330,6 +341,11 @@
                                     v-model:selection="selectedTocRows"
                                     selection-mode="multiple"
                                     :row-style="row => ({ '--toc-entry-level': row.level })"
+                                    :pt="{
+                                        bodyRow: {
+                                            onmouseenter: handleTocRowHover,
+                                        },
+                                    }"
                                 >
                                     <p-column field="label" header="Label">
                                         <template #editor="{ data, field }">
@@ -499,7 +515,7 @@
         </p-dialog>
     </div>
 
-    <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.prod.js"></script>
     <script src="https://unpkg.com/primevue@4.0.5/umd/primevue.min.js"></script>
     <script src="https://unpkg.com/@primevue/themes@4.0.5/umd/aura.min.js"></script>
     <script src="[[ url_for('static', path='shared.js') ]]"></script>
@@ -630,6 +646,8 @@
 
                     // Table editor
                     selectedTocRows: [],
+
+                    stitchEnabled: true,
                 };
             },
 
@@ -637,9 +655,26 @@
                 monacoValue: _.debounce(function (value) {
                     this.updateTocFromMonaco();
                 }, 500),
+                selectedTocRows() {
+                    if (!this.stitch) return;
+                    const ocrWords = this.stitch.getOcrWordsForTocEntries(this.selectedTocRows);
+                    this.stitch.setExtraClass(ocrWords, 'selected');
+                },
             },
 
             computed: {
+                parsedOcr() {
+                    return this.current_toc?.record?.toc_raw_ocr
+                        ?.map((ocr) => new OcrPage(ocr)) || null;
+                },
+                stitch() {
+                    if (!this.parsedOcr || !this.corrected_toc || !this.stitchEnabled) {
+                        return null;
+                    }
+                    const result = Vue.reactive(new OcrTocStitch(this.parsedOcr, this.corrected_toc));
+                    console.log('Stitched OCR:', result);
+                    return result;
+                },
                 hasNesting() {
                     return this.corrected_toc?.some((entry) => entry.level > 0);
                 },
@@ -678,6 +713,58 @@
             },
 
             methods: {
+                /**
+                 * @param {MouseEvent} event
+                 */
+                handleTocRowHover(event) {
+                    if (!this.stitch) return;
+                    const index = parseFloat(event.currentTarget.getAttribute('data-p-index'));
+                    const ocrWords = this.stitch.getOcrWordsForTocEntries([this.corrected_toc[index]]);
+                    this.stitch.setExtraClass(ocrWords, 'hovered');
+                },
+
+                /**
+                 * @param {MouseEvent} event
+                 */
+                handleTocTableScroll: _.throttle(
+                    async function (event) {
+                        if (!this.stitch) return;
+
+                        // get visible rows
+                        const allRows = event.target.querySelectorAll('.p-datatable-tbody > tr');
+                        const visibleRows = Array.from(allRows).filter(row => {
+                            // event.target is the scrollable element
+                            const rect = row.getBoundingClientRect();
+                            const scrollRect = event.target.getBoundingClientRect();
+                            return (
+                                rect.top >= scrollRect.top &&
+                                rect.bottom <= scrollRect.bottom
+                            );
+                        });
+                        // Use data-p-index
+                        const visibleRowIndices = visibleRows.map(row => parseFloat(row.getAttribute('data-p-index')));
+                        // Finally, get the tocEntries for those indices
+                        const visibleTocEntries = this.corrected_toc.filter((_, index) => visibleRowIndices.includes(index));
+                        const ocrWords = this.stitch.getOcrWordsForTocEntries(visibleTocEntries);
+                        // Highlight the OCR for those entries
+                        this.stitch.highlightWords(ocrWords);
+                        await this.$nextTick();
+
+                        const scrollableElement = document.querySelector('.toc-pages-panel');
+                        const scrollableRect = scrollableElement.getBoundingClientRect();
+                        const highlightedWords = Array.from(document.querySelectorAll('.tocky-page-selector__ocr > span.highlighted'));
+                        highlightedWords[Math.floor(highlightedWords.length / 2)].scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'nearest',
+                        });
+                    },
+                    200,
+                    {
+                        leading: true,
+                        trailing: true,
+                    }
+                ),
                 prettyJsonToc(toc) {
                     const normalizedToc = _.chain(toc)
                         .map(entry => {

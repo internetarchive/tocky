@@ -17,6 +17,7 @@ from tocky.bulk_processor import TockyOptionsError, build_phase_from_options, pr
 from tocky.env import get_env
 from tocky.extractor.ai_extractor import AiExtractor
 from tocky.ocr import get_supported_engines
+from tocky.ocr.printer import print_ocr
 from tocky.utils import get_tocky_version
 from tocky.utils.ia import get_ia_metadata_field, get_page_image
 from jinja2 import Environment, FileSystemLoader, pass_context
@@ -222,10 +223,11 @@ def api_extractor_prompt(id: int = Query(...)):
         return JSONResponse({'success': False, 'message': 'Extractor type is not AI Extractor'}, status_code=400)
     extractor = build_phase_from_options(EXTRACTORS_BY_NAME, extractor_type, record['extractor']['options'])
     extractor = cast(AiExtractor, extractor)
+    toc_flat_ocr = [print_ocr(ocr) for ocr in record['toc_raw_ocr']]
     return {
         'success': True,
         'messages': extractor.build_prompt(
-            extractor.chunk_ocr_text(record['toc_raw_ocr'])[0],
+            extractor.chunk_ocr_text(toc_flat_ocr)[0],
             book_title=get_ia_metadata_field(record['input_book']['ia_id'], '/metadata/title'),
             prev_toc=None,
         ),

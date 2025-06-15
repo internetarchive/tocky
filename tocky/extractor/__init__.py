@@ -97,6 +97,7 @@ class AbstractExtractor(Generic[TParams]):
         self.S = ShareableState()
 
     toc_raw_ocr: list[str] | None = None
+    toc_flat_ocr: list[str] | None = None
     toc_response: TocResponse | None = None
 
     def predict_cost(self) -> float:
