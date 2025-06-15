@@ -206,3 +206,6 @@ class DbBatch(Batch):
                 WHERE id = ?
             """, (self.offset, self.id))
             conn.commit()
+
+            if skip:
+                return await self.start_next_job()
