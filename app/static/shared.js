@@ -523,7 +523,7 @@ class OcrPage {
     findAllWords(word) {
         /** @param {string} text */
         function normalizeText(text) {
-            return text.toLowerCase().trim().replace(/[.:]+$/, '');
+            return text.toLowerCase().trim().replace(/[.:,]+$/, '');
         }
         return this.words.filter(ocrWord => normalizeText(ocrWord.text) === normalizeText(word))
     }
