@@ -6,6 +6,7 @@ import json
 import re
 import sys
 from typing import Any, Literal, TypedDict, cast
+import httpx
 from internetarchive import get_session
 from PIL import Image
 from lxml import etree
@@ -15,10 +16,12 @@ import concurrent.futures
 from dotenv import load_dotenv
 import requests
 
+from tocky.env import get_env
 from tocky.utils import PageScan
 
 load_dotenv()  # take environment variables from .env.
 
+env = get_env()
 ia_session = get_session()
 
 class IaMetadata(TypedDict):
@@ -207,3 +210,64 @@ def bulk_ia_to_ol(ia_records: list[IaLiteMetadata]) -> dict[str, dict]:
       ol_record['ocaid'] = ia_record['identifier']
   
   return ol_records_by_key
+
+
+async def ia_advanced_search_at_index(
+  q: str,
+  index: int,
+  fl: str | None = None,
+  sort: str | None = None,
+  buffer_size: int = 100,
+):
+  page = (index // buffer_size) + 1
+  index_in_page = index % buffer_size
+  result = await ia_advanced_search(
+    q=q,
+    fl=fl,
+    rows=buffer_size,
+    page=page,
+    sort=sort,
+  )
+  # Now swap out docs to be just the desired index
+  docs = result['response']['docs']
+  if index_in_page >= len(docs):
+    docs = []
+  else:
+    docs = [docs[index_in_page]]
+  
+  return {
+    'responseHeader': {
+      **result['responseHeader'],
+      'params': {
+        **result['responseHeader'].get('params', {}),
+        'rows': 1,
+        'page': index,
+      },
+    },
+    'response': {
+      'start': index,
+      'docs': docs,
+    },
+  }
+
+
+@env.cache.amemoize(expire=60 * 60)
+async def ia_advanced_search(
+  q: str,
+  fl: str | None = None,
+  rows: int = 100,
+  page: int = 1,
+  sort: str | None = None,
+):
+  async with httpx.AsyncClient() as client:
+      resp = await client.get('https://archive.org/advancedsearch.php', params={
+          'q': q,
+          **({'fl': fl} if fl else {}),
+          'rows': rows,
+          'page': page,
+          **({'sort': sort} if sort else {}),
+          'output': 'json',
+      })
+      print(f"IA advanced search: {resp.url}")
+      resp.raise_for_status()
+      return resp.json()

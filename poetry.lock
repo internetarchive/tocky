@@ -421,6 +421,17 @@ files = [
 ]
 
 [[package]]
+name = "diskcache"
+version = "5.6.3"
+description = "Disk Cache -- Disk and file backed persistent cache."
+optional = false
+python-versions = ">=3"
+files = [
+    {file = "diskcache-5.6.3-py3-none-any.whl", hash = "sha256:5e31b2d5fbad117cc363ebaf6b689474db18a1f6438bc82358b024abd4c2ca19"},
+    {file = "diskcache-5.6.3.tar.gz", hash = "sha256:2c3a3fa2743d8535d832ec61c2054a1641f41775aa7c556758a109941e33e4fc"},
+]
+
+[[package]]
 name = "distro"
 version = "1.9.0"
 description = "Distro - an OS platform information API"
@@ -3325,4 +3336,4 @@ tesseract = ["numpy", "opencv-contrib-python", "pandas", "pytesseract"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "35d13da80d47987eec99587e4ee841fc25a1172bcafa1584bedc06636e6ac5e4"
+content-hash = "94d985a5362b113cec0144219e5aecd4b9f308ec16b91e0273b25c582f4e20cb"

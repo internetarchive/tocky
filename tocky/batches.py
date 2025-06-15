@@ -9,6 +9,7 @@ import requests
 
 from app.db.utils import DbContext
 from tocky.env import get_env
+from tocky.utils.ia import ia_advanced_search_at_index
 
 env = get_env()
 
@@ -134,49 +135,46 @@ class DbBatch(Batch):
                 print(f"[TOCKY-BATCH] Batch #{self.id}: Offset complete.", file=sys.stderr, flush=True)
                 return
 
-            async with httpx.AsyncClient() as client:
-                resp = await client.get('https://archive.org/advancedsearch.php', params={
-                    'q': self.full_query,
-                    'fl': 'identifier,openlibrary_edition',
-                    'rows': 1,
-                    'page': self.offset + 1,
-                    # Need to sort by something to ensure consistent results; might want
-                    # to make this configurable in the future.
-                    'sort': '-week',
-                    'output': 'json',
-                })
-                resp.raise_for_status()
-                ia_record = resp.json()['response']['docs']
+            resp = await ia_advanced_search_at_index(
+                self.full_query,
+                self.offset,
+                fl='identifier,openlibrary_edition',
+                # Need to sort by something to ensure consistent results; might want
+                # to make this configurable in the future.
+                sort='-week',
+            )
+            ia_record = resp['response']['docs']
 
-                if not ia_record:
-                    cur.execute("UPDATE batches SET state = 'Completed' WHERE id = ?", (self.id,))
-                    conn.commit()
-                    print(f"[TOCKY-BATCH] Batch #{self.id}: no more records, marking as completed.", file=sys.stderr, flush=True)
-                    return
+            if not ia_record:
+                cur.execute("UPDATE batches SET state = 'Completed' WHERE id = ?", (self.id,))
+                conn.commit()
+                print(f"[TOCKY-BATCH] Batch #{self.id}: no more records, marking as completed.", file=sys.stderr, flush=True)
+                return
 
-                ia_record = ia_record[0]
+            ia_record = ia_record[0]
 
-                skip = False
-                if self.skip_processed_books:
-                    cur.execute("""
-                        SELECT COUNT(*) FROM toc_queue
-                        WHERE record->>'$.ocaid' = ? AND state != 'Errored'
-                    """, (ia_record['identifier'],))
-                    skip = cur.fetchone()[0] > 0
+            skip = False
+            if self.skip_processed_books:
+                cur.execute("""
+                    SELECT COUNT(*) FROM toc_queue
+                    WHERE record->>'$.ocaid' = ? AND state != 'Errored'
+                """, (ia_record['identifier'],))
+                skip = cur.fetchone()[0] > 0
 
 
-                if skip:
-                    print(f"[TOCKY-BATCH] Batch #{self.id}: Skipping already processed book {ia_record['identifier']}", file=sys.stderr, flush=True)
-                    self.skipped += 1
-                    cur.execute("""
-                        UPDATE batches
-                        SET record = json_set(record, '$.skipped', ?), updated = CURRENT_TIMESTAMP
-                        WHERE id = ?
-                    """, (self.skipped, self.id))
-                    conn.commit()
-                else:
-                    print(f"[TOCKY-BATCH] Batch #{self.id}: Processing {ia_record['identifier']} at offset {self.offset}\n{resp.url}", file=sys.stderr, flush=True)
+            if skip:
+                print(f"[TOCKY-BATCH] Batch #{self.id}: Skipping already processed book {ia_record['identifier']}", file=sys.stderr, flush=True)
+                self.skipped += 1
+                cur.execute("""
+                    UPDATE batches
+                    SET record = json_set(record, '$.skipped', ?), updated = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (self.skipped, self.id))
+                conn.commit()
+            else:
+                print(f"[TOCKY-BATCH] Batch #{self.id}: Processing {ia_record['identifier']} at offset {self.offset}", file=sys.stderr, flush=True)
 
+                async with httpx.AsyncClient() as client:
                     await client.post(
                         f'{env.TOCKY_INTERNAL_URL}/submit',
                         timeout=5,

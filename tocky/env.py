@@ -6,6 +6,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 
+from tocky.utils.async_cache import CacheWithAsync
+
 
 @functools.cache
 def get_env() -> "TockyEnv":
@@ -33,6 +35,11 @@ class TockyEnv:
     def TOCKY_APPLICATION_ROOT(self) -> str:
         return urlparse(self.TOCKY_PUBLIC_URL).path
 
+    @property
+    def TOCKY_DISK_CACHE(self) -> Path:
+        """Path to the disk cache directory."""
+        return Path(getenv_required('TOCKY_DISK_CACHE')).resolve()
+
     @cached_property
     def TOCKY_QUEUE_DB_PATH(self) -> Path:
         return Path(getenv_required('TOCKY_QUEUE_DB_PATH'))
@@ -52,6 +59,10 @@ class TockyEnv:
     @property
     def AZURE_ENDPOINT(self) -> str | None:
         return os.environ.get('AZURE_ENDPOINT')
+
+    @functools.cached_property
+    def cache(self):
+        return CacheWithAsync(self.TOCKY_DISK_CACHE)
 
     @staticmethod
     def from_env() -> "TockyEnv":
