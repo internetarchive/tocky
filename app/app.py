@@ -185,6 +185,8 @@ def api_list(
 
     if flat_ocr and not isinstance(results, Response):
         for row in results:
+            if not row['record'].get('toc_raw_ocr'):
+                continue
             if row['record']['toc_raw_ocr'][0].startswith('<OBJECT'):
                 # This is a DjVu XML, we need to redo OCR
                 row['record']['toc_flat_ocr'] = [
