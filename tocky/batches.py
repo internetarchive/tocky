@@ -109,6 +109,7 @@ class DbBatch(Batch):
             toc_filter=batch['toc_filter'],
             detector=batch['detector'],
             extractor=batch['extractor'],
+            skipped=batch.get('skipped', 0),
             # This field was added later, so if unspecified assume false
             skip_processed_books=batch.get('skip_processed_books', False),
         )
