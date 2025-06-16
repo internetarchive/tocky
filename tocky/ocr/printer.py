@@ -44,7 +44,9 @@ def ocr_printer_canvas(djvu_page: str | etree._Element) -> str:
     canvas = ""
 
     # Convert inches to pixels
-    dpi = int((root.xpath(".//PARAM[@name='DPI']/@value") or [int(get_ia_metadata(ocaid)['metadata']['ppi'])])[0])
+    param_dpi_value = cast(list[str] | None, root.xpath(".//PARAM[@name='DPI']/@value"))
+    assert param_dpi_value, "DPI parameter not found in the DJVU XML"
+    dpi = int(param_dpi_value[0])
     line_rounding_size = round(0.0333 * dpi)
     img_width = int(root.xpath('./@width')[0])
     img_height = int(root.xpath('./@height')[0])

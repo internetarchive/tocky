@@ -107,7 +107,7 @@ def get_page_scan(
   return PageScan(
     uri=f'https://archive.org/details/{ocaid}#page/leaf{leaf_num}',
     image=image,
-    dpi=int(full_metadata['metadata']['ppi']),
+    dpi=int(full_metadata['metadata'].get('ppi') or get_ppi_from_djvu_xml(ocaid)),
     lang=ia_language_to_iso639_2_code(lang) or 'eng',
   )
 
@@ -179,6 +179,19 @@ def get_djvu_pages(djvu_url: str, start: int=0, end: int=sys.maxsize):
     for _, elem in itertools.islice(etree.iterparse(response.raw, events=("end",), tag="OBJECT"), start, end):
       page_name = cast(str, elem.xpath(".//PARAM[@name='PAGE']/@value")[0])
       yield page_name, cast(etree._Element, elem)
+
+
+@env.cache.memoize(expire=60 * 60)
+def get_ppi_from_djvu_xml(ocaid: str) -> int:
+  """
+  Fetches the PPI from the DJVU XML file of an item on archive.org
+  """
+  djvu_url = ocaid_to_djvu_url(ocaid)
+  for _, elem in itertools.islice(get_djvu_pages(djvu_url), 10):
+    if ppi_value := cast(list[str] | None, elem.xpath(".//PARAM[@name='DPI']/@value")):
+      return int(ppi_value[0])
+  raise ValueError(f"No DPI found in DJVU XML for {ocaid}")
+
 
 def get_djvu_by_leaf_nums(djvu_url: str, start: int, end: int):
   """
