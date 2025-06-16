@@ -755,7 +755,7 @@
                         const visibleTocEntries = this.corrected_toc.filter((_, index) => visibleRowIndices.includes(index));
                         const ocrWords = this.stitch.getOcrWordsForTocEntries(visibleTocEntries);
                         // Highlight the OCR for those entries
-                        this.stitch.highlightWords(ocrWords);
+                        this.stitch.setExtraClass(ocrWords, 'highlighted');
                         await this.$nextTick();
 
                         const scrollableElement = document.querySelector('.toc-pages-panel');

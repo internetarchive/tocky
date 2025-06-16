@@ -365,7 +365,6 @@ class OcrTocStitch {
                 .filter(word => word.ocrWords.length === 0)
                 .flatMap(word => word.ocrWords.map(w => w.id))
         );
-        this.highlightedWords = new Set();
         /** @type {Map<OcrWord, Set<string>>} */
         this.ocrWordToExtraClasses = new Map();
         /** @type {Map<string, OcrWord[]>} */
@@ -423,16 +422,6 @@ class OcrTocStitch {
 
     /**
      * @param {OcrWord[]} ocrWords
-     */
-    highlightWords(ocrWords) {
-        this.highlightedWords.clear();
-        for (const ocrWord of ocrWords) {
-            this.highlightedWords.add(ocrWord.id);
-        }
-    }
-
-    /**
-     * @param {OcrWord[]} ocrWords
      * @returns {{ page: OcrPage, words: OcrWord[] } | undefined}
      */
     findMostMatchingOcrPage(ocrWords) {
@@ -460,13 +449,6 @@ class OcrTocStitch {
             return 'deleted';
         }
         return 'matched';
-    }
-    
-    /**
-     * @param {OcrWord} ocrWord
-     */
-    getOcrWordHighlighted(ocrWord) {
-        return this.highlightedWords.has(ocrWord.id) ? 'highlighted' : '';
     }
 
     /**
@@ -548,7 +530,7 @@ TockyShared.PageSelector = {
                     <span
                         v-for="(word, widx) in ocr[index].words"
                         :key="widx"
-                        :class="[stitch?.getOcrWordCSSClass(word), stitch?.getOcrWordHighlighted(word), ...(stitch?.getOcrWordExtraClasses(word) || [])]"
+                        :class="[stitch?.getOcrWordCSSClass(word), ...(stitch?.getOcrWordExtraClasses(word) || [])]"
                         :style="word.coords.normalize(ocr[index].width, ocr[index].height).toCSS('%')"
                         :title="word.text"
                     ></span>
