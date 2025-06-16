@@ -757,15 +757,7 @@
                         // Highlight the OCR for those entries
                         this.stitch.setExtraClass(ocrWords, 'highlighted');
                         await this.$nextTick();
-
-                        const scrollableElement = document.querySelector('.toc-pages-panel');
-                        const scrollableRect = scrollableElement.getBoundingClientRect();
-                        const highlightedWords = Array.from(document.querySelectorAll('.tocky-page-selector__ocr > span.highlighted'));
-                        highlightedWords[Math.floor(highlightedWords.length / 2)].scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center',
-                            inline: 'nearest',
-                        });
+                        this.scrollWordsIntoView('highlighted');
                     },
                     200,
                     {
@@ -773,6 +765,16 @@
                         trailing: true,
                     }
                 ),
+                scrollWordsIntoView(className) {
+                    const scrollableElement = document.querySelector('.toc-pages-panel');
+                    const scrollableRect = scrollableElement.getBoundingClientRect();
+                    const highlightedWords = Array.from(document.querySelectorAll(`.tocky-page-selector__ocr > span.${className}`));
+                    highlightedWords[Math.floor(highlightedWords.length / 2)].scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'nearest',
+                    });
+                },
                 prettyJsonToc(toc) {
                     const normalizedToc = _.chain(toc)
                         .map(entry => {
@@ -842,6 +844,29 @@
                 },
                 handleMonacoMount(editor) {
                     this.monacoEditor = editor;
+                    editor.onDidScrollChange(_.throttle(async (ev) => {
+                        if (!this.stitch) return;
+                        const visibleRanges = editor.getVisibleRanges();
+                        // visibleRanges is an array of { startLineNumber, endLineNumber }
+                        const tocEntries = visibleRanges
+                            .flatMap(r => this.corrected_toc.slice(r.startLineNumber - 1, r.endLineNumber));
+
+                        this.stitch.setExtraClass(this.stitch.getOcrWordsForTocEntries(tocEntries), 'highlighted');
+                        await 0; // wait for event loop + DOM update
+                        this.scrollWordsIntoView('highlighted');
+                    }, 200, {
+                        leading: true,
+                        trailing: true,
+                    }));
+
+                    editor.onDidChangeCursorPosition(async (ev) => {
+                        if (!this.stitch) return;
+                        const tocEntries = _.chain(editor.getSelections())
+                            .flatMap(s => _.range(s.startLineNumber, s.endLineNumber + 1))
+                            .uniq()
+                            .map(lineNumber => this.corrected_toc[lineNumber - 1]);
+                        this.stitch.setExtraClass(this.stitch.getOcrWordsForTocEntries(tocEntries), 'selected');
+                    });
                 },
                 async getNextToc() {
                     const example = {
