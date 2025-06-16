@@ -414,10 +414,60 @@ class OcrTocStitch {
      * @param {TocEntry[]} tocEntries
      */
     getOcrWordsForTocEntries(tocEntries) {
-        const tocEntriesSet = new Set(tocEntries);
-        return this.words
-            .filter(word => tocEntriesSet.has(word.tocEntry) && word.ocrWords.length <= 2)
+        return tocEntries.flatMap(tocEntry => this.getOcrWordsForTocEntry(tocEntry))
+    }
+
+    /**
+     * @param {TocEntry} tocEntry
+     */
+    getOcrWordsForTocEntry(tocEntry) {
+        // First check words which only one occurrence in the OCR
+        let highConfidenceWords = this.words
+            .filter(word => tocEntry == word.tocEntry && word.ocrWords.length <= 1)
             .flatMap(word => word.ocrWords);
+        
+        if (highConfidenceWords.length === 0) {
+            // No luck, try a more relaxed search
+            highConfidenceWords = this.words
+            .filter(word => tocEntry == word.tocEntry && word.ocrWords.length <= 2)
+            .flatMap(word => word.ocrWords);
+        }
+
+        const includedWordTexts = new Set(highConfidenceWords.map(word => normalizeOcrWordText(word.text)));
+
+        const allWords = this.words
+            .filter(word => tocEntry == word.tocEntry)
+            .flatMap(word => word.ocrWords)
+
+        let minWordIndex = highConfidenceWords[0]?.wordIndex;
+        let maxWordIndex = highConfidenceWords[highConfidenceWords.length - 1]?.wordIndex;
+
+        // Expand backwards to include mid-confidence words
+        for (let i = minWordIndex; i >= Math.max(0, minWordIndex - 5); i--) {
+            const word = allWords.find(ocrWord => ocrWord.wordIndex === i);
+            if (word && !includedWordTexts.has(normalizeOcrWordText(word.text))) {
+                minWordIndex = i;
+                highConfidenceWords.unshift(word);
+            }
+        }
+
+        // Expand forwards to include mid-confidence words
+        for (let i = maxWordIndex; i <= Math.min(allWords.length - 1, maxWordIndex + 5); i++) {
+            const word = allWords.find(ocrWord => ocrWord.wordIndex === i);
+            if (word && !includedWordTexts.has(normalizeOcrWordText(word.text))) {
+                maxWordIndex = i;
+                highConfidenceWords.push(word);
+            }
+        }
+
+        const midConfidenceWords = allWords
+            .filter(ocrWord => ocrWord.wordIndex >= minWordIndex && ocrWord.wordIndex <= maxWordIndex)
+            .filter(ocrWord => !highConfidenceWords.includes(ocrWord) && !includedWordTexts.has(normalizeOcrWordText(ocrWord.text)));
+
+        return _.sortBy([
+            ...highConfidenceWords,
+            ...midConfidenceWords,
+        ], 'wordIndex');
     }
 
     /**
@@ -477,6 +527,7 @@ class OcrWord {
         /** @type {Rect} */
         this.coords = Rect.fromLBRT(wordElement.getAttribute('coords').split(',').map(parseFloat));
         this.id = `PageLeaf#${page.leafNumber}/Word#${wordIndex}`;
+        this.wordIndex = wordIndex;
         this.page = page;
     }
 }
@@ -503,12 +554,13 @@ class OcrPage {
      * @param {string} word
      */
     findAllWords(word) {
-        /** @param {string} text */
-        function normalizeText(text) {
-            return text.toLowerCase().trim().replace(/[.:,]+$/, '');
-        }
-        return this.words.filter(ocrWord => normalizeText(ocrWord.text) === normalizeText(word))
+        return this.words.filter(ocrWord => normalizeOcrWordText(ocrWord.text) === normalizeOcrWordText(word))
     }
+}
+
+/** @param {string} text */
+function normalizeOcrWordText(text) {
+    return text.toLowerCase().trim().replace(/[.:;,]+$/, '');
 }
 
 // v-models
@@ -704,10 +756,9 @@ TockyShared.PageSelector = {
                 border-radius: 3px;
                 font-size: 9px;
                 line-height: 1em;
-                opacity: 0.2;
-                transition: opacity 0.2s;
+                transition: background-color 0.2s;
                 --ocr-span-color: var(--p-blue-500);
-                background-color: var(--ocr-span-color);
+                background-color: color-mix(in srgb, var(--ocr-span-color) 10%, transparent);
             }
 
             .tocky-page-selector__ocr span.added {
@@ -715,16 +766,16 @@ TockyShared.PageSelector = {
             }
             .tocky-page-selector__ocr span.deleted {
                 --ocr-span-color: var(--p-red-500);
-                opacity: 0.5;
+                background-color: color-mix(in srgb, var(--ocr-span-color) 50%, transparent);
             }
             .tocky-page-selector__ocr span.matched {
                 --ocr-span-color: var(--p-blue-500);
             }
             .tocky-page-selector__ocr span.highlighted {
-                opacity: 0.35;
+                background-color: color-mix(in srgb, var(--ocr-span-color) 25%, transparent);
             }
             .tocky-page-selector__ocr span.hovered {
-                opacity: 0.5;
+                background-color: color-mix(in srgb, var(--ocr-span-color) 40%, transparent);
             }
             .tocky-page-selector__ocr span.selected {
                 outline: 2px solid var(--ocr-span-color);
