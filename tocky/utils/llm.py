@@ -5,6 +5,13 @@ import openai
 import tiktoken
 
 
+def encoding_for_model(model_name: str):
+    """Get the encoding for a specific OpenAI model."""
+    # Work-around https://github.com/openai/tiktoken/issues/395#issuecomment-2835806009
+    if model_name.startswith("gpt-4.1"):
+        model_name = "gpt-4o"
+    return tiktoken.encoding_for_model(model_name)
+
 @dataclass
 class PriceRangeCents:
     min: float
@@ -36,7 +43,7 @@ class ModelPricing:
         return prompt_cost + completion_cost
 
     def count_tokens(self, message: str) -> int:
-        return len(tiktoken.encoding_for_model(self.name).encode(message))
+        return len(encoding_for_model(self.name).encode(message))
 
     def predict_cost(
         self,

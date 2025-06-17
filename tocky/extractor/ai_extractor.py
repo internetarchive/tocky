@@ -4,13 +4,13 @@ import re
 from dataclasses import dataclass
 import openai
 from openai.types.chat import ChatCompletionMessageParam
-import tiktoken
 
 from tocky.extractor import AbstractExtractor, TocEntry, TocResponse
 from tocky.extractor.formats import build_system_prompt, format_toc, process_extracted_output
 from tocky.ocr.printer import print_ocr
 from tocky.utils import avg_ocr_conf
 from tocky.utils.ia import get_djvu_by_leaf_nums, get_ia_metadata, get_page_scan, ocaid_to_djvu_url
+from tocky.utils.llm import encoding_for_model
 
 
 class BadOcrOnToc(Exception):
@@ -169,7 +169,7 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
     chunks = ['']
     for page_ocr in pages_ocr:
       extended_chunk = chunks[-1] + '\n' + page_ocr
-      if len(tiktoken.encoding_for_model(self.P.model).encode(extended_chunk)) > self.P.max_sent_tokens:
+      if len(encoding_for_model(self.P.model).encode(extended_chunk)) > self.P.max_sent_tokens:
         chunks.append(page_ocr)
       else:
         chunks[-1] += '\n' + page_ocr

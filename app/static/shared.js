@@ -8,6 +8,92 @@ TockyShared.config = Vue.reactive({
     authenticated: false,
 });
 
+// See https://platform.openai.com/docs/pricing
+TockyShared.MODELS = [
+  {
+    model: "gpt-4.1",
+    input_price_pm: 2_00_0,
+    cached_input_price_pm: 50_0,
+    output_price_pm: 8_00_0,
+  },
+  {
+    model: "gpt-4.1-mini",
+    input_price_pm: 40_0,
+    cached_input_price_pm: 10_0,
+    output_price_pm: 1_60_0,
+  },
+  {
+    model: "gpt-4.1-nano",
+    input_price_pm: 10_0,
+    cached_input_price_pm: 2_5,
+    output_price_pm: 40_0,
+  },
+  {
+    model: "gpt-4.5-preview",
+    input_price_pm: 75_00_0,
+    cached_input_price_pm: 37_50_0,
+    output_price_pm: 1_50_00_0,
+  },
+  {
+    model: "gpt-4o",
+    input_price_pm: 2_50_0,
+    cached_input_price_pm: 1_25_0,
+    output_price_pm: 10_00_0,
+  },
+  {
+    model: "gpt-4o-mini",
+    input_price_pm: 15_0,
+    cached_input_price_pm: 7_5,
+    output_price_pm: 60_0,
+  },
+  {
+    model: "o1",
+    input_price_pm: 15_00_0,
+    cached_input_price_pm: 7_50_0,
+    output_price_pm: 60_00_0,
+  },
+  {
+    model: "o1-pro",
+    input_price_pm: 150_00_0,
+    cached_input_price_pm: null,
+    output_price_pm: 600_00_0,
+  },
+  {
+    model: "o3-pro",
+    input_price_pm: 20_00_0,
+    cached_input_price_pm: null,
+    output_price_pm: 80_00_0,
+  },
+  {
+    model: "o3",
+    input_price_pm: 2_00_0,
+    cached_input_price_pm: 50_0,
+    output_price_pm: 8_00_0,
+  },
+  {
+    model: "o4-mini",
+    input_price_pm: 1_10_0,
+    cached_input_price_pm: 27_5,
+    output_price_pm: 4_40_0,
+  },
+  {
+    model: "o3-mini",
+    input_price_pm: 1_10_0,
+    cached_input_price_pm: 55_0,
+    output_price_pm: 4_40_0,
+  },
+  {
+    model: "o1-mini",
+    input_price_pm: 1_10_0,
+    cached_input_price_pm: 55_0,
+    output_price_pm: 4_40_0,
+  },
+];
+
+TockyShared.MODELS_BY_NAME = Object.fromEntries(
+    TockyShared.MODELS.map(model => [model.model, model])
+);
+
 TockyShared.DETECTORS = {
     ocr_detector: {
         name: "OCR Detector",
@@ -30,9 +116,7 @@ TockyShared.DETECTORS = {
         options: {
             model: {
                 value: 'gpt-4o-mini',
-                options: [
-                    "gpt-4o-mini"
-                ]
+                options: Object.keys(TockyShared.MODELS_BY_NAME)
             },
             max_tokens: {
                 value: 200,
@@ -66,10 +150,7 @@ TockyShared.EXTRACTORS = {
         options: {
             model: {
                 value: 'gpt-4o-mini',
-                options: [
-                    "gpt-4o-mini",
-                    "gpt-3.5-turbo",
-                ]
+                options: Object.keys(TockyShared.MODELS_BY_NAME)
             },
             max_sent_tokens: {
                 value: 1000,
@@ -97,10 +178,7 @@ TockyShared.EXTRACTORS = {
         options: {
             model: {
                 value: 'gpt-4o-mini',
-                options: [
-                    "gpt-4o-mini",
-                    "gpt-3.5-turbo",
-                ]
+                options: Object.keys(TockyShared.MODELS_BY_NAME)
             },
             extraction_format: {
                 value: "json",
