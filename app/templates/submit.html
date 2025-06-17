@@ -118,18 +118,33 @@
                                         ></p-input-text>
                                         <label>Internet Archive Query</label>
                                     </p-float-label>
-                                    <p-float-label>
-                                        <p-input-number
-                                            v-model="batchOptions.maxLimit"
-                                            mode="decimal"
-                                            :min="1"
-                                            :max="150"
-                                        ></p-input-number>
-                                        <label>
-                                            Max Limit
-                                            <i class="ui icon question circle outline" v-tooltip="`Limit number of books processed. Currently restricted to 150.`"></i>
-                                        </label>
-                                    </p-float-label>
+                                    <div class="flex-row">
+                                        <p-float-label>
+                                            <p-select
+                                                v-model="batchOptions.sort"
+                                                :options="iaSortOptions"
+                                                overlay-class="block-options"
+                                                option-label="name"
+                                                option-value="value"
+                                            ></p-select>
+                                            <label>
+                                                Order
+                                                <i class="ui icon question circle outline" v-tooltip="`Sort order for the books. Default is top viewed this week.`"></i>
+                                            </label>
+                                        </p-float-label>
+                                        <p-float-label>
+                                            <p-input-number
+                                                v-model="batchOptions.maxLimit"
+                                                mode="decimal"
+                                                :min="1"
+                                                :max="150"
+                                            ></p-input-number>
+                                            <label>
+                                                Max Limit
+                                                <i class="ui icon question circle outline" v-tooltip="`Limit number of books processed. Currently restricted to 150.`"></i>
+                                            </label>
+                                        </p-float-label>
+                                    </div>
                                     <div class="flex-row">
                                         <p-button
                                             small
@@ -144,7 +159,7 @@
                                             as="a"
                                             label="View in Archive.org"
                                             target="_blank"
-                                            :href="buildIaSearchUrl(batchOptions.query)"
+                                            :href="buildIaSearchUrl(batchOptions.query, batchOptions.sort)"
                                             icon="pi pi-external-link"
                                             icon-pos="right"
                                         ></p-button>
@@ -482,6 +497,7 @@
                         name: "",
                         query: "",
                         maxLimit: 10,
+                        sort: '-week',
                         
                         // TMP not supported yet
                         useDelayedApiCalls: true,
@@ -491,6 +507,11 @@
                         allowMicrofilm: false,
                         skipProcessedBooks: true,
                     },
+
+                    iaSortOptions: [
+                        { value: '-week', name: 'Top viewed this week' },
+                        { value: 'random', name: 'Random' },
+                    ],
 
                     batchPullStrategyOptions: [
                         {
@@ -603,12 +624,13 @@
                         this.iaQueryValidateState.state = 'neutral';
                     }
                 },
-                buildIaSearchUrl(query='') {
+                buildIaSearchUrl(query, sort) {
                     const params = new URLSearchParams({
                         q: [
                             '(' + query + ')',
                             this.toc_filter,
                         ].filter(Boolean).join(" AND "),
+                        sort,
                     });
 
                     return `https://archive.org/search.php?${params}`;
@@ -636,6 +658,7 @@
                                 allow_microfilm: this.batchOptions.allowMicrofilm,
                                 skip_processed_books: this.batchOptions.skipProcessedBooks,
                                 max_limit: this.batchOptions.maxLimit,
+                                sort: this.batchOptions.sort,
                             },
                         };
                     } else if (this.inputType === "single") {

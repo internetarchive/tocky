@@ -30,6 +30,7 @@ class Batch:
     offset: int
     limit: int
     query: str
+    sort: str
     toc_filter: str
     detector: dict
     extractor: dict
@@ -48,6 +49,7 @@ class Batch:
             offset=0,
             limit=0,  # Computed later
             query=input_dict['batch']['query'],
+            sort=input_dict['batch'].get('sort', '-week'),
             toc_filter=input_dict['batch']['toc_filter'],
             detector=input_dict['detector'],
             extractor=input_dict['extractor'],
@@ -105,6 +107,7 @@ class DbBatch(Batch):
             state=batch['state'],
             offset=batch['offset'],
             limit=batch['limit'],
+            sort=batch.get('sort', '-week'),
             query=batch['query'],
             toc_filter=batch['toc_filter'],
             detector=batch['detector'],
@@ -142,7 +145,7 @@ class DbBatch(Batch):
                 fl='identifier,openlibrary_edition',
                 # Need to sort by something to ensure consistent results; might want
                 # to make this configurable in the future.
-                sort='-week',
+                sort=self.sort,
             )
             ia_record = resp['response']['docs']
 
