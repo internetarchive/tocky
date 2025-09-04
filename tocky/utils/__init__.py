@@ -90,7 +90,9 @@ class PageScan:
   uri: str
   image: Image.Image
   dpi: int
+
   lang: str
+  """ISO 639-2 code, e.g. 'eng'"""
 
   @property
   def width(self) -> int:
@@ -99,6 +101,15 @@ class PageScan:
   @property
   def height(self) -> int:
     return self.image.height
+
+  @functools.cached_property
+  def lang_iso639_1(self) -> str | None:
+    import pycountry
+    language = pycountry.languages.get(alpha_3=self.lang)
+    if language and hasattr(language, 'alpha_2'):
+      return language.alpha_2
+    else:
+      return None
 
   def preview(self, width=300) -> Image.Image:
     return self.image.resize((width, int(width * self.image.height / self.image.width)))

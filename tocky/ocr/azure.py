@@ -72,7 +72,7 @@ class retry_if_status_code(retry_if_exception):
 # The azure rate limit for the free tier F0 is 20 requests per minute. To avoid
 # hitting that limit too quickly, limit to 5 requests / 15 seconds.
 @rate_limit(5, 15)
-def fetch_ocr_azure(image: Image.Image) -> AzureOcrResponse:
+def fetch_ocr_azure(image: Image.Image, language: str = 'en') -> AzureOcrResponse:
     subscription_key = os.getenv("AZURE_SUBSCRIPTION_KEY")
     endpoint = os.getenv("AZURE_ENDPOINT")
 
@@ -86,7 +86,7 @@ def fetch_ocr_azure(image: Image.Image) -> AzureOcrResponse:
         params={
             'features': 'read',
             'model-version': 'latest',
-            'language': 'en',
+            'language': language,
             'api-version': '2024-02-01',
         },
         headers={
@@ -126,7 +126,7 @@ def azure_read_result_to_djvu_xml(read_result: AzureOcrReadResult) -> str:
     return '\n'.join(paragraphs)
 
 def ocr_djvu_page_azure(page_scan: PageScan) -> str:
-    azure_response = fetch_ocr_azure(page_scan.image)
+    azure_response = fetch_ocr_azure(page_scan.image, page_scan.lang_iso639_1 or 'en')
 
     return (
         f'<OBJECT type="image/x.djvu" width="{page_scan.width}" height="{page_scan.height}">\n'
