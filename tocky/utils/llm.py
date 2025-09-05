@@ -7,9 +7,6 @@ import tiktoken
 
 def encoding_for_model(model_name: str):
     """Get the encoding for a specific OpenAI model."""
-    # Work-around https://github.com/openai/tiktoken/issues/395#issuecomment-2835806009
-    if model_name.startswith("gpt-4.1") or model_name in ("o1", "o1-pro", "o3-pro", "o3", "o4-mini", "o3-mini", "o1-mini"):
-        model_name = "gpt-4o"
     return tiktoken.encoding_for_model(model_name)
 
 @dataclass
