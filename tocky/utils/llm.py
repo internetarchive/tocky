@@ -7,6 +7,9 @@ import tiktoken
 
 def encoding_for_model(model_name: str):
     """Get the encoding for a specific OpenAI model."""
+    if model_name == "gpt-5":
+        # Uses the same encoding, tiktoken is outdated https://github.com/openai/tiktoken/issues/428
+        model_name = "gpt-5-mini"
     return tiktoken.encoding_for_model(model_name)
 
 @dataclass
