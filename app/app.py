@@ -20,6 +20,7 @@ from tocky.ocr import get_supported_engines
 from tocky.ocr.printer import print_ocr
 from tocky.utils import get_tocky_version
 from tocky.utils.ia import get_ia_metadata_field, get_page_image
+from tocky.utils.models import get_model_index_json
 from jinja2 import Environment, FileSystemLoader, pass_context
 
 env = get_env()
@@ -69,6 +70,7 @@ jinja_env.globals['TOCKY_VERSION'] = get_tocky_version()
 jinja_env.globals['TOCKY_PUBLIC_CONFIG_JSON'] = json.dumps({
     'APPLICATION_ROOT': env.TOCKY_APPLICATION_ROOT,
     'OCR_ENGINES': get_supported_engines(),
+    'LLM_MODELS': get_model_index_json(),
 })
 templates = Jinja2Templates(env=jinja_env)
 

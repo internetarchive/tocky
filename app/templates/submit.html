@@ -338,7 +338,7 @@
                         <br>
                         <p-float-label>
                             <p-input-number v-model="detector.options.max_tokens.value" mode="decimal" :min="1" :max="500"></p-input-number>
-                            <label>Max Tokens <i class="ui icon question circle outline" v-tooltip="`The maximum number of tokens to generate. This is the maximum number of tokens the model will generate for the completion.`"></i></label>
+                            <label>Max Output Tokens <i class="ui icon question circle outline" v-tooltip="`The maximum number of tokens to generate. This is the maximum number of tokens the model will generate for the completion.`"></i></label>
                         </p-float-label>
                     </div>
                 </p-fieldset>
@@ -397,9 +397,17 @@
                         </p-float-label>
 
                         <p-float-label>
-                            <p-input-number v-model="extractor.options.max_sent_tokens.value" :min="1000"></p-input-number>
+                            <p-input-number
+                                v-model="extractor.options.max_sent_tokens.value"
+                                :min="1000"
+                                :max="getModelInfo('openai', extractor.options.model.value).context_window_tokens"
+                            ></p-input-number>
                             <label>
-                                Max Sent Tokens <i class="ui icon question circle outline" v-tooltip="`This could be limited by your model. E.g. gpt 4o mini can handle 128k tokens.`"></i>
+                                Max Sent Tokens
+                                <i
+                                    class="ui icon question circle outline"
+                                    v-tooltip="`Maximum for the current model: ${getModelInfo('openai', extractor.options.model.value).context_window_tokens} tokens.`"
+                                ></i>
                             </label>
                         </p-float-label>                        
                     </div>
@@ -583,6 +591,9 @@
             },
 
             methods: {
+                getModelInfo(provider, modelName) {
+                    return TockyShared.getModelInfo(provider, modelName);
+                },
                 buildIaValidateUrl() {
                     const params = new URLSearchParams({
                         q: [

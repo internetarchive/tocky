@@ -11,6 +11,7 @@ from tocky.ocr.printer import print_ocr
 from tocky.utils import avg_ocr_conf
 from tocky.utils.ia import get_djvu_by_leaf_nums, get_ia_metadata, get_page_scan, ocaid_to_djvu_url
 from tocky.utils.llm import encoding_for_model
+from tocky.utils.models import get_model_info
 
 
 class BadOcrOnToc(Exception):
@@ -143,13 +144,15 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
     book_title: str,
     prev_toc: list[TocEntry] | None = None,
   ) -> TocResponse:
+    model = get_model_info('openai', self.P.model)
+    assert model, f"Model {self.P.model} not found"
     completion = openai.chat.completions.create(
       model=self.P.model,
       messages=self.build_prompt(ocr_text, book_title, prev_toc),
       # max_tokens=1024,
       n=1,
       stop=None,
-      temperature=0.5,
+      temperature=0.5 if model.supports_temperature else 1,
     )
 
     assert completion.choices[0].message.content

@@ -1,6 +1,8 @@
 // @ts-check
+
 const TockyShared = {};
 
+/** @type {TockyConf} */
 TockyShared.CONF = window.TOCKY_CONF;
 
 TockyShared.config = Vue.reactive({
@@ -8,91 +10,19 @@ TockyShared.config = Vue.reactive({
     authenticated: false,
 });
 
-// See https://platform.openai.com/docs/pricing
-TockyShared.MODELS = [
-  {
-    model: "gpt-4.1",
-    input_price_pm: 2_00_0,
-    cached_input_price_pm: 50_0,
-    output_price_pm: 8_00_0,
-  },
-  {
-    model: "gpt-4.1-mini",
-    input_price_pm: 40_0,
-    cached_input_price_pm: 10_0,
-    output_price_pm: 1_60_0,
-  },
-  {
-    model: "gpt-4.1-nano",
-    input_price_pm: 10_0,
-    cached_input_price_pm: 2_5,
-    output_price_pm: 40_0,
-  },
-  {
-    model: "gpt-4.5-preview",
-    input_price_pm: 75_00_0,
-    cached_input_price_pm: 37_50_0,
-    output_price_pm: 1_50_00_0,
-  },
-  {
-    model: "gpt-4o",
-    input_price_pm: 2_50_0,
-    cached_input_price_pm: 1_25_0,
-    output_price_pm: 10_00_0,
-  },
-  {
-    model: "gpt-4o-mini",
-    input_price_pm: 15_0,
-    cached_input_price_pm: 7_5,
-    output_price_pm: 60_0,
-  },
-  {
-    model: "o1",
-    input_price_pm: 15_00_0,
-    cached_input_price_pm: 7_50_0,
-    output_price_pm: 60_00_0,
-  },
-  {
-    model: "o1-pro",
-    input_price_pm: 150_00_0,
-    cached_input_price_pm: null,
-    output_price_pm: 600_00_0,
-  },
-  {
-    model: "o3-pro",
-    input_price_pm: 20_00_0,
-    cached_input_price_pm: null,
-    output_price_pm: 80_00_0,
-  },
-  {
-    model: "o3",
-    input_price_pm: 2_00_0,
-    cached_input_price_pm: 50_0,
-    output_price_pm: 8_00_0,
-  },
-  {
-    model: "o4-mini",
-    input_price_pm: 1_10_0,
-    cached_input_price_pm: 27_5,
-    output_price_pm: 4_40_0,
-  },
-  {
-    model: "o3-mini",
-    input_price_pm: 1_10_0,
-    cached_input_price_pm: 55_0,
-    output_price_pm: 4_40_0,
-  },
-  {
-    model: "o1-mini",
-    input_price_pm: 1_10_0,
-    cached_input_price_pm: 55_0,
-    output_price_pm: 4_40_0,
-  },
-];
-
 TockyShared.MODELS_BY_NAME = Object.fromEntries(
-    TockyShared.MODELS.map(model => [model.model, model])
+    TockyShared.CONF.LLM_MODELS.map(model => [model.model, model])
 );
+
+/**
+ * Get model information by provider and model name.
+ * @param {string} provider 
+ * @param {string} modelName 
+ * @returns {LLMModel | undefined}
+ */
+TockyShared.getModelInfo = function (provider, modelName) {
+    return TockyShared.MODELS_BY_NAME[modelName];
+};
 
 TockyShared.DETECTORS = {
     ocr_detector: {
@@ -116,7 +46,7 @@ TockyShared.DETECTORS = {
         options: {
             model: {
                 value: 'gpt-4o-mini',
-                options: Object.keys(TockyShared.MODELS_BY_NAME)
+                options: TockyShared.CONF.LLM_MODELS.filter(m => m.can_input_images).map(m => m.model),
             },
             max_tokens: {
                 value: 200,
@@ -178,7 +108,7 @@ TockyShared.EXTRACTORS = {
         options: {
             model: {
                 value: 'gpt-4o-mini',
-                options: Object.keys(TockyShared.MODELS_BY_NAME)
+                options: TockyShared.CONF.LLM_MODELS.filter(m => m.can_input_images).map(m => m.model),
             },
             extraction_format: {
                 value: "json",
