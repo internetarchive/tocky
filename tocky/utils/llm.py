@@ -24,13 +24,19 @@ def encoding_for_model(model_name: LLMSpecifier | str):
     """Get the encoding for a specific OpenAI model."""
 
     # Todo: This should likely be handled further upstream
-    if '/' in model_name:
-        _, model_name = model_name.split('/', 1)
+    provider, model_name = model_name.split('/', 1)
 
-    if model_name == "gpt-5":
-        # Uses the same encoding, tiktoken is outdated https://github.com/openai/tiktoken/issues/428
-        model_name = "gpt-5-mini"
-    return tiktoken.encoding_for_model(model_name)
+    match provider:
+        case "openai":
+            if model_name == "gpt-5":
+                # Uses the same encoding, tiktoken is outdated https://github.com/openai/tiktoken/issues/428
+                model_name = "gpt-5-mini"
+            return tiktoken.encoding_for_model(model_name)
+        case "google":
+            # Google doesn't have a way to check these locally, so use gpt-5-mini as a proxy
+            return tiktoken.encoding_for_model("gpt-5-mini")
+        case _:
+            raise ValueError(f"Unknown provider: {provider}")
 
 @dataclass
 class PriceRangeCents:

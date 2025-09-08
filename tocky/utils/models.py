@@ -5,7 +5,7 @@ from typing import Literal
 
 @dataclass
 class LLMModel:
-    provider: Literal["openai"]
+    provider: Literal["google", "openai"]
     model: str
 
     input_price_pm: int
@@ -242,6 +242,48 @@ LLM_MODELS: list[LLMModel] = [
         max_output_tokens=65_536,
         knowledge_cutoff=d("2023-10-01")
     ),
+    LLMModel(
+        provider="google",
+        model="gemini-2.5-pro",
+        input_price_pm=1_25_0,
+        cached_input_price_pm=1_25_0,  # Unknown, using same as input
+        output_price_pm=10_00_0,
+        can_input_images=True,
+        can_input_audio=True,
+        # PDF and video support not directly modeled, but can_input_images/audio covers most
+        supports_reasoning=True,
+        context_window_tokens=1_048_576,
+        max_output_tokens=65_536,
+        knowledge_cutoff=d("2025-01-01"),
+    ),
+    LLMModel(
+        provider="google",
+        model="gemini-2.5-flash",
+        input_price_pm=30_0,
+        cached_input_price_pm=30_0,  # Unknown?
+        output_price_pm=2_50_0,
+        can_input_images=True,
+        can_input_audio=True,
+        supports_reasoning=True,
+        context_window_tokens=1_048_576,
+        max_output_tokens=65_536,
+        knowledge_cutoff=d("2025-01-01"),
+    ),
+    # GRRRR Flash lite doesn't support the open ai chat completions api?
+    # LLMModel(
+    #     provider="google",
+    #     model="gemini-2.5-flash-lite",
+    #     input_price_pm=30_0,
+    #     cached_input_price_pm=30_0,  # Unknown?
+    #     output_price_pm=2_50_0,
+    #     can_input_images=True,
+    #     can_input_audio=True,
+    #     # Video support not directly modeled, but can_input_images/audio covers most
+    #     supports_reasoning=True,
+    #     context_window_tokens=1_048_576,
+    #     max_output_tokens=65_536,
+    #     knowledge_cutoff=d("2025-01-01"),
+    # ),
 ]
 
 LLMSpecifier = Literal[
