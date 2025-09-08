@@ -10,7 +10,7 @@ from tocky.ocr.printer import print_ocr
 from tocky.utils import avg_ocr_conf
 from tocky.utils.ia import get_djvu_by_leaf_nums, get_ia_metadata, get_page_scan, ocaid_to_djvu_url
 from tocky.utils.llm import encoding_for_model, hit_llm
-from tocky.utils.models import get_model_info
+from tocky.utils.models import LLMSpecifier, LLMSpecifier, get_model_info
 
 
 class BadOcrOnToc(Exception):
@@ -64,7 +64,7 @@ Extract the table of contents from this OCR text of "{book_title}":
 class AiExtractorOptions:
   redo_ocr: bool = True
   ocr_engine: Literal['easyocr', 'tesseract', 'azure'] = 'easyocr'
-  model: str = "gpt-4o-mini"
+  model: LLMSpecifier | str = "openai/gpt-4o-mini"
   max_sent_tokens: int = 1_000
   """
   GPT 4o mini can handle up to 128k input tokens and 16k output tokens.
@@ -143,10 +143,10 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
     book_title: str,
     prev_toc: list[TocEntry] | None = None,
   ) -> TocResponse:
-    model = get_model_info(f"openai/{self.P.model}")
+    model = get_model_info(self.P.model)
     assert model, f"Model {self.P.model} not found"
     completion = hit_llm(
-      f"openai/{self.P.model}",
+      self.P.model,
       messages=self.build_prompt(ocr_text, book_title, prev_toc),
       # max_tokens=1024,
       # n=1,

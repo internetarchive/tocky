@@ -400,13 +400,13 @@
                             <p-input-number
                                 v-model="extractor.options.max_sent_tokens.value"
                                 :min="1000"
-                                :max="getModelInfo('openai', extractor.options.model.value).context_window_tokens"
+                                :max="getModelInfo(extractor.options.model.value).context_window_tokens"
                             ></p-input-number>
                             <label>
                                 Max Sent Tokens
                                 <i
                                     class="ui icon question circle outline"
-                                    v-tooltip="`Maximum for the current model: ${getModelInfo('openai', extractor.options.model.value).context_window_tokens} tokens.`"
+                                    v-tooltip="`Maximum for the current model: ${getModelInfo(extractor.options.model.value).context_window_tokens} tokens.`"
                                 ></i>
                             </label>
                         </p-float-label>                         -->
@@ -591,8 +591,8 @@
             },
 
             methods: {
-                getModelInfo(provider, modelName) {
-                    return TockyShared.getModelInfo(provider, modelName);
+                getModelInfo(modelSpecifier) {
+                    return TockyShared.getModelInfo(modelSpecifier);
                 },
                 buildIaValidateUrl() {
                     const params = new URLSearchParams({

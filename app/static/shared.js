@@ -11,17 +11,16 @@ TockyShared.config = Vue.reactive({
 });
 
 TockyShared.MODELS_BY_NAME = Object.fromEntries(
-    TockyShared.CONF.LLM_MODELS.map(model => [model.model, model])
+    TockyShared.CONF.LLM_MODELS.map(model => [`${model.provider}/${model.model}`, model])
 );
 
 /**
  * Get model information by provider and model name.
- * @param {string} provider 
- * @param {string} modelName 
+ * @param {string} modelSpecifier - Model specifier in the form "provider/model" 
  * @returns {LLMModel | undefined}
  */
-TockyShared.getModelInfo = function (provider, modelName) {
-    return TockyShared.MODELS_BY_NAME[modelName];
+TockyShared.getModelInfo = function (modelSpecifier) {
+    return TockyShared.MODELS_BY_NAME[modelSpecifier];
 };
 
 TockyShared.DETECTORS = {
@@ -45,8 +44,8 @@ TockyShared.DETECTORS = {
         description: "Uses AI with vision capabilities to visually detect the TOC pages.",
         options: {
             model: {
-                value: 'gpt-4o-mini',
-                options: TockyShared.CONF.LLM_MODELS.filter(m => m.can_input_images).map(m => m.model),
+                value: 'openai/gpt-4o-mini',
+                options: TockyShared.CONF.LLM_MODELS.filter(m => m.can_input_images).map(m => `${m.provider}/${m.model}`),
             },
             max_tokens: {
                 value: 200,
@@ -79,7 +78,7 @@ TockyShared.EXTRACTORS = {
         description: "Sends the OCR from the TOC pages to AI to extract in a structured format.",
         options: {
             model: {
-                value: 'gpt-4o-mini',
+                value: 'openai/gpt-4o-mini',
                 options: Object.keys(TockyShared.MODELS_BY_NAME)
             },
             max_sent_tokens: {
@@ -107,8 +106,8 @@ TockyShared.EXTRACTORS = {
         description: "Sends the raw images of the TOC pages to AI to 'read' and extract in a structured format.",
         options: {
             model: {
-                value: 'gpt-4o-mini',
-                options: TockyShared.CONF.LLM_MODELS.filter(m => m.can_input_images).map(m => m.model),
+                value: 'openai/gpt-4o-mini',
+                options: TockyShared.CONF.LLM_MODELS.filter(m => m.can_input_images).map(m => `${m.provider}/${m.model}`),
             },
             extraction_format: {
                 value: "json",

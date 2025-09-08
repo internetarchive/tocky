@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 from tocky.detector import AbstractDetector
 from tocky.utils.ia import get_book_images
 from tocky.utils.llm import MODEL_PRICES, hit_llm
+from tocky.utils.models import LLMSpecifier
 
 SYSTEM_PROMPT: str = """
 You are a bot that helps in the detection of all table of contents pages in a book.
@@ -23,7 +24,7 @@ Please output only JSON of this format: { "toc_pages": [7,8], "notes": "<anythin
 
 @dataclass
 class AiVisionDetectorOptions:
-    model: str = "gpt-4o-mini"
+    model: LLMSpecifier | str = "openai/gpt-4o-mini"
     max_tokens: int = 200
     image_size: tuple[int, int] = (1024, 512)
 
@@ -59,7 +60,7 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
             self.composite_image = composite_image
 
         response = hit_llm(
-            f'openai/{self.P.model}',
+            self.P.model,
             system_prompt=SYSTEM_PROMPT,
             messages=[
                 {
