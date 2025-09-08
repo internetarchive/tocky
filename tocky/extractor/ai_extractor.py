@@ -2,16 +2,14 @@ from typing import Literal
 from lxml import etree
 import re
 from dataclasses import dataclass
-import openai
 from openai.types.chat import ChatCompletionMessageParam
 
-from tocky.env import get_env
 from tocky.extractor import AbstractExtractor, TocEntry, TocResponse
 from tocky.extractor.formats import build_system_prompt, format_toc, process_extracted_output
 from tocky.ocr.printer import print_ocr
 from tocky.utils import avg_ocr_conf
 from tocky.utils.ia import get_djvu_by_leaf_nums, get_ia_metadata, get_page_scan, ocaid_to_djvu_url
-from tocky.utils.llm import encoding_for_model
+from tocky.utils.llm import encoding_for_model, hit_llm
 from tocky.utils.models import get_model_info
 
 
@@ -147,13 +145,13 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
   ) -> TocResponse:
     model = get_model_info(f"openai/{self.P.model}")
     assert model, f"Model {self.P.model} not found"
-    completion = get_env().openai_client.chat.completions.create(
-      model=self.P.model,
+    completion = hit_llm(
+      f"openai/{self.P.model}",
       messages=self.build_prompt(ocr_text, book_title, prev_toc),
       # max_tokens=1024,
-      n=1,
-      stop=None,
-      temperature=0.5 if model.supports_temperature else 1,
+      # n=1,
+      # stop=None,
+      # temperature=0.5 if model.supports_temperature else 1,
     )
 
     assert completion.choices[0].message.content

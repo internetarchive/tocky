@@ -66,6 +66,11 @@ class TockyEnv:
     def cache(self):
         return CacheWithAsync(self.TOCKY_DISK_CACHE)
 
+    @functools.cached_property
+    def cache_sync(self):
+        from diskcache import Cache
+        return Cache(self.TOCKY_DISK_CACHE)
+
     @property
     def OPENAI_API_KEY(self) -> str:
         return getenv_required('OPENAI_API_KEY')
@@ -73,6 +78,21 @@ class TockyEnv:
     @functools.cached_property
     def openai_client(self):
         return OpenAI(api_key=self.OPENAI_API_KEY)
+
+    @property
+    def GEMINI_API_KEY(self) -> str:
+        return getenv_required("GEMINI_API_KEY")
+
+    @functools.cached_property
+    def gemini_openai_client(self):
+        """
+        This supports some of the features of the OpenAI client, but not all.
+        Notably: it does not support batches.
+        """
+        return OpenAI(
+            api_key=self.GEMINI_API_KEY,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        )
 
     @staticmethod
     def from_env() -> "TockyEnv":

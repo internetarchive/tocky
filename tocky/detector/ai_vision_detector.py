@@ -7,9 +7,8 @@ from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
 from tocky.detector import AbstractDetector
-from tocky.env import get_env
 from tocky.utils.ia import get_book_images
-from tocky.utils.llm import MODEL_PRICES
+from tocky.utils.llm import MODEL_PRICES, hit_llm
 
 SYSTEM_PROMPT: str = """
 You are a bot that helps in the detection of all table of contents pages in a book.
@@ -59,13 +58,10 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
             self.small_images = small_images
             self.composite_image = composite_image
 
-        response = get_env().openai_client.chat.completions.create(
-            model=self.P.model,
+        response = hit_llm(
+            f'openai/{self.P.model}',
+            system_prompt=SYSTEM_PROMPT,
             messages=[
-                {
-                    "role": "system",
-                    "content": SYSTEM_PROMPT,
-                },
                 {
                     "role": "user",
                     "content": [
@@ -79,7 +75,7 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
                     ],
                 }
             ],
-            max_tokens=self.P.max_tokens,
+            # max_tokens=self.P.max_tokens,
         )
 
         if self.debug:
