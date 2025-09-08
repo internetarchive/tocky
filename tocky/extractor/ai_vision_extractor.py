@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Literal
 
-from openai import OpenAI
 from tocky.detector.ai_vision_detector import concatenate_and_resize, image_to_base64
+from tocky.env import get_env
 from tocky.extractor import AbstractExtractor, TocEntry, TocResponse
 from tocky.extractor.formats import build_system_prompt, process_extracted_output
 from tocky.utils.ia import get_book_images
@@ -40,9 +40,8 @@ class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
     def extract(self, ocaid: str, detector_result: list[int]) -> list[TocEntry]:
         toc_page_image = concatenate_and_resize(list(get_book_images(ocaid, detector_result, reduce=1)), target_height=512)
 
-        client = OpenAI()
         system_prompt = build_system_prompt(SYSTEM_PROMPT, self.P.extraction_format)
-        completion = client.chat.completions.create(
+        completion = get_env().openai_client.chat.completions.create(
             model=self.P.model,
             messages=[
                 {

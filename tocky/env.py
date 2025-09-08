@@ -6,6 +6,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 
+from openai import OpenAI
+
 from tocky.utils.async_cache import CacheWithAsync
 
 
@@ -63,6 +65,14 @@ class TockyEnv:
     @functools.cached_property
     def cache(self):
         return CacheWithAsync(self.TOCKY_DISK_CACHE)
+
+    @property
+    def OPENAI_API_KEY(self) -> str:
+        return getenv_required('OPENAI_API_KEY')
+
+    @functools.cached_property
+    def openai_client(self):
+        return OpenAI(api_key=self.OPENAI_API_KEY)
 
     @staticmethod
     def from_env() -> "TockyEnv":

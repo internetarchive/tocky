@@ -2,13 +2,12 @@ import base64
 from dataclasses import dataclass
 import json
 import re
-import textwrap
 from io import BytesIO
 
-from openai import OpenAI
 from PIL import Image, ImageDraw, ImageFont
 
 from tocky.detector import AbstractDetector
+from tocky.env import get_env
 from tocky.utils.ia import get_book_images
 from tocky.utils.llm import MODEL_PRICES
 
@@ -60,8 +59,7 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
             self.small_images = small_images
             self.composite_image = composite_image
 
-        client = OpenAI()
-        response = client.chat.completions.create(
+        response = get_env().openai_client.chat.completions.create(
             model=self.P.model,
             messages=[
                 {

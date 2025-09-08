@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import openai
 from openai.types.chat import ChatCompletionMessageParam
 
+from tocky.env import get_env
 from tocky.extractor import AbstractExtractor, TocEntry, TocResponse
 from tocky.extractor.formats import build_system_prompt, format_toc, process_extracted_output
 from tocky.ocr.printer import print_ocr
@@ -146,7 +147,7 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
   ) -> TocResponse:
     model = get_model_info(f"openai/{self.P.model}")
     assert model, f"Model {self.P.model} not found"
-    completion = openai.chat.completions.create(
+    completion = get_env().openai_client.chat.completions.create(
       model=self.P.model,
       messages=self.build_prompt(ocr_text, book_title, prev_toc),
       # max_tokens=1024,
