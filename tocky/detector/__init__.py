@@ -15,8 +15,5 @@ class AbstractDetector(Generic[TParams]):
     def __init__(self):
         self.S = ShareableState()
 
-    def predict_cost(self) -> float:
-        raise NotImplementedError()
-
     def detect(self, ocaid: str) -> list[int]:
         raise NotImplementedError()

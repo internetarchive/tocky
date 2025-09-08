@@ -77,9 +77,6 @@ class OcrDetector(AbstractDetector[OcrDetectorOptions]):
     super().__init__()
     self.P = OcrDetectorOptions()
 
-  def predict_cost(self):
-    return 0
-
   def detect(self, ocaid: str) -> list[int]:
     results = list(self.extract_toc_pages(ocaid))
     self.S.ocr_cache.update({

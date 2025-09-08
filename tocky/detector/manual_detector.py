@@ -15,8 +15,5 @@ class ManualDetector(AbstractDetector[ManualDetectorOptions]):
         super().__init__()
         self.P = ManualDetectorOptions()
 
-    def predict_cost(self):
-        return 0.0
-
     def detect(self, ocaid: str):
         return self.P.leaf_numbers

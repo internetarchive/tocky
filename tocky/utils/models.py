@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
+from openai.types import CompletionUsage
 
 
 @dataclass
@@ -43,6 +44,18 @@ class LLMModel:
     context_window_tokens: int | None = None
     max_output_tokens: int | None = None
 
+    def compute_price(self, usage: CompletionUsage) -> float:
+        """
+        Compute the price for a given number of input and output tokens.
+        """
+        # Gemini models price the reasoning tokens as output tokens and place them in total_tokens.
+        # not sure about other models, but seems like a reasonable default for now.
+        input_tokens = usage.prompt_tokens
+        output_tokens = usage.total_tokens - usage.prompt_tokens
+
+        input_price = self.input_price_pm * input_tokens
+        output_price = self.output_price_pm * output_tokens
+        return (input_price + output_price) / 1_000_000 / 100 / 100
 
 d = datetime.fromisoformat
 
@@ -303,6 +316,8 @@ LLMSpecifier = Literal[
     "openai/o4-mini",
     "openai/o3-mini",
     "openai/o1-mini",
+    "google/gemini-2.5-pro",
+    "google/gemini-2.5-flash",
 ]
 
 

@@ -8,8 +8,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 from tocky.detector import AbstractDetector
 from tocky.utils.ia import get_book_images
-from tocky.utils.llm import MODEL_PRICES, hit_llm
-from tocky.utils.models import LLMSpecifier
+from tocky.utils.llm import hit_llm
+from tocky.utils.models import LLMSpecifier, get_model_info
 
 SYSTEM_PROMPT: str = """
 You are a bot that helps in the detection of all table of contents pages in a book.
@@ -41,10 +41,7 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
 
     @property
     def model(self):
-        return MODEL_PRICES[self.P.model]
-
-    def predict_cost(self):
-        return self.model.predict_cost([SYSTEM_PROMPT], self.P.max_tokens, [self.P.image_size])
+        return get_model_info(self.P.model)
 
     def detect(self, ocaid: str):
         small_images = list(get_book_images(ocaid, range(0, 28), reduce=3))

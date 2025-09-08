@@ -100,8 +100,5 @@ class AbstractExtractor(Generic[TParams]):
     toc_flat_ocr: list[str] | None = None
     toc_response: TocResponse | None = None
 
-    def predict_cost(self) -> float:
-        raise NotImplementedError()
-
     def extract(self, ocaid: str, detector_result: list[int]) -> list[TocEntry]:
         raise NotImplementedError()
