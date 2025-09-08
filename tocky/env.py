@@ -94,6 +94,14 @@ class TockyEnv:
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         )
 
+    @functools.cached_property
+    def google_genai_client(self):
+        from google import genai
+
+        return genai.Client(
+            api_key=self.GEMINI_API_KEY,
+        )
+
     @staticmethod
     def from_env() -> "TockyEnv":
         print("Loading environment variables from .env...")
