@@ -144,7 +144,7 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
     book_title: str,
     prev_toc: list[TocEntry] | None = None,
   ) -> TocResponse:
-    model = get_model_info('openai', self.P.model)
+    model = get_model_info(f"openai/{self.P.model}")
     assert model, f"Model {self.P.model} not found"
     completion = openai.chat.completions.create(
       model=self.P.model,

@@ -244,8 +244,28 @@ LLM_MODELS: list[LLMModel] = [
     ),
 ]
 
+LLMSpecifier = Literal[
+    "openai/gpt-5",
+    "openai/gpt-5-mini",
+    "openai/gpt-5-nano",
+    "openai/gpt-4.1",
+    "openai/gpt-4.1-mini",
+    "openai/gpt-4.1-nano",
+    "openai/gpt-4.5-preview",
+    "openai/gpt-4o",
+    "openai/gpt-4o-mini",
+    "openai/o1",
+    "openai/o1-pro",
+    "openai/o3-pro",
+    "openai/o3",
+    "openai/o4-mini",
+    "openai/o3-mini",
+    "openai/o1-mini",
+]
 
-def get_model_info(provider: str, model_name: str) -> LLMModel | None:
+
+def get_model_info(llm_specifier: LLMSpecifier | str) -> LLMModel | None:
+    provider, model_name = llm_specifier.split("/", 1)
     for model in LLM_MODELS:
         if model.provider == provider and model.model == model_name:
             return model
