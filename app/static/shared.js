@@ -82,7 +82,7 @@ TockyShared.EXTRACTORS = {
                 options: Object.keys(TockyShared.MODELS_BY_NAME)
             },
             max_sent_tokens: {
-                value: 1000,
+                value: 50_000,
             },
             redo_ocr: {
                 value: true,

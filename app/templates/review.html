@@ -28,6 +28,10 @@
             color-scheme: dark;
         }
 
+        pre {
+            margin: 0;
+        }
+
         #app {
             font-family: Avenir, Helvetica, Arial, sans-serif;
             display: flex;
@@ -286,6 +290,43 @@
                                 :src="`https://archive.org/embed/${current_toc.record.ocaid}?admin=1#page/leaf${current_toc.record.detected_toc[0]}`"></iframe>
                         </p-tab-panel>
                         <p-tab-panel value="json">
+                            <div v-if="expenses">
+                                EXPENSES:
+                                <p-data-table
+                                    size="small"
+                                    scrollable 
+                                    data-key="id"
+                                    :value="expenses"
+                                    :show-gridlines="true"
+                                >
+                                <p-column field="id" header="ID" style="width: 60px;"></p-column>
+                                <p-column field="phase" header="Phase" style="width: 120px;"></p-column>
+                                <p-column field="cost" style="width: 100px;">
+                                    <template #header>
+                                        <div>
+                                            <b>Cost</b>
+                                            <br>
+                                            <span style="font-weight: normal; font-size: 0.9em;">
+                                                Total: ${{ expenses.reduce((sum, row) => sum + row.cost, 0) / 1_000_000 / 100 / 100 }}
+                                            </span>
+                                        </div>
+                                    </template>
+                                    <template #body="{ data: row }">
+                                        ${{ (row.cost / 1_000_000 / 100 / 100) }}
+                                    </template>
+                                </p-column>
+                                <p-column field="duration" header="Duration (s)" style="width: 110px;">
+                                    <template #body="{ data: row }">
+                                        {{ (row.duration / 1000).toLocaleString() }}
+                                    </template>
+                                </p-column>
+                                <p-column field="record" header="Record">
+                                    <template #body="{ data: row }">
+                                        <pre style="max-width: 400px; overflow-x: auto;">{{ JSON.stringify(row.record) }}</pre>
+                                    </template>
+                                </p-column>
+                            </p-data-table>
+                            </div>
                             <pre>{{JSON.stringify(current_toc, null, '  ')}}</pre>
                         </p-tab-panel>
                     </p-tab-panels>
@@ -622,6 +663,7 @@
                     },
 
                     specific_id: m ? parseFloat(m[1]) : null,
+                    expenses: null,
                     current_toc: null,
                     corrected_toc: null,
                     // The corrected leaf nums of the toc pages
@@ -710,7 +752,7 @@
 
             async mounted() {
                 if (this.specific_id) {
-                    const params = new URLSearchParams({ id: this.specific_id, flat_ocr: true });
+                    const params = new URLSearchParams({ id: this.specific_id, flat_ocr: true, expenses: true });
                     const resp = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/list?${params}`, {
                         headers: {
                             'Content-Type': 'application/json',
@@ -807,6 +849,9 @@
                     if (this.specific_id !== full_db_record.id) {
                         history.pushState({}, '', `[[ TOCKY_APPLICATION_ROOT ]]/review/${full_db_record.id}`);
                     }
+
+                    this.expenses = full_db_record.expenses || null;
+                    delete full_db_record.expenses;
 
                     this.specific_id = full_db_record.id;
                     this.current_toc = full_db_record;

@@ -41,17 +41,17 @@ class DbExpenseEntry(ExpenseEntry):
     created: datetime
 
     @staticmethod
-    def from_db_row(row: tuple) -> 'DbExpenseEntry':
+    def from_db_row(row: dict) -> 'DbExpenseEntry':
         """Create a DbExpenseEntry instance from a database row."""
         return DbExpenseEntry(
-            id=row[0],
-            created=row[1],
-            toc_queue_id=row[2],
-            batch_id=row[3],
-            phase=row[4],
-            cost=row[5],
-            duration=row[6],
-            record=json.loads(row[7])
+            id=row['id'],
+            created=row['created'],
+            toc_queue_id=row['toc_queue_id'],
+            batch_id=row['batch_id'],
+            phase=row['phase'],
+            cost=row['cost'],
+            duration=row['duration'],
+            record=json.loads(row['record'])
         )
 
 
@@ -67,31 +67,38 @@ class ExpenseTracker:
             conn.commit()
             return cur.lastrowid
 
-    def get_expenses_by_batch(self, batch_id: int) -> list[DbExpenseEntry]:
+    @staticmethod
+    def get_expenses_by_batch(batch_id: int) -> list[DbExpenseEntry]:
         """Get all expenses for a specific batch."""
         with DbContext() as (conn, cur):
             cur.execute("""
                 SELECT id, created, toc_queue_id, batch_id, phase, cost, duration, record
                 FROM expenses
                 WHERE batch_id = ?
-                ORDER BY created DESC
+                ORDER BY created ASC
             """, (batch_id,))
             
             return [DbExpenseEntry.from_db_row(row) for row in cur.fetchall()]
 
-    def get_expenses_by_toc_queue(self, toc_queue_id: int) -> list[DbExpenseEntry]:
-        """Get all expenses for a specific toc_queue item."""
-        with DbContext() as (conn, cur):
-            cur.execute("""
-                SELECT id, created, toc_queue_id, batch_id, phase, cost, duration, record
-                FROM expenses
-                WHERE toc_queue_id = ?
-                ORDER BY created DESC
-            """, (toc_queue_id,))
-            
+    @staticmethod
+    def get_expenses_by_toc_queue_ids(toc_queue_ids: list[int]) -> list[DbExpenseEntry]:
+        """Get all expenses for a list of toc_queue item IDs."""
+        if not toc_queue_ids:
+            return []
+        # Ensure all IDs are integers to prevent SQL injection
+        placeholders = ','.join('?' for _ in toc_queue_ids)
+        query = f"""
+            SELECT id, created, toc_queue_id, batch_id, phase, cost, duration, record
+            FROM expenses
+            WHERE toc_queue_id IN ({placeholders})
+            ORDER BY created ASC
+        """
+        with DbContext() as (_, cur):
+            cur.execute(query, toc_queue_ids)
             return [DbExpenseEntry.from_db_row(row) for row in cur.fetchall()]
 
-    def get_expense_by_id(self, expense_id: int) -> DbExpenseEntry | None:
+    @staticmethod
+    def get_expense_by_id(expense_id: int) -> DbExpenseEntry | None:
         """Get a single expense by its ID."""
         with DbContext() as (conn, cur):
             cur.execute("""
@@ -103,7 +110,8 @@ class ExpenseTracker:
             row = cur.fetchone()
             return DbExpenseEntry.from_db_row(row) if row else None
 
-    def get_total_cost_by_batch(self, batch_id: int) -> int:
+    @staticmethod
+    def get_total_cost_by_batch(batch_id: int) -> int:
         """Get the total cost for a batch in micropennies."""
         with DbContext() as (conn, cur):
             cur.execute("""
