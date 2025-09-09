@@ -41,7 +41,9 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
 
     @property
     def model(self):
-        return get_model_info(self.P.model)
+        m = get_model_info(self.P.model)
+        assert m
+        return m
 
     def detect(self, ocaid: str):
         small_images = list(get_book_images(ocaid, range(0, 28), reduce=3))
@@ -56,7 +58,7 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
             self.small_images = small_images
             self.composite_image = composite_image
 
-        response = hit_llm(
+        response = self.log_llm_expense(self.model, hit_llm)(
             self.P.model,
             system_prompt=SYSTEM_PROMPT,
             messages=[

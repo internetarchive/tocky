@@ -8,15 +8,19 @@ import psutil
 import requests
 
 
-from tocky import DETECTERS_BY_NAME, EXTRACTORS_BY_NAME
+from tocky.phases import DETECTERS_BY_NAME, EXTRACTORS_BY_NAME
 from tocky.detector import AbstractDetector
 from tocky.detector.ocr_detector import OcrDetector
 from tocky.env import get_env
 from tocky.extractor import AbstractExtractor, TocEntry
 from tocky.extractor.ai_extractor import AiExtractor
+from tocky.utils.expense_tracker import ExpenseTracker
 from tocky.utils.ia import bulk_ia_to_ol, get_ia_metadata
 from tocky.utils import ResultStat, get_git_sha, get_tocky_version, run_with_result_stats
+from tocky.utils.phase import AbstractPhase
 from tocky.validator import validate_extracted_toc
+from typing import TypeVar
+from tocky.extractor import AbstractExtractor
 
 TockyItemState = Literal[
   "To Detect",
@@ -157,6 +161,9 @@ def process_ia_book(
   toc_queue_id = 0
   if push:
     toc_queue_id = push_to_toc_queue(state.to_db_dict())
+    detector.expense_tracker = extractor.expense_tracker = ExpenseTracker()
+    detector.job_id = extractor.job_id = toc_queue_id
+    detector.batch_id = extractor.batch_id = batch_id
   
   def set_state(new_state: TockyItemState):
     state.state = new_state
@@ -206,7 +213,7 @@ def process_ia_book(
 class TockyOptionsError(ValueError):
     pass
 
-TPhaseClass = TypeVar('TPhaseClass')
+TPhaseClass = TypeVar('TPhaseClass', bound=AbstractPhase)
 
 def build_phase_from_options(phase_map: dict[str, type[TPhaseClass]], phase_name: str, options: dict) -> TPhaseClass:
     PHASE_CLS = phase_map.get(phase_name)
@@ -215,12 +222,11 @@ def build_phase_from_options(phase_map: dict[str, type[TPhaseClass]], phase_name
 
     phase = PHASE_CLS()
     try:
-        # TODO: Fix type error
         phase.P = dataclasses.replace(phase.P, **options)
     except TypeError as e:
         # TODO: This will not error if things are set to the wrong type
       raise TockyOptionsError(f'Invalid phase options: {e}')
-  
+
     return phase
 
 

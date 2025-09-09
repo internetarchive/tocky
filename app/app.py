@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from app.db.utils import DbContext, clear_dead_jobs, init_db, db_select_from_params
 from app.worker import process_batches
-from tocky import EXTRACTORS_BY_NAME
+from tocky.phases import EXTRACTORS_BY_NAME
 from tocky.batches import Batch
 from tocky.bulk_processor import TockyOptionsError, build_phase_from_options, process_from_options
 from tocky.env import get_env

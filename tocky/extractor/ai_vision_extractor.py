@@ -6,6 +6,7 @@ from tocky.extractor import AbstractExtractor, TocEntry, TocResponse
 from tocky.extractor.formats import build_system_prompt, process_extracted_output
 from tocky.utils.ia import get_book_images
 from tocky.utils.llm import hit_llm
+from tocky.utils.models import get_model_info
 
 SYSTEM_PROMPT = """
 You are a bot that helps to extract the full table of contents data in a structured format.
@@ -37,11 +38,17 @@ class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
         super().__init__()
         self.P = AiVisionExtractorOptions()
 
+    @property
+    def model(self):
+        m = get_model_info(self.P.model)
+        assert m
+        return m
+
     def extract(self, ocaid: str, detector_result: list[int]) -> list[TocEntry]:
         toc_page_image = concatenate_and_resize(list(get_book_images(ocaid, detector_result, reduce=1)), target_height=512)
 
         system_prompt = build_system_prompt(SYSTEM_PROMPT, self.P.extraction_format)
-        completion = hit_llm(
+        completion = self.log_llm_expense(self.model, hit_llm)(
             f"openai/{self.P.model}",
             system_prompt=system_prompt,
             messages=[

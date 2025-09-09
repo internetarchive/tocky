@@ -28,6 +28,19 @@ CREATE TABLE toc_queue (
     record JSON NOT NULL,
 );
 
+CREATE TABLE expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    toc_queue_id INTEGER,
+    batch_id INTEGER,
+    phase VARCHAR(255) NOT NULL,  -- e.g. "detector", "extractor"
+    cost INTEGER NOT NULL DEFAULT 0,  -- cost in micropennies
+    duration INTEGER NOT NULL DEFAULT 0, -- duration in milliseconds
+    record JSON NOT NULL,
+    FOREIGN KEY (toc_queue_id) REFERENCES toc_queue(id),
+    FOREIGN KEY (batch_id) REFERENCES batches(id)
+);
+
 CREATE INDEX idx_q_created ON toc_queue (created);
 CREATE INDEX idx_q_state ON toc_queue (state);
 CREATE INDEX idx_q_batch_id ON toc_queue (batch_id);

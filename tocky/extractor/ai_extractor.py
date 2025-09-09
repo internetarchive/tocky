@@ -145,7 +145,7 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
   ) -> TocResponse:
     model = get_model_info(self.P.model)
     assert model, f"Model {self.P.model} not found"
-    completion = hit_llm(
+    completion = self.log_llm_expense(model, hit_llm)(
       self.P.model,
       messages=self.build_prompt(ocr_text, book_title, prev_toc),
       # max_tokens=1024,
