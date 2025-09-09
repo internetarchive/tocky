@@ -6,7 +6,7 @@ from tocky.extractor import AbstractExtractor, TocEntry, TocResponse
 from tocky.extractor.formats import build_system_prompt, process_extracted_output
 from tocky.utils.ia import get_book_images
 from tocky.utils.llm import hit_llm
-from tocky.utils.models import get_model_info
+from tocky.utils.models import LLMSpecifier, get_model_info
 
 SYSTEM_PROMPT = """
 You are a bot that helps to extract the full table of contents data in a structured format.
@@ -26,7 +26,7 @@ Notes:
 
 @dataclass
 class AiVisionExtractorOptions:
-    model: str = "gpt-4o-mini"
+    model: LLMSpecifier | str = "openai/gpt-4o-mini"
     target_height: int = 512
     extraction_format: Literal['json', 'markdown'] = 'json'
 
@@ -49,7 +49,7 @@ class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
 
         system_prompt = build_system_prompt(SYSTEM_PROMPT, self.P.extraction_format)
         completion = self.log_llm_expense(self.model, hit_llm)(
-            f"openai/{self.P.model}",
+            self.P.model,
             system_prompt=system_prompt,
             messages=[
                 {
