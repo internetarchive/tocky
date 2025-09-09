@@ -65,7 +65,7 @@ class AiExtractorOptions:
   redo_ocr: bool = True
   ocr_engine: Literal['easyocr', 'tesseract', 'azure'] = 'easyocr'
   model: LLMSpecifier | str = "openai/gpt-4o-mini"
-  max_sent_tokens: int = 1_000
+  max_sent_tokens: int = 50_000
   """
   GPT 4o mini can handle up to 128k input tokens and 16k output tokens.
   TODO: Experiment with larger input sizes.
