@@ -14,7 +14,7 @@ from tocky.detector.ocr_detector import OcrDetector
 from tocky.env import get_env
 from tocky.extractor import AbstractExtractor, TocEntry
 from tocky.extractor.ai_extractor import AiExtractor
-from tocky.utils.expense_tracker import ExpenseTracker
+from tocky.utils.expense_tracker import DatabaseExpenseTracker
 from tocky.utils.ia import bulk_ia_to_ol, get_ia_metadata
 from tocky.utils import ResultStat, get_git_sha, get_tocky_version, run_with_result_stats
 from tocky.utils.phase import AbstractPhase
@@ -161,7 +161,7 @@ def process_ia_book(
   toc_queue_id = 0
   if push:
     toc_queue_id = push_to_toc_queue(state.to_db_dict())
-    detector.expense_tracker = extractor.expense_tracker = ExpenseTracker()
+    detector.expense_tracker = extractor.expense_tracker = DatabaseExpenseTracker()
     detector.job_id = extractor.job_id = toc_queue_id
     detector.batch_id = extractor.batch_id = batch_id
   

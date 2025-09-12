@@ -3,7 +3,7 @@
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Protocol
 
 from app.db.utils import DbContext
 
@@ -55,7 +55,41 @@ class DbExpenseEntry(ExpenseEntry):
         )
 
 
-class ExpenseTracker:
+
+
+
+class ExpenseTracker(Protocol):
+    """Protocol for expense trackers.
+
+    Any implementation should provide an ``add_expense`` method accepting an
+    ``ExpenseEntry`` and returning the inserted id or ``None``.
+    """
+
+    def add_expense(self, entry: ExpenseEntry) -> int | None: ...
+
+
+class InMemoryExpenseTracker(ExpenseTracker):
+    def __init__(self):
+        self.expenses: list[ExpenseEntry] = []
+
+    def add_expense(self, entry: ExpenseEntry) -> int | None:
+        """Add an expense entry to the in-memory list and return None."""
+        self.expenses.append(entry)
+        return None
+    
+    def report(self):
+        print("Phase\tCost ($)\tDuration (s)\tRecord")
+        for expense in self.expenses:
+            cost = expense.cost / 1_000_000 / 100 / 100
+            print('\t'.join([
+                expense.phase,
+                f"${cost:.8f}",
+                f"{expense.duration / 1000:1f}",
+                json.dumps(expense.record)
+            ]))
+
+
+class DatabaseExpenseTracker(InMemoryExpenseTracker):
     def __init__(self):
         pass
 

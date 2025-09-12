@@ -19,7 +19,7 @@ from tocky.extractor.ai_extractor import AiExtractor
 from tocky.ocr import get_supported_engines
 from tocky.ocr.printer import print_ocr
 from tocky.utils import get_tocky_version
-from tocky.utils.expense_tracker import ExpenseTracker
+from tocky.utils.expense_tracker import DatabaseExpenseTracker
 from tocky.utils.ia import get_ia_metadata_field, get_page_image
 from tocky.utils.models import get_model_index_json
 from jinja2 import Environment, FileSystemLoader, pass_context
@@ -190,7 +190,7 @@ def api_list(
     if expenses:
         job_ids = [row['id'] for row in results] if not isinstance(results, Response) else []
         if job_ids:
-            entries = ExpenseTracker.get_expenses_by_toc_queue_ids(job_ids)
+            entries = DatabaseExpenseTracker.get_expenses_by_toc_queue_ids(job_ids)
             expenses_by_job = {
                 job_id: [expense for expense in entries if expense.toc_queue_id == job_id]
                 for job_id in job_ids

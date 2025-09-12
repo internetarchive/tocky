@@ -3,6 +3,8 @@ from dataclasses import dataclass
 import json
 import re
 from io import BytesIO
+from typing import Literal
+import math
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -24,9 +26,9 @@ Please output only JSON of this format: { "toc_pages": [7,8], "notes": "<anythin
 
 @dataclass
 class AiVisionDetectorOptions:
-    model: LLMSpecifier | str = "openai/gpt-4o-mini"
+    model: LLMSpecifier | str = "openai/gpt-5-nano"
     max_tokens: int = 200
-    image_size: tuple[int, int] = (1024, 512)
+    image_size: tuple[int, int] = (1024, 1024)
 
 class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
     """
@@ -46,12 +48,15 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
         return m
 
     def detect(self, ocaid: str):
-        small_images = list(get_book_images(ocaid, range(0, 28), reduce=3))
+        small_images = list(get_book_images(ocaid, range(0, 35), reduce=3))
         composite_image = place_images_in_grid(
             small_images,
             composite_width=self.P.image_size[0],
             composite_height=self.P.image_size[1],
             image_width=140,
+            # make_square=True,
+            # square_method='crop',
+            cut_percent=5.0,
         )
 
         if self.debug:
@@ -69,7 +74,7 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
                             "type": "image_url",
                             "image_url": {
                                 "url": f"data:image/png;base64,{image_to_base64(composite_image)}",
-                                # "detail": "low",
+                                "detail": "high",
                             }
                         },
                     ],
@@ -90,14 +95,28 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
 
 
 
-def place_images_in_grid(images, composite_width=1024, composite_height=512, image_width=100):
+def place_images_in_grid(
+    images,
+    composite_width=1024,
+    composite_height=512,
+    image_width=100,
+    make_square=False,
+    square_method: Literal['crop', 'squish', 'proportional_squish']='crop',
+    cut_percent: float = 0.0,
+):
     # Set the larger image height as twice the desired composite height
     larger_image_height = composite_height * 2
 
     # Calculate the number of images per row and initial image height
     num_images_per_row = composite_width // image_width
     spacing_x = (composite_width % image_width) // (num_images_per_row - 1) if num_images_per_row > 1 else 0
-    image_height = min((img.size[1] * image_width) // img.size[0] for img in images)
+    # Normalize cut_percent to [0, 99.0] to avoid zero/negative dimensions
+    cut_percent = max(0.0, min(99.0, cut_percent))
+    cut_ratio = cut_percent / 100.0
+    
+    # If making images square, the resized height is the same as image_width; otherwise compute
+    # the resized height that preserves aspect ratio when width is image_width.
+    image_height = image_width if make_square else min((img.size[1] * image_width) // img.size[0] for img in images)
 
     # Create a larger composite image with a white background
     larger_composite_image = Image.new('RGB', (composite_width, larger_image_height), (0,0,0))
@@ -110,7 +129,38 @@ def place_images_in_grid(images, composite_width=1024, composite_height=512, ima
 
     # Place images in the larger composite image
     for i, img in enumerate(images):
-        img_resized = img.resize((image_width, image_height), Image.ANTIALIAS)
+        # First, cut margins before any processing
+        if cut_percent > 0:
+            w, h = img.size
+            dx = int(w * cut_ratio / 2.0)
+            dy = int(h * cut_ratio / 2.0)
+            dx = min(dx, max(0, (w - 1) // 2))
+            dy = min(dy, max(0, (h - 1) // 2))
+            img = img.crop((dx, dy, w - dx, h - dy))
+        # Optionally make images square before resizing/placing.
+        if make_square:
+            if square_method == 'crop':
+                w, h = img.size
+                # Determine the side of the square crop: center horizontally, take from top vertically
+                side = min(w, h)
+                left = (w - side) // 2
+                top = 0
+                right = left + side
+                bottom = top + side
+                img_to_place = img.crop((left, top, right, bottom))
+                target_size = (image_width, image_width)
+            elif square_method == 'squish':  # ignore aspect ratio, just resize to a square
+                img_to_place = img
+                target_size = (image_width, image_width)
+            else:  # 'proportional_squish'
+                img_resized = proportional_squish_to_square(img, image_width)
+                img_to_place = img_resized
+                target_size = (image_width, image_width)
+        else:
+            img_to_place = img
+            target_size = (image_width, image_height)
+
+        img_resized = img_to_place.resize(target_size, Image.ANTIALIAS)
 
         # Create a drawing context to draw on the resized image
         draw_img = ImageDraw.Draw(img_resized)
@@ -143,6 +193,47 @@ def place_images_in_grid(images, composite_width=1024, composite_height=512, ima
     final_composite_image = larger_composite_image.crop((0, 0, composite_width, composite_height))
 
     return final_composite_image
+
+
+def proportional_squish_to_square(img: Image.Image, size: int) -> Image.Image:
+    """
+    Transform an image into a square of (size x size) where vertical contribution
+    of each source row decreases linearly from top (scale=1) to bottom (scale=0).
+    Implementation maps each output scanline y to a source row using the inverse
+    of the cumulative linear scale function, ensuring an exact fit into `size` height.
+    """
+    # Ensure we have a compatible mode and dimensions
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGB")
+
+    src_w, src_h = img.size
+    if src_h <= 0:
+        # Fallback: simple squish if something odd happens
+        return img.resize((size, size), Image.ANTIALIAS)
+
+    # First, resize horizontally to the target width while keeping original height.
+    # We ignore aspect ratio horizontally only; vertical distribution is handled below.
+    horiz_resized = img.resize((size, src_h), Image.ANTIALIAS)
+
+    # Prepare the destination image
+    dest = Image.new(horiz_resized.mode if horiz_resized.mode in ("RGB", "RGBA") else "RGB", (size, size))
+
+    # For each output scanline y in [0, size-1], find the corresponding source row.
+    # Using derived relation: y_norm = 2u - u^2, where u = t/src_h in [0,1].
+    # Inverse: u = 1 - sqrt(1 - y_norm), with y_norm = y/size.
+    for y in range(size):
+        y_norm = y / size
+        # Guard against minor floating issues at y=size-1
+        y_norm = min(1.0, max(0.0, y_norm))
+        u = 1.0 - math.sqrt(1.0 - y_norm) if y_norm < 1.0 else 1.0
+        t = u * src_h
+        src_row = min(src_h - 1, max(0, int(t)))
+
+        # Extract a single-row slice and paste it at y
+        row = horiz_resized.crop((0, src_row, size, src_row + 1))
+        dest.paste(row, (0, y))
+
+    return dest
 
 
 def image_to_base64(pil_image, format="PNG"):
