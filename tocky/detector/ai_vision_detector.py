@@ -14,10 +14,11 @@ from tocky.utils.llm import hit_llm
 from tocky.utils.models import LLMSpecifier, get_model_info
 
 SYSTEM_PROMPT: str = """
-You are a bot that helps in the detection of all pages of the table of contents of a book.
+You are a bot that detects all pages of the table of contents in a book.
 
 Notes:
 - Make sure to get all the pages, not just the first page of the table of contents
+- Sometimes the first or last page has only a few lines; be sure to include those pages too
 - AVOID things like the copyright page, "contents in brief", or table of figures/illustrations, or pages that are blank
 - If there are multiple tables of contents sections, only detect the pages for the primary table of contents
 - If you cannot detect a table of contents, output an empty array instead of guessing
