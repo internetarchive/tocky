@@ -791,6 +791,59 @@ TockyShared.PageSelector = {
     }
 };
 
+/** @type {import('vue').App} */
+TockyShared.ExpensesTable = {
+    template: `
+        <p-data-table
+            size="small"
+            scrollable
+            data-key="id"
+            :value="value"
+            :show-gridlines="true"
+        >
+            <p-column field="id" header="ID" style="width: 60px;"></p-column>
+            <p-column field="phase" header="Phase" style="width: 120px;"></p-column>
+            <p-column field="cost" style="width: 100px;">
+                <template #header>
+                    <div>
+                        <b>Cost</b>
+                        <br>
+                        <span style="font-weight: normal; font-size: 0.9em;">
+                            Total: {{ totalCost }}
+                        </span>
+                    </div>
+                </template>
+                <template #body="{ data: row }">
+                    {{ (row.cost / 1_000_000 / 100 / 100) }}
+                </template>
+            </p-column>
+            <p-column field="duration" header="Duration (s)" style="width: 110px;">
+                <template #body="{ data: row }">
+                    {{ (row.duration / 1000).toLocaleString() }}
+                </template>
+            </p-column>
+            <p-column field="record" header="Record">
+                <template #body="{ data: row }">
+                    <pre style="max-width: 400px; overflow-x: auto;">{{ JSON.stringify(row.record) }}</pre>
+                </template>
+            </p-column>
+        </p-data-table>
+    `,
+    props: {
+        /**
+         * Array of expense rows
+         * @type {{ id: number|string, phase: string, cost: number, duration: number, record: any }[] }
+         */
+        value: Array,
+    },
+    computed: {
+        totalCost() {
+            const total = (this.value || []).reduce((sum, row) => sum + (row?.cost || 0), 0);
+            return (total / 1_000_000 / 100 / 100);
+        },
+    },
+};
+
 TockyShared.MiddleTruncate = {
     mounted(el, binding) {
         const text = el.innerText;
@@ -803,6 +856,7 @@ TockyShared.MiddleTruncate = {
     }
 };
 
+/** @type {import('vue').App} */
 TockyShared.IaLink = {
     template: `
         <p-button-group>
@@ -966,6 +1020,7 @@ TockyShared.registerComponents = function (app) {
     app.component('tocky-state-tag', TockyShared.StateTag);
     app.component('tocky-ia-link', TockyShared.IaLink);
     app.component('tocky-page-selector', TockyShared.PageSelector);
+    app.component('tocky-expenses-table', TockyShared.ExpensesTable);
 
     // Register global directives
     app.directive('tocky-middle-truncate', TockyShared.MiddleTruncate);
