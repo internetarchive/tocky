@@ -189,31 +189,21 @@
             </template>
         </p-toolbar>
 
-        <p-dialog v-model:visible="dialogVisible" header="Full Record" :modal="true" :style="{ width: '50vw' }">
+        <p-dialog v-model:visible="dialogVisible" header="Full Record" :modal="true" :style="{ 'min-width': '50vw' }">
             <pre>{{ fullRecord }}</pre>
         </p-dialog>
 
-        <p-dialog v-model:visible="statsDialogVisible" header="Stats" :modal="true" :style="{ width: '50vw' }">
+        <p-dialog v-model:visible="statsDialogVisible" header="Stats" :modal="true" :style="{ 'min-width': '50vw' }">
             <div v-if="statsLoading">
                 <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
             </div>
             <div v-else>
                 <p>Total Records: {{ statsRecord.total }}</p>
                 <template v-for="field in ['state', 'record.human_validation']">
-                    <table class="ui compact table">
-                        <thead>
-                            <tr>
-                                <th>{{ field }}</th>
-                                <th>Count</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(count, name) in statsRecord[field]" :key="name">
-                                <td>{{ name }}</td>
-                                <td>{{ count }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <p-data-table :value="Object.entries(statsRecord[field])" size="small" style="margin-bottom: 10px;">
+                        <p-column field="0" :header="field"></p-column>
+                        <p-column field="1" header="Count"></p-column>
+                    </p-data-table>
                 </template>
             </div>
         </p-dialog>
