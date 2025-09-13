@@ -809,22 +809,22 @@ TockyShared.ExpensesTable = {
                         <b>Cost</b>
                         <br>
                         <span style="font-weight: normal; font-size: 0.9em;">
-                            Total: {{ totalCost }}
+                            Total: \${{ totalCost }}
                         </span>
                     </div>
                 </template>
                 <template #body="{ data: row }">
-                    {{ (row.cost / 1_000_000 / 100 / 100) }}
+                    \${{ (row.cost / 1_000_000 / 100 / 100) }}
                 </template>
             </p-column>
-            <p-column field="duration" header="Duration (s)" style="width: 110px;">
+            <p-column field="duration" header="Duration" style="width: 110px;">
                 <template #body="{ data: row }">
-                    {{ (row.duration / 1000).toLocaleString() }}
+                    {{ (row.duration / 1000).toLocaleString() }} s
                 </template>
             </p-column>
             <p-column field="record" header="Record">
                 <template #body="{ data: row }">
-                    <pre style="max-width: 400px; overflow-x: auto;">{{ JSON.stringify(row.record) }}</pre>
+                    <pre style="max-width: 400px; overflow-x: auto; margin: 0;">{{ JSON.stringify(row.record) }}</pre>
                 </template>
             </p-column>
         </p-data-table>

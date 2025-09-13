@@ -306,6 +306,26 @@ def stats(
             {where_str}
             GROUP BY record->>'$.human_validation'
         """, (*where_params,)).fetchall()
+
+        # Join over distinct batch_id in toc_queue table with expenses table batch_id
+        expenses_from_batches = cur.execute(f"""
+            SELECT e.* FROM expenses e
+            JOIN (
+                SELECT DISTINCT batch_id FROM toc_queue
+                {where_str + " AND batch_id IS NOT NULL" if where_str else " WHERE batch_id IS NOT NULL"}
+            ) b ON e.batch_id = b.batch_id
+            ORDER BY e.created DESC
+        """, (*where_params,)).fetchall()
+
+        expenses_from_individual_jobs = cur.execute(f"""
+            SELECT e.* FROM expenses e
+            JOIN (
+                SELECT id as toc_queue_id FROM toc_queue
+                {where_str + " AND batch_id IS NULL" if where_str else " WHERE batch_id IS NULL"}
+            ) j ON e.toc_queue_id = j.toc_queue_id
+            ORDER BY e.created DESC
+        """, (*where_params,)).fetchall()
+
         return {
             'total': total_count['count'],
             'state': {
@@ -316,6 +336,13 @@ def stats(
                 row['record.human_validation'] or 'Unreviewed': row['count']
                 for row in by_validation
             },
+            'expenses': [
+                {
+                    **dict(row),
+                    'record': json.loads(row['record']) if row['record'] else None,
+                }
+                for row in expenses_from_batches + expenses_from_individual_jobs
+            ],
         }
 
 @tocky_router.get('/review', response_class=HTMLResponse)
