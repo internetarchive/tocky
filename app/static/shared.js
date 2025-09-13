@@ -360,6 +360,29 @@ class OcrTocStitch {
         }
 
         this.words = stitchedWords;
+        this.onceUsedWords = stitchedWords.filter(word => word.ocrWords.length <= 1);
+        this.twiceUsedWords = stitchedWords.filter(word => word.ocrWords.length === 2);
+
+        /** @type {Map<TocEntry, StitchedWord[]>} */
+        this.tocEntryToOnceUsedWord = new Map();
+        for (const word of this.onceUsedWords) {
+            const tocEntry = word.tocEntry;
+            if (!this.tocEntryToOnceUsedWord.has(tocEntry)) {
+                this.tocEntryToOnceUsedWord.set(tocEntry, []);
+            }
+            this.tocEntryToOnceUsedWord.get(tocEntry).push(word);
+        }
+
+        /** @type {Map<TocEntry, StitchedWord[]>} */
+        this.tocEntryToTwiceUsedWord = new Map();
+        for (const word of this.twiceUsedWords) {
+            const tocEntry = word.tocEntry;
+            if (!this.tocEntryToTwiceUsedWord.has(tocEntry)) {
+                this.tocEntryToTwiceUsedWord.set(tocEntry, []);
+            }
+            this.tocEntryToTwiceUsedWord.get(tocEntry).push(word);
+        }
+
         const matchedOcrWords = new Set(stitchedWords.flatMap(word => word.ocrWords.map(w => w.id)));
 
         this.deletedWords = new Set(
@@ -376,6 +399,11 @@ class OcrTocStitch {
         this.ocrWordToExtraClasses = new Map();
         /** @type {Map<string, OcrWord[]>} */
         this.classToOcrWords = new Map();
+
+        /** @type {Map<TocEntry, OcrWord[]>} */
+        this.cacheTocEntryToOcrWords = new Map();
+
+        this.events = new EventTarget();
     }
 
     /**
@@ -393,6 +421,8 @@ class OcrTocStitch {
             existingClasses.push(ocrWord);
             this.classToOcrWords.set(cls, existingClasses);
         }
+
+        this.events.dispatchEvent(new Event('update'));
     }
 
     /**
@@ -414,6 +444,8 @@ class OcrTocStitch {
             }
         }
         this.classToOcrWords.delete(cls);
+
+        this.events.dispatchEvent(new Event('update'));
     }
 
 
@@ -428,17 +460,16 @@ class OcrTocStitch {
      * @param {TocEntry} tocEntry
      */
     getOcrWordsForTocEntry(tocEntry) {
-        // First check words which only one occurrence in the OCR
-        let highConfidenceWords = this.words
-            .filter(word => tocEntry == word.tocEntry && word.ocrWords.length <= 1)
-            .flatMap(word => word.ocrWords);
-        
-        if (highConfidenceWords.length === 0) {
-            // No luck, try a more relaxed search
-            highConfidenceWords = this.words
-            .filter(word => tocEntry == word.tocEntry && word.ocrWords.length <= 2)
-            .flatMap(word => word.ocrWords);
+        if (this.cacheTocEntryToOcrWords.has(tocEntry)) {
+            return this.cacheTocEntryToOcrWords.get(tocEntry);
         }
+        const highConfidenceWords = (
+            // First check words which only one occurrence in the OCR
+            this.tocEntryToOnceUsedWord.get(tocEntry)
+            // Then check words which occur at most twice in the OCR
+            || this.tocEntryToTwiceUsedWord.get(tocEntry)
+            || []
+        ).flatMap(word => word.ocrWords);
 
         const includedWordTexts = new Set(highConfidenceWords.map(word => normalizeOcrWordText(word.text)));
 
@@ -471,10 +502,12 @@ class OcrTocStitch {
             .filter(ocrWord => ocrWord.wordIndex >= minWordIndex && ocrWord.wordIndex <= maxWordIndex)
             .filter(ocrWord => !highConfidenceWords.includes(ocrWord) && !includedWordTexts.has(normalizeOcrWordText(ocrWord.text)));
 
-        return _.sortBy([
+        const result = _.sortBy([
             ...highConfidenceWords,
             ...midConfidenceWords,
         ], 'wordIndex');
+        this.cacheTocEntryToOcrWords.set(tocEntry, result);
+        return result;
     }
 
     /**
@@ -674,6 +707,9 @@ TockyShared.PageSelector = {
                 };
             }
         },
+        onStitchUpdate: _.throttle(function () {
+            this.$forceUpdate();
+        }, 100),
     },
     watch: {
         async layout(newLayout) {
@@ -685,6 +721,16 @@ TockyShared.PageSelector = {
                     selectedImg.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
                 }
             }
+        },
+
+        stitch(newStitch, oldStitch) {
+            if (oldStitch) {
+                oldStitch.events.removeEventListener('update', this.onStitchUpdate);
+            }
+            if (newStitch) {
+                newStitch.events.addEventListener('update', this.onStitchUpdate);
+            }
+            this.onStitchUpdate();
         }
     },
     mounted() {

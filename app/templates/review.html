@@ -532,12 +532,12 @@
     <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.prod.js"></script>
     <script src="https://unpkg.com/primevue@4.0.5/umd/primevue.min.js"></script>
     <script src="https://unpkg.com/@primevue/themes@4.0.5/umd/aura.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
     <script src="[[ url_for('static', path='shared.js') ]]"></script>
 
     <script src="https://unpkg.com/vue-demi@0.14.6/lib/index.iife.js"></script>
     <script src="https://unpkg.com/@monaco-editor/loader@1.4.0/lib/umd/monaco-loader.js"></script>
     <script src="https://unpkg.com/@guolao/vue-monaco-editor@1.5.4/lib/umd/monaco-vue.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
 
     <script type="module">
         const { VueMonacoEditor, VueMonacoDiffEditor } = monaco_vue;
@@ -686,7 +686,7 @@
                     if (!this.parsedOcr || !this.corrected_toc || !this.stitchEnabled) {
                         return null;
                     }
-                    return Vue.reactive(new OcrTocStitch(this.parsedOcr, this.corrected_toc));
+                    return new OcrTocStitch(this.parsedOcr, this.corrected_toc);
                 },
                 hasNesting() {
                     return this.corrected_toc?.some((entry) => entry.level > 0);
@@ -863,7 +863,7 @@
                         await 0; // wait for event loop + DOM update
                         this.scrollWordsIntoView('highlighted');
                     }, 200, {
-                        leading: true,
+                        leading: false,
                         trailing: true,
                     }));
 
