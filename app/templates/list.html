@@ -48,6 +48,26 @@
         .p-multiselect-list-container {
             scrollbar-width: thin;
         }
+
+        .p-toolbar.tocky-footer-toolbar {
+            position: sticky;
+            bottom: 10px;
+            left: 0;
+            z-index: 1000;
+            padding: 6px;
+            border-radius: 100px;
+            max-width: 600px;
+            margin: auto;
+        }
+
+        .p-toolbar.tocky-footer-toolbar .p-paginator {
+            background: transparent;
+            padding: 0;
+        }
+
+        .p-toolbar.tocky-footer-toolbar .p-paginator-content {
+            flex-wrap: nowrap;
+        }
     </style>
 </head>
 
@@ -149,15 +169,53 @@
             </p-column>
         </p-data-table>
 
-        <p-paginator
-            :first="offset"
-            :rows="limit"
-            :total-records="max_id"
-            @page="handlePageChange"
-        ></p-paginator>
+        <p-toolbar class="tocky-footer-toolbar">
+            <template #end>
+                <p-button
+                    icon="pi pi-calculator"
+                    label="Stats"
+                    text
+                    rounded
+                    @click="showStats()"
+                ></p-button>
+            </template>
+            <template #center>
+                <p-paginator
+                    :first="offset"
+                    :rows="limit"
+                    :total-records="max_id"
+                    @page="handlePageChange"
+                ></p-paginator>
+            </template>
+        </p-toolbar>
 
         <p-dialog v-model:visible="dialogVisible" header="Full Record" :modal="true" :style="{ width: '50vw' }">
             <pre>{{ fullRecord }}</pre>
+        </p-dialog>
+
+        <p-dialog v-model:visible="statsDialogVisible" header="Stats" :modal="true" :style="{ width: '50vw' }">
+            <div v-if="statsLoading">
+                <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+            </div>
+            <div v-else>
+                <p>Total Records: {{ statsRecord.total }}</p>
+                <template v-for="field in ['state', 'record.human_validation']">
+                    <table class="ui compact table">
+                        <thead>
+                            <tr>
+                                <th>{{ field }}</th>
+                                <th>Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(count, name) in statsRecord[field]" :key="name">
+                                <td>{{ name }}</td>
+                                <td>{{ count }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </template>
+            </div>
         </p-dialog>
     </div>
 
@@ -184,6 +242,11 @@
                     dialogVisible: false,
                     fullRecord: '',
                     loading: false,
+                    
+                    statsDialogVisible: false,
+                    statsLoading: false,
+                    statsRecord: null,
+                    statsParamString: '',
 
                     limit: limit,
                     offset: hashParams.get('offset') ? parseFloat(hashParams.get('offset')) :
@@ -232,7 +295,7 @@
             },
             methods: {
                 async apiList(params) {
-                    const response = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/list?${new URLSearchParams(params).toString()}`);
+                    const response = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/list?${new URLSearchParams(params)}`);
                     return await response.json();
                 },
                 isRunning(record) {
@@ -294,6 +357,24 @@
                 showFullRecord(record) {
                     this.fullRecord = JSON.stringify(record, null, 2);
                     this.dialogVisible = true;
+                },
+                async showStats() {
+                    this.statsDialogVisible = true;
+                    const params = {};
+                    for (const [key, value] of Object.entries(this.filters)) {
+                        if (value.value?.length > 0) {
+                            params[key] = value.value.join('|');
+                        }
+                    }
+                    const paramString = new URLSearchParams(params).toString();
+                    if (this.statsRecord && this.statsParamString === paramString) {
+                        return;
+                    }
+                    this.statsParamString = paramString;
+                    this.statsLoading = true;
+                    const stats = await fetch(`[[ TOCKY_APPLICATION_ROOT ]]/api/stats?${paramString}`);
+                    this.statsRecord = await stats.json();
+                    this.statsLoading = false;
                 },
                 handleFilter(event) {
                     if (JSON.stringify(this.filters) === JSON.stringify(event.filters)) {

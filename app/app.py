@@ -9,7 +9,7 @@ from fastapi import APIRouter
 from typing import Optional, cast
 import json
 from pathlib import Path
-from app.db.utils import DbContext, clear_dead_jobs, init_db, db_select_from_params
+from app.db.utils import DbContext, clear_dead_jobs, db_where_clause_from_params, init_db, db_select_from_params
 from app.worker import process_batches
 from tocky.phases import EXTRACTORS_BY_NAME
 from tocky.batches import Batch
@@ -280,19 +280,43 @@ def api_extractor_prompt(id: int = Query(...)):
         ),
     }
 
-@tocky_router.get('/stats')
-def stats():
+@tocky_router.get('/api/stats')
+def stats(
+    request: Request,
+):
+    where_str, where_params = db_where_clause_from_params(
+        request,
+        filter_fields=('id', 'state', 'batch_id', 'assignee', 'record.status', 'record.human_validation'),
+        # table_alias,
+    )
     with DbContext() as (conn, cur):
-        result = cur.execute("""
+        total_count = cur.execute(f"""
+            SELECT count(*) as count FROM toc_queue
+            {where_str}
+        """, (*where_params,)).fetchone()
+        
+        by_state = cur.execute(f"""
             SELECT state, count(*) as count FROM toc_queue
+            {where_str}
             GROUP BY state
-        """)
-        return [
-            {
-                **dict(row),
-            }
-            for row in result.fetchall()
-        ]
+        """, (*where_params,)).fetchall()
+
+        by_validation = cur.execute(f"""
+            SELECT record->>'$.human_validation' as 'record.human_validation', count(*) as count FROM toc_queue
+            {where_str}
+            GROUP BY record->>'$.human_validation'
+        """, (*where_params,)).fetchall()
+        return {
+            'total': total_count['count'],
+            'state': {
+                row['state']: row['count']
+                for row in by_state
+            },
+            'record.human_validation': {
+                row['record.human_validation'] or 'Unreviewed': row['count']
+                for row in by_validation
+            },
+        }
 
 @tocky_router.get('/review', response_class=HTMLResponse)
 def review(request: Request):

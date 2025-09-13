@@ -47,24 +47,13 @@ def init_db():
             cur.executescript(schema_sql)
 
 
-def db_select_from_params(
-    table: str,
-    filter_fields: Sequence[str],
-    sort_fields: Sequence[str],
-    limit: int,
-    offset: int,
-    sort: str,
+def db_where_clause_from_params(
     request: Request,
+    filter_fields: Sequence[str],
     table_alias: str | None = None,
-    select_extras: Sequence[str] | None = None,
-):
-    direction = 'DESC' if sort[0] == '-' else 'ASC'
-    sort_field = sort.lstrip('-')
-    if sort_field not in sort_fields:
-        return JSONResponse({'success': False, 'message': 'Invalid sort field'}, status_code=400)
-    where_clauses = []
+) -> tuple[str, list]:
     params = []
-
+    where_clauses = []
     for list_field in filter_fields:
         if arg_val := request.query_params.get(list_field):
             filter_list = arg_val.split('|')
@@ -80,6 +69,26 @@ def db_select_from_params(
             where_clauses.append(f'{db_field} IN ({",".join(["?"] * len(filter_list))})')
             params.extend(sub_fields)
             params.extend(filter_list)
+    where_str = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+    return where_str, params
+
+def db_select_from_params(
+    table: str,
+    filter_fields: Sequence[str],
+    sort_fields: Sequence[str],
+    limit: int,
+    offset: int,
+    sort: str,
+    request: Request,
+    table_alias: str | None = None,
+    select_extras: Sequence[str] | None = None,
+):
+    direction = 'DESC' if sort[0] == '-' else 'ASC'
+    sort_field = sort.lstrip('-')
+    if sort_field not in sort_fields:
+        return JSONResponse({'success': False, 'message': 'Invalid sort field'}, status_code=400)
+    where_str, where_params = db_where_clause_from_params(request, filter_fields, table_alias)
+
     with DbContext() as (conn, cur):
         select_fields = [
             f"{table_alias}.*" if table_alias else f"{table}.*",
@@ -87,10 +96,10 @@ def db_select_from_params(
         ]
         result = cur.execute(f"""
             SELECT {', '.join(select_fields)} FROM {table} {table_alias or ''}
-            {"WHERE " + " AND ".join(where_clauses) if where_clauses else ""}
+            {where_str}
             ORDER BY {sort_field} {direction}
             LIMIT ? OFFSET ?
-        """, (*params, limit, offset))
+        """, (*where_params, limit, offset))
         return [
             {
                 **dict(row),
