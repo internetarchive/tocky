@@ -358,7 +358,7 @@ def ia_toc_img(id: int = Query(...), index: int = Query(...), _=Depends(requires
         detected_toc = record['detected_toc']
         if not detected_toc:
             return JSONResponse({'success': False, 'message': 'TOC not detected'}, status_code=404)
-        detected_toc = detected_toc[0:10]
+        detected_toc = detected_toc[0:20]
         if not(-2 <= index <= len(detected_toc) + 2):
             return JSONResponse({'success': False, 'message': 'Index out of range'}, status_code=400)
         if index < 0:
