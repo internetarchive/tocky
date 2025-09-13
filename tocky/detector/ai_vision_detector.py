@@ -18,7 +18,7 @@ You are a bot that helps in the detection of all table of contents pages in a bo
 
 Notes:
 - Make sure to get all the pages, not just the first page of the table of contents
-- AVOID things like the copyright page or table of figures/illustrations
+- AVOID things like the copyright page, or table of figures/illustrations, or pages that are blank
 - If you cannot detect a table of contents, output an empty array instead of guessing
 
 Please output only JSON of this format: { "toc_pages": [7,8], "notes": "<anything you want to share>" }
@@ -28,7 +28,8 @@ Please output only JSON of this format: { "toc_pages": [7,8], "notes": "<anythin
 class AiVisionDetectorOptions:
     model: LLMSpecifier | str = "openai/gpt-5-nano"
     max_tokens: int = 200
-    image_size: tuple[int, int] = (1024, 1024)
+    image_size: tuple[int, int] = (2 * 512, 3 * 512)
+    page_width: int = 165
 
 class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
     """
@@ -47,13 +48,16 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
         assert m
         return m
 
-    def detect(self, ocaid: str):
-        small_images = list(get_book_images(ocaid, range(0, 35), reduce=3))
+    def build_composite_image(self, ocaid: str, reuse=False) -> Image.Image:
+        if self.debug and reuse and hasattr(self, 'small_images'):
+            small_images = self.small_images
+        else:
+            small_images = list(get_book_images(ocaid, range(0, 36), reduce=3))
         composite_image = place_images_in_grid(
             small_images,
             composite_width=self.P.image_size[0],
             composite_height=self.P.image_size[1],
-            image_width=140,
+            image_width=self.P.page_width,
             # make_square=True,
             # square_method='crop',
             cut_percent=5.0,
@@ -63,6 +67,10 @@ class AiVisionDetector(AbstractDetector[AiVisionDetectorOptions]):
             self.small_images = small_images
             self.composite_image = composite_image
 
+        return composite_image
+
+    def detect(self, ocaid: str):
+        composite_image = self.build_composite_image(ocaid)
         response = self.log_llm_expense(self.model, hit_llm)(
             self.P.model,
             system_prompt=SYSTEM_PROMPT,
