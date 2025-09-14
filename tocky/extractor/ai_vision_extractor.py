@@ -4,7 +4,7 @@ from typing import Literal
 from PIL import Image
 from lxml import etree
 
-from tocky.detector.ai_vision_detector import concatenate_and_resize, image_to_base64
+from tocky.detector.ai_vision_detector import image_to_base64
 from tocky.extractor import AbstractExtractor, TocEntry, TocResponse
 from tocky.extractor.formats import build_system_prompt, process_extracted_output
 from tocky.ocr.printer import print_ocr
@@ -31,7 +31,7 @@ Notes:
 @dataclass
 class AiVisionExtractorOptions:
     model: LLMSpecifier | str = "openai/gpt-4o-mini"
-    target_height: int = 512
+    image_size: int = 2048
     extraction_format: Literal['json', 'markdown'] = 'json'
 
 
@@ -51,19 +51,26 @@ class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
     def build_system_prompt(self) -> str:
         return build_system_prompt(SYSTEM_PROMPT, self.P.extraction_format, show_input=False)
 
-    def extract(self, ocaid: str, detector_result: list[int]) -> list[TocEntry]:
+    def build_images(self, ocaid: str, detector_result: list[int]) -> list[Image.Image]:
         images: list[Image.Image] = []
-        self.log_debug(f"Loading and resizing images from {ocaid}...", end="")
         for img in get_book_images(ocaid, detector_result, reduce=1):
-            new_width = min(1024, img.width)
-            if img.width != new_width:
-                new_height = int(img.height * (new_width / img.width))
-                img = img.resize(
+            max_dimension = max(img.width, img.height)
+            if max_dimension > self.P.image_size:
+                scale = self.P.image_size / max_dimension
+                new_width = int(img.width * scale)
+                new_height = int(img.height * scale)
+                images.append(img.resize(
                     (new_width, new_height),
                     Image.LANCZOS
-                )
-            images.append(img)
-        self.log_debug(f"✓")
+                ))
+            else:
+                images.append(img)
+        return images
+
+    def extract(self, ocaid: str, detector_result: list[int]) -> list[TocEntry]:
+        self.log_debug(f"Loading and resizing images from {ocaid}...", end="")
+        images = self.build_images(ocaid, detector_result)
+        self.log_debug(f" ✓")
 
         self.log_debug(f"Loading OCR...", end="")
         djvu_xml_to_fetch = set(detector_result) - set(self.S.ocr_cache.keys())
@@ -76,7 +83,7 @@ class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
                     self.S.ocr_cache[leaf_num] = etree.tostring(elem, encoding='unicode')
         self.toc_raw_ocr = [self.S.ocr_cache[leaf_num] for leaf_num in detector_result]
         self.toc_flat_ocr = [print_ocr(ocr) for ocr in self.toc_raw_ocr]
-        self.log_debug(f"✓")
+        self.log_debug(f" ✓")
 
         self.log_debug(f"Hitting LLM...", end="")
         completion = self.log_llm_expense(self.model, hit_llm)(
@@ -104,7 +111,10 @@ class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
                 },
             ],
         )
-        self.log_debug(f"✓")
+        self.log_debug(f" ✓")
+
+        if self.debug:
+            self.completion = completion
 
         assert completion.choices[0].message.content
         assert completion.usage
