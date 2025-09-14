@@ -244,7 +244,7 @@ def process_from_options(options: dict, push=False):
     extractor.S = detector.S
 
     # Now let's run some stuff!
-    detector.debug = False    
+    detector.debug = extractor.debug = False
     return process_ia_book(ia_id, detector, extractor, push=push, batch_id=batch_id)
 
 

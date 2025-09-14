@@ -33,6 +33,15 @@ Output:
 ```
 """.strip()
 
+SAMPLE_FORMAT_NO_INPUT = """
+{label}
+
+```{output_format}
+{output}
+```
+""".strip()
+
+
 JSON_INSTRUCTIONS = """
 The format you will need to output is JSON of this type:
 
@@ -75,23 +84,25 @@ def format_toc(toc: list[TocEntry], extraction_format: Literal["json", "markdown
         raise ValueError(f"Unknown extraction format: {extraction_format}")
    
 
-def format_prompt_sample(sample: PromptSample, extraction_format: Literal["json", "markdown"]) -> str:
+def format_prompt_sample(sample: PromptSample, extraction_format: Literal["json", "markdown"], show_input=True) -> str:
+    template = SAMPLE_FORMAT if show_input else SAMPLE_FORMAT_NO_INPUT
     input_str = sample["input"].strip('\n')
     input_str = re.sub(r'^\|', '', input_str, flags=re.MULTILINE)
     output_toc = [TocEntry(**entry) for entry in sample["output"]]
-    return SAMPLE_FORMAT.format(
+
+    return template.format(
         label=sample.get("label", ""),
         input=input_str,
         output=format_toc(output_toc, extraction_format),
         output_format="" if extraction_format == "markdown" else extraction_format,
     ).strip()
 
-def build_system_prompt(prompt_template: str, extraction_format: Literal["json", "markdown"]) -> str:
+def build_system_prompt(prompt_template: str, extraction_format: Literal["json", "markdown"], show_input=True) -> str:
     format_instructions = JSON_INSTRUCTIONS if extraction_format == "json" else MARKDOWN_INSTRUCTIONS
     return prompt_template.format(
         format_instructions=format_instructions,
         PROMPT_SAMPLES={
-            sample_id: format_prompt_sample(sample, extraction_format)
+            sample_id: format_prompt_sample(sample, extraction_format, show_input)
             for sample_id, sample in PROMPT_SAMPLES.items()
         }
     )

@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from PIL import Image
+
 from tocky.detector.ai_vision_detector import concatenate_and_resize, image_to_base64
 from tocky.extractor import AbstractExtractor, TocEntry, TocResponse
 from tocky.extractor.formats import build_system_prompt, process_extracted_output
@@ -44,32 +46,50 @@ class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
         assert m
         return m
 
-    def extract(self, ocaid: str, detector_result: list[int]) -> list[TocEntry]:
-        toc_page_image = concatenate_and_resize(list(get_book_images(ocaid, detector_result, reduce=1)), target_height=512)
+    def build_system_prompt(self) -> str:
+        return build_system_prompt(SYSTEM_PROMPT, self.P.extraction_format, show_input=False)
 
-        system_prompt = build_system_prompt(SYSTEM_PROMPT, self.P.extraction_format)
+    def extract(self, ocaid: str, detector_result: list[int]) -> list[TocEntry]:
+        images: list[Image.Image] = []
+        self.log_debug(f"Loading and resizing images from {ocaid}...", end="")
+        for img in get_book_images(ocaid, detector_result, reduce=1):
+            new_width = min(1024, img.width)
+            if img.width != new_width:
+                new_height = int(img.height * (new_width / img.width))
+                img = img.resize(
+                    (new_width, new_height),
+                    Image.LANCZOS
+                )
+            images.append(img)
+        self.log_debug(f"✓")
+
+        self.log_debug(f"Hitting LLM...", end="")
         completion = self.log_llm_expense(self.model, hit_llm)(
             self.P.model,
-            system_prompt=system_prompt,
+            system_prompt=self.build_system_prompt(),
             messages=[
                 {
                     "role": "user",
                     "content": [
                         {
                             "type": "text",
-                            "text": "Please extract the table of contents from this image.",
+                            "text": "Please extract the table of contents from these images",
                         },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/png;base64,{image_to_base64(toc_page_image)}"
-                            },
-                        },
+                        *(
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{image_to_base64(img)}",
+                                    "detail": "high",
+                                },
+                            }
+                            for img in images
+                        )
                     ],
                 },
             ],
-            # max_tokens=4096,
         )
+        self.log_debug(f"✓")
 
         assert completion.choices[0].message.content
         assert completion.usage

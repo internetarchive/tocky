@@ -29,6 +29,10 @@ class AbstractPhase(Generic[TParams]):
         self.S = ShareableState()
         self.expense_tracker = None
 
+    def log_debug(self, *args, **kwargs):
+        if self.debug:
+            print(*args, **kwargs)
+
     def log_expense(self, cost: int, duration: int, record: dict):
         if not self.expense_tracker:
             # Expense tracking not enabled
