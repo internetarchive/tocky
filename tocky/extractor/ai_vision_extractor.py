@@ -2,11 +2,13 @@ from dataclasses import dataclass
 from typing import Literal
 
 from PIL import Image
+from lxml import etree
 
 from tocky.detector.ai_vision_detector import concatenate_and_resize, image_to_base64
 from tocky.extractor import AbstractExtractor, TocEntry, TocResponse
 from tocky.extractor.formats import build_system_prompt, process_extracted_output
-from tocky.utils.ia import get_book_images
+from tocky.ocr.printer import print_ocr
+from tocky.utils.ia import get_book_images, get_djvu_by_leaf_nums, ocaid_to_djvu_url
 from tocky.utils.llm import hit_llm
 from tocky.utils.models import LLMSpecifier, get_model_info
 
@@ -61,6 +63,19 @@ class AiVisionExtractor(AbstractExtractor[AiVisionExtractorOptions]):
                     Image.LANCZOS
                 )
             images.append(img)
+        self.log_debug(f"✓")
+
+        self.log_debug(f"Loading OCR...", end="")
+        djvu_xml_to_fetch = set(detector_result) - set(self.S.ocr_cache.keys())
+        if djvu_xml_to_fetch:
+            djvu_url = ocaid_to_djvu_url(ocaid)
+            start = min(djvu_xml_to_fetch)
+            end = max(djvu_xml_to_fetch)
+            for leaf_num, elem in get_djvu_by_leaf_nums(djvu_url, start, end):
+                if leaf_num in djvu_xml_to_fetch:
+                    self.S.ocr_cache[leaf_num] = etree.tostring(elem, encoding='unicode')
+        self.toc_raw_ocr = [self.S.ocr_cache[leaf_num] for leaf_num in detector_result]
+        self.toc_flat_ocr = [print_ocr(ocr) for ocr in self.toc_raw_ocr]
         self.log_debug(f"✓")
 
         self.log_debug(f"Hitting LLM...", end="")
