@@ -102,7 +102,11 @@
                 </template>
             </p-column>
             <p-column field="creator" header="Creator" style="white-space: nowrap;"></p-column>
-            <p-column field="created" header="Created" style="white-space: nowrap;"></p-column>
+            <p-column field="created" header="Created" style="white-space: nowrap;">
+                <template #body="{ data }">
+                    <time :datetime="data.created">{{ new Date(data.created + 'Z').toLocaleString(undefined, { hour12: false }) }}</time>
+                </template>
+            </p-column>
             <p-column field="name" header="Name" style="width: 50%">
                 <template #body="{ data }">
                     <template v-if="data.name">{{ data.name }}</template>

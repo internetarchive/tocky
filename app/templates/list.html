@@ -45,6 +45,14 @@
             opacity: 1;
         }
 
+        td:nth-child(5) .tocky-filter-button {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        td:nth-child(5):hover .tocky-filter-button {
+            opacity: 1;
+        }
+
         .p-multiselect-list-container {
             scrollbar-width: thin;
         }
@@ -99,7 +107,11 @@
                 </template>
             </p-column>
             <p-column field="assignee" header="Assignee"></p-column>
-            <p-column field="created" header="Created"></p-column>
+            <p-column field="created" header="Created">
+                <template #body="{ data }">
+                    <time :datetime="data.created">{{ new Date(data.created + 'Z').toLocaleString(undefined, { hour12: false }) }}</time>
+                </template>
+            </p-column>
             <p-column field="state" header="State" :show-filter-match-modes="false">
                 <template #body="{ data }">
                     <tocky-state-tag
@@ -124,6 +136,13 @@
             <p-column field="record.ocaid" header="IA ID">
                 <template #body="{ data }">
                     <tocky-ia-link :ocaid="data.record.ocaid"></tocky-ia-link>
+                    <p-button
+                        class="tocky-filter-button"
+                        icon="pi pi-filter"
+                        v-tooltip.top="'Filter by this IA ID'"
+                        text
+                        @click="handleFilter({filters: Object.assign({}, filters, { 'record.ocaid': {value: [data.record.ocaid]} })})"
+                    ></p-button>
                 </template>
             </p-column>
             <p-column field="record.status" header="Status" :show-filter-match-modes="false">

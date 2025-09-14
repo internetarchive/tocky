@@ -106,7 +106,7 @@ TockyShared.EXTRACTORS = {
         description: "Sends the raw images of the TOC pages to AI to 'read' and extract in a structured format.",
         options: {
             model: {
-                value: 'openai/gpt-4o-mini',
+                value: 'openai/gpt-5-mini',
                 options: TockyShared.CONF.LLM_MODELS.filter(m => m.can_input_images).map(m => `${m.provider}/${m.model}`),
             },
             extraction_format: {

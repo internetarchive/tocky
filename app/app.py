@@ -168,6 +168,8 @@ def batches(request: Request):
 def list_view(request: Request):
     return templates.TemplateResponse('list.html', {"request": request})
 
+ALLOWED_FILTERS = ('id', 'state', 'batch_id', 'assignee', 'record.status', 'record.human_validation', 'record.ocaid')
+
 @tocky_router.get('/api/list')
 def api_list(
     request: Request,
@@ -179,7 +181,7 @@ def api_list(
 ):
     results = db_select_from_params(
         table='toc_queue',
-        filter_fields=('id', 'state', 'batch_id', 'assignee', 'record.status', 'record.human_validation'),
+        filter_fields=ALLOWED_FILTERS,
         sort_fields=('id', 'created', 'state', 'batch_id', 'assignee'),
         limit=limit,
         offset=offset,
@@ -286,7 +288,7 @@ def stats(
 ):
     where_str, where_params = db_where_clause_from_params(
         request,
-        filter_fields=('id', 'state', 'batch_id', 'assignee', 'record.status', 'record.human_validation'),
+        filter_fields=ALLOWED_FILTERS,
         # table_alias,
     )
     with DbContext() as (conn, cur):
