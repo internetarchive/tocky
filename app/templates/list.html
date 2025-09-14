@@ -117,6 +117,7 @@
                     <tocky-state-tag
                         :state="data.state"
                         :class="{'flashing': data.id in watchedRecords}"
+                        :error-details="data.record?.error"
                     ></tocky-state-tag>
                 </template>
                 <template #filter="{ filterModel, filterCallback }">

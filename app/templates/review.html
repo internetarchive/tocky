@@ -475,7 +475,7 @@
                     >Batch #{{ current_toc.batch_id }}</p-button>
                 </div>
                 <p-divider layout="vertical"></p-divider>
-                <div>State: <tocky-state-tag :state="current_toc.state"></tocky-state-tag></div>
+                <div>State: <tocky-state-tag :state="current_toc.state" :error-details="current_toc.record?.error"></tocky-state-tag></div>
                 <p-divider layout="vertical"></p-divider>
                 <div>IA ID: <tocky-ia-link :ocaid="current_toc.record.ocaid"></tocky-ia-link></div>
                 <p-divider layout="vertical"></p-divider>

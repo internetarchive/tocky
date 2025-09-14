@@ -196,10 +196,12 @@ TockyShared.StateTag = {
             :value="state"
             :class="{'p-tag-help': jobStateToPrimeVueSeverity(state) === 'help'}"
             :severity="jobStateToPrimeVueSeverity(state)"
+            v-tooltip="errorDetails"
         ></p-tag>
     `,
     props: {
         state: String,
+        errorDetails: { type: String, default: '' },
     },
     methods: {
         jobStateToPrimeVueSeverity: TockyShared.jobStateToPrimeVueSeverity,
