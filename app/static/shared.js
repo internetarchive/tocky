@@ -1,11 +1,16 @@
 // @ts-check
+import sanitizeHtml from "https://esm.sh/sanitize-html@2.17.0";
+import _ from "https://esm.sh/lodash@4.17.21";
+import {reactive} from "https://esm.sh/vue@3.4.38";
+import { Marked } from "https://esm.sh/marked@16.3.0";
+import katexExtension from "https://esm.sh/marked-katex-extension@5.1.5";
 
 const TockyShared = {};
 
 /** @type {TockyConf} */
 TockyShared.CONF = window.TOCKY_CONF;
 
-TockyShared.config = Vue.reactive({
+TockyShared.config = reactive({
     darkMode: localStorage.getItem('tocky--dark-mode') === 'true',
     authenticated: false,
 });
@@ -58,6 +63,7 @@ TockyShared.DETECTORS = {
         description: '"Why don\'t you just tell me where the TOC is?"',
         options: {
             leaf_numbers: {
+                /** @type {number[]} */
                 value: [],
                 
                 get value_str() {
@@ -221,6 +227,65 @@ TockyShared.StateTag = {
     }
 };
 
+/** @type {import('https://esm.sh/vue@3.4.38').Component} */
+TockyShared.Md = {
+    template: `
+        <template v-if="renderedMarkdown !== content">
+            <span v-html="renderedMarkdown"></span>
+        </template>
+        <span v-else>{{ content }}</span>
+    `,
+    props: {
+        content: String,
+    },
+    computed: {
+        renderedMarkdown() {
+            const cleanMd = (this.content || '')
+                // Replace \( and \) with $ for inline math; needed for katex
+                .replace(/\\\(/g, '$').replace(/\\\)/g, '$')
+                // Replace & first to avoid double-escaping
+                .replace(/&/g, '&amp;')
+                // Input should not have any actual html, so can safely escape these
+                .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            // Parse as markdown
+            const rawHTML = this.getMarkedInstance()
+                .parse(cleanMd)
+                // For TOC entries context we expect singe-line
+                .trim().slice('<p>'.length, -'</p>'.length);
+
+            // Sanitize the HTML, allowing only a few tags
+            const cleanHTML = sanitizeHtml(rawHTML, {
+                allowedTags: [ 'b', 'i', 'em', 'strong', 'span', 'code', ],
+                allowedAttributes: {
+                    // katex; a bit broader than I would like
+                    'span': [ 'class', 'style' ],
+                },
+                disallowedTagsMode: 'escape',
+            });
+
+            // Parse it, and for any code tags, revert the HTML escaping
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = cleanHTML;
+            tempDiv.querySelectorAll('code').forEach(codeEl => {
+                codeEl.textContent = (codeEl.textContent || '')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&amp;/g, '&');
+            });
+            return tempDiv.innerHTML;
+        }
+    },
+    methods: {
+        getMarkedInstance() {
+            if (this._markedInstance) return this._markedInstance;
+            this._markedInstance = new Marked();
+            this._markedInstance.use(katexExtension({ throwOnError: false }));
+            return this._markedInstance;
+        },
+    },
+}
+
 TockyShared.CopyButton = {
     template: `
         <p-button
@@ -349,7 +414,7 @@ function tocJsonToTaggedWords(tocJson) {
     return taggedWords;
 }
 
-class OcrTocStitch {
+export class OcrTocStitch {
     /**
      * @param {OcrPage[]} ocr
      * @param {TocEntry[]} tocJson
@@ -555,7 +620,7 @@ class OcrTocStitch {
     }
 }
 
-class OcrWord {
+export class OcrWord {
     /**
      * @param {OcrPage} page - The OCR page containing the word.
      * @param {number} wordIndex - The index of the word in the page's words array.
@@ -574,7 +639,7 @@ class OcrWord {
     }
 }
 
-class OcrPage {
+export class OcrPage {
     /**
      * @param {string} ocrXml - The OCR XML string to parse.
      */
@@ -839,7 +904,7 @@ TockyShared.PageSelector = {
     }
 };
 
-/** @type {import('vue').App} */
+/** @type {import('https://esm.sh/vue@3.4.38').Component} */
 TockyShared.ExpensesTable = {
     template: `
         <p-data-table
@@ -885,6 +950,9 @@ TockyShared.ExpensesTable = {
         value: Array,
     },
     computed: {
+        /**
+         * @return {number} Total cost in dollars
+         */
         totalCost() {
             const total = (this.value || []).reduce((sum, row) => sum + (row?.cost || 0), 0);
             return (total / 1_000_000 / 100 / 100);
@@ -892,6 +960,7 @@ TockyShared.ExpensesTable = {
     },
 };
 
+/** @type {import('https://esm.sh/vue@3.4.38').Component} */
 TockyShared.MiddleTruncate = {
     mounted(el, binding) {
         const text = el.innerText;
@@ -904,7 +973,7 @@ TockyShared.MiddleTruncate = {
     }
 };
 
-/** @type {import('vue').App} */
+/** @type {import('https://esm.sh/vue@3.4.38').Component} */
 TockyShared.IaLink = {
     template: `
         <p-button-group>
@@ -923,6 +992,7 @@ TockyShared.IaLink = {
     },
 };
 
+/** @type {import('https://esm.sh/vue@3.4.38').Component} */
 TockyShared.Header = {
     template: `
         <p-menubar class="app-toolbar" :model="nav_options">
@@ -978,6 +1048,10 @@ TockyShared.Header = {
     },
 };
 
+/**
+ * @param {string} ia_id
+ * @param {number} leafNumber
+ */
 TockyShared.getImageUrl = function(ia_id, leafNumber) {
     return `ia_img?${
         new URLSearchParams({
@@ -1066,6 +1140,7 @@ TockyShared.registerComponents = function (app) {
     app.component('tocky-header', TockyShared.Header);
     app.component('tocky-copy-button', TockyShared.CopyButton);
     app.component('tocky-state-tag', TockyShared.StateTag);
+    app.component('tocky-md', TockyShared.Md);
     app.component('tocky-ia-link', TockyShared.IaLink);
     app.component('tocky-page-selector', TockyShared.PageSelector);
     app.component('tocky-expenses-table', TockyShared.ExpensesTable);

@@ -28,6 +28,7 @@ You are a bot made to extract table of contents data in a structured, semantic f
 - `title` should always be specified.
 - Avoid the `label` field; only use it to store unimportant data like numerals (e.g. "3", "1.8.1", "Chapter 1", "Section 2.3", etc.).
 - Some books include a sentence or so of description after the chapter title. Put this in the `description` field.
+- For entries containing math formulae, use `\\(...\\)`, eg \\(\\chi^2\\) for inline latex. For code, use backticks, eg `print()`.
 
 ### Examples:
 

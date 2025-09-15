@@ -16,6 +16,7 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css" />
+    <link rel="stylesheet" href="https://esm.sh/katex@0.16.22/dist/katex.min.css" />
     <style>
         [v-cloak] {
             display: none !important;
@@ -374,7 +375,7 @@
             
                                         <template #body="{ data: row }">
                                             <div>
-                                                {{ row.title }}
+                                                <tocky-md :content="row.title"></tocky-md>
                                                 <div v-if="row.subtitle" tooltip="Subtitle" class="toc-table__subtitle">
                                                     {{ row.subtitle }}
                                                 </div>
@@ -533,14 +534,13 @@
     <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.prod.js"></script>
     <script src="https://unpkg.com/primevue@4.0.5/umd/primevue.min.js"></script>
     <script src="https://unpkg.com/@primevue/themes@4.0.5/umd/aura.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
-    <script src="[[ url_for('static', path='shared.js') ]]"></script>
-
     <script src="https://unpkg.com/vue-demi@0.14.6/lib/index.iife.js"></script>
     <script src="https://unpkg.com/@monaco-editor/loader@1.4.0/lib/umd/monaco-loader.js"></script>
     <script src="https://unpkg.com/@guolao/vue-monaco-editor@1.5.4/lib/umd/monaco-vue.js"></script>
 
     <script type="module">
+        import _ from "https://esm.sh/lodash@4.17.21";
+        import {OcrPage, OcrTocStitch} from "[[ url_for('static', path='shared.js') ]]";
         const { VueMonacoEditor, VueMonacoDiffEditor } = monaco_vue;
 
         window.app = Vue.createApp({

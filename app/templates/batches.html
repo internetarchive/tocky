@@ -187,8 +187,9 @@
     <script src="https://unpkg.com/primevue@4.0.5/umd/primevue.min.js"></script>
     <script src="https://unpkg.com/@primevue/themes@4.0.5/umd/aura.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
-    <script src="[[ url_for('static', path='shared.js') ]]"></script>
-    <script>
+    <script type="module">
+        import "[[ url_for('static', path='shared.js') ]]";
+
         const hashParams = new URLSearchParams(window.location.hash.slice(1));
         const DEFAULT_LIMIT = 20;
         const DEFAULT_OFFSET = 0;

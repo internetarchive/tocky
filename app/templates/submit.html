@@ -491,8 +491,9 @@
     <script src="https://unpkg.com/primevue@4.0.5/umd/primevue.min.js"></script>
     <script src="https://unpkg.com/@primevue/themes@4.0.5/umd/aura.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
-    <script src="[[ url_for('static', path='shared.js') ]]"></script>
-    <script>
+    <script type="module">
+        import "[[ url_for('static', path='shared.js') ]]";
+
         const IA_TOC_FILTER = 'mediatype:texts AND (language:eng OR language:English OR ocr_detected_lang:en) AND -collection:opensource AND  -repub_state:(10 OR 13)  AND imagecount:[100 TO 99999] AND NOT scanner:google AND NOT curatestate:dark';
         window.app = Vue.createApp({
             data() {
