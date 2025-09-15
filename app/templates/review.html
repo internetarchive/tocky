@@ -307,6 +307,7 @@
                                 @click="enumerateText"
                                 :model="[
                                     { label: 'Arabic numerals (1, 2, 3...)', command: () => enumerateText() },
+                                    { label: 'Decimal numerals (1, 1.1, 1.1.1...)', command: () => enumerateTextDecimal() },
                                     { label: 'Roman numerals (I, II, III...)', command: () => enumerateTextRomanNumerals() },
                                 ]"
                             ></p-split-button>
@@ -1078,6 +1079,29 @@
                     let i = 1;
                     for (const chapter of this.getSelectedChapters()) {
                         chapter.label = `${i++}`;
+                    }
+                    this.monacoValue = tocToMarkdown(this.corrected_toc);
+                },
+                enumerateTextDecimal() {
+                    let i = 1;
+                    const allChapters = this.getSelectedChapters();
+                    const minLevel = Math.min(...allChapters.map(c => c.level));
+                    let curDecimal = [0];
+                    let lastLevel = minLevel;
+                    for (const chapter of allChapters) {
+                        if (chapter.level > lastLevel) {
+                            // went deeper
+                            curDecimal.push(1);
+                        } else if (chapter.level < lastLevel) {
+                            // went shallower
+                            curDecimal = curDecimal.slice(0, chapter.level - minLevel + 1);
+                            curDecimal[curDecimal.length - 1]++;
+                        } else {
+                            // same level
+                            curDecimal[curDecimal.length - 1]++;
+                        }
+                        lastLevel = chapter.level;
+                        chapter.label = curDecimal.join('.');
                     }
                     this.monacoValue = tocToMarkdown(this.corrected_toc);
                 },
