@@ -97,7 +97,8 @@ class AiExtractor(AbstractExtractor[AiExtractorOptions]):
     self.toc_raw_ocr = [self.S.ocr_cache[leaf_num] for leaf_num in detector_result]
     self.toc_flat_ocr = [print_ocr(ocr) for ocr in self.toc_raw_ocr]
 
-    if re.search(r'([A-Za-z]{25,}|\beee+\b)', '\n'.join(self.toc_flat_ocr), flags=re.MULTILINE):
+    # Tesseract ocr can sometimes have a bunch of odd crazy characters
+    if not self.P.redo_ocr and re.search(r'([A-Za-z]{25,}|\beee+\b)', '\n'.join(self.toc_flat_ocr), flags=re.MULTILINE):
       raise BadOcrOnToc("Bad OCR on TOC")
 
     self.toc_response = self.extract_structured_toc(self.toc_flat_ocr, get_ia_metadata(ocaid)['metadata']['title'])
